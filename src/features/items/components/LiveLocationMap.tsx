@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react';
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
-import { MapPin, CheckCircle2, Loader2, Navigation } from 'lucide-react';
+﻿import { useEffect, useRef, useState, useCallback } from 'react';
+import { MapPin, CheckCircle2, Loader2, Navigation, Search } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 export interface LocationDetails {
   lat?: number;
@@ -18,271 +18,519 @@ interface LiveLocationMapProps {
   disabled?: boolean;
 }
 
-const DEFAULT_COORDS = { lat: 16.3218, lng: 120.3644 }; // Agoo, La Union
+const LA_UNION_TOWNS: Array<{ name: string; lat: number; lng: number }> = [
+  { name: 'Agoo', lat: 16.3224, lng: 120.3670 },
+  { name: 'San Fernando', lat: 16.6159, lng: 120.3167 },
+  { name: 'San Juan', lat: 16.6749, lng: 120.3392 },
+  { name: 'Bauang', lat: 16.5333, lng: 120.3333 },
+  { name: 'Aringay', lat: 16.3983, lng: 120.3556 },
+  { name: 'Caba', lat: 16.4439, lng: 120.3444 },
+  { name: 'Rosario', lat: 16.2289, lng: 120.4878 },
+  { name: 'Santo Tomas', lat: 16.2861, lng: 120.3844 },
+  { name: 'Naguilian', lat: 16.5333, lng: 120.4000 },
+  { name: 'Tubao', lat: 16.3500, lng: 120.4167 },
+  { name: 'Bacnotan', lat: 16.7194, lng: 120.3528 },
+  { name: 'Balaoan', lat: 16.8222, lng: 120.4000 },
+  { name: 'Luna', lat: 16.8556, lng: 120.3750 },
+  { name: 'Bangar', lat: 16.8944, lng: 120.4250 },
+];
+
+const DEFAULT_COORDS = { lat: 16.3224, lng: 120.3670 }; // Agoo, La Union
+
+interface NominatimSearchResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    house_number?: string;
+    road?: string;
+    street?: string;
+    pedestrian?: string;
+    highway?: string;
+    residential?: string;
+    building?: string;
+    neighbourhood?: string;
+    suburb?: string;
+    village?: string;
+    quarter?: string;
+    hamlet?: string;
+    city?: string;
+    town?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    province?: string;
+    region?: string;
+  };
+}
+
+export async function reverseGeocodeLocation(lat: number, lng: number): Promise<LocationDetails> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      {
+        headers: {
+          'Accept-Language': 'en',
+        },
+      }
+    );
+
+    if (!res.ok) throw new Error('Geocoding request failed');
+
+    const data = await res.json();
+    const a = data.address || {};
+
+    // Determine Municipality
+    const municipality =
+      a.town ||
+      a.city ||
+      a.municipality ||
+      a.county ||
+      'Agoo';
+
+    // Determine Barangay
+    let rawBarangay =
+      a.village ||
+      a.quarter ||
+      a.neighbourhood ||
+      a.suburb ||
+      a.hamlet ||
+      '';
+
+    if (!rawBarangay && data.display_name) {
+      const parts = data.display_name.split(',').map((s: string) => s.trim());
+      if (parts.length > 2) rawBarangay = parts[0];
+    }
+
+    const barangay = rawBarangay
+      ? rawBarangay.toLowerCase().startsWith('barangay') || rawBarangay.toLowerCase().startsWith('brgy')
+        ? rawBarangay
+        : `Barangay ${rawBarangay}`
+      : 'Barangay Poblacion';
+
+    // Determine Street / Landmark
+    const streetParts = [
+      a.house_number,
+      a.road || a.street || a.pedestrian || a.highway || a.residential || a.building,
+    ].filter(Boolean);
+
+    const street =
+      streetParts.join(' ') ||
+      (a.quarter && a.quarter !== a.village ? a.quarter : '') ||
+      'Main Street';
+
+    const province = a.state || a.province || a.region || 'La Union';
+    const formattedAddress = [street, barangay, municipality, province].filter(Boolean).join(', ');
+
+    return {
+      lat,
+      lng,
+      street,
+      barangay,
+      municipality,
+      province,
+      formattedAddress,
+    };
+  } catch (err) {
+    console.error('Reverse geocode error:', err);
+    return {
+      lat,
+      lng,
+      street: 'Main Street',
+      barangay: 'Barangay Poblacion',
+      municipality: 'Agoo',
+      province: 'La Union',
+      formattedAddress: 'Main Street, Barangay Poblacion, Agoo, La Union',
+    };
+  }
+}
 
 export default function LiveLocationMap({ location, onLocationChange, disabled = false }: LiveLocationMapProps) {
-  const mapElementRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<import('leaflet').Map | null>(null);
+  const markerRef = useRef<import('leaflet').Marker | null>(null);
   const onChangeRef = useRef(onLocationChange);
   onChangeRef.current = onLocationChange;
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<NominatimSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const initialLat = location?.lat ?? DEFAULT_COORDS.lat;
   const initialLng = location?.lng ?? DEFAULT_COORDS.lng;
 
-  // Initialize Google Maps
+  // Initialize Leaflet Map
   useEffect(() => {
-    if (!mapElementRef.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    import('leaflet').then((L) => {
+      if (!mapContainerRef.current || mapRef.current) return;
 
-    setOptions({
-      key: apiKey,
-      v: 'weekly',
-      region: 'PH',
-      language: 'en',
-    });
-
-    let isMounted = true;
-
-    Promise.all([
-      importLibrary('maps'),
-      importLibrary('geocoding'),
-      importLibrary('marker'),
-    ])
-      .then(([mapsLib, geocodingLib, markerLib]) => {
-        if (!isMounted || !mapElementRef.current) return;
-
-        const { Map } = mapsLib;
-        const { Geocoder } = geocodingLib;
-        const { Marker } = markerLib;
-
-        const geocoder = new Geocoder();
-        geocoderRef.current = geocoder;
-
-        const map = new Map(mapElementRef.current, {
-          center: { lat: initialLat, lng: initialLng },
-          zoom: location ? 16 : 14,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          zoomControl: true,
-          clickableIcons: false,
-        });
-
-        // Marker for pin location
-        const marker = new Marker({
-          position: { lat: initialLat, lng: initialLng },
-          map,
-          draggable: !disabled,
-          animation: google.maps.Animation.DROP,
-          title: 'Selected Location',
-        });
-
-        const geocodePosition = (lat: number, lng: number) => {
-          if (!geocoderRef.current) return;
-          setIsResolving(true);
-
-          geocoderRef.current.geocode(
-            { location: { lat, lng } },
-            (results, status) => {
-              setIsResolving(false);
-              if (String(status) === 'OK' && results && results[0]) {
-                const components = results[0].address_components;
-
-                let streetNumber = '';
-                let route = '';
-                let barangay = '';
-                let municipality = '';
-                let province = '';
-
-                for (const c of components) {
-                  const types = c.types;
-                  if (types.includes('street_number')) streetNumber = c.long_name;
-                  if (types.includes('route')) route = c.long_name;
-                  if (
-                    types.includes('sublocality_level_1') ||
-                    types.includes('neighborhood') ||
-                    types.includes('sublocality') ||
-                    types.includes('administrative_area_level_5')
-                  ) {
-                    if (!barangay) barangay = c.long_name;
-                  }
-                  if (
-                    types.includes('locality') ||
-                    types.includes('administrative_area_level_2') ||
-                    types.includes('administrative_area_level_3')
-                  ) {
-                    if (!municipality) municipality = c.long_name;
-                  }
-                  if (types.includes('administrative_area_level_1')) {
-                    province = c.long_name;
-                  }
-                }
-
-                // Fallback parsing from formatted address
-                const addressParts = results[0].formatted_address.split(',').map((p: string) => p.trim());
-                if (!barangay && addressParts.length > 2) {
-                  barangay = addressParts[0];
-                }
-                if (!municipality && addressParts.length > 3) {
-                  municipality = addressParts[1];
-                }
-
-                const street = [streetNumber, route].filter(Boolean).join(' ') || route || addressParts[0] || 'Main Street';
-
-                const formattedBarangay = barangay
-                  ? barangay.toLowerCase().startsWith('barangay') || barangay.toLowerCase().startsWith('brgy')
-                    ? barangay
-                    : `Barangay ${barangay}`
-                  : 'Barangay Poblacion';
-
-                const details: LocationDetails = {
-                  lat,
-                  lng,
-                  street,
-                  barangay: formattedBarangay,
-                  municipality: municipality || 'Agoo',
-                  province: province || 'La Union',
-                  formattedAddress: results[0].formatted_address,
-                };
-
-                onChangeRef.current?.(details);
-              }
-            }
-          );
-        };
-
-        map.addListener('click', (e: google.maps.MapMouseEvent) => {
-          if (disabled || !e.latLng) return;
-          const clickedLat = e.latLng.lat();
-          const clickedLng = e.latLng.lng();
-          marker.setPosition({ lat: clickedLat, lng: clickedLng });
-          geocodePosition(clickedLat, clickedLng);
-        });
-
-        marker.addListener('dragend', () => {
-          const pos = marker.getPosition();
-          if (pos) {
-            geocodePosition(pos.lat(), pos.lng());
-          }
-        });
-
-        mapRef.current = map;
-        markerRef.current = marker;
-      })
-      .catch((err: unknown) => {
-        console.error('Google Maps failed to load:', err);
+      // Fix Leaflet icons
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       });
 
+      // Animated high-visibility Pin Icon
+      const customPinIcon = L.divIcon({
+        className: '',
+        html: `
+          <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+            <div style="
+              position:absolute;
+              width:40px;height:40px;
+              border-radius:50%;
+              background:rgba(239,68,68,0.25);
+              animation:liveMapPulse 1.8s ease-out infinite;
+            "></div>
+            <div style="
+              position:absolute;
+              width:24px;height:24px;
+              border-radius:50%;
+              background:rgba(239,68,68,0.38);
+              animation:liveMapPulse 1.8s ease-out infinite 0.35s;
+            "></div>
+            <div style="
+              width:16px;height:16px;
+              border-radius:50%;
+              background:#ef4444;
+              border:2.5px solid #fff;
+              box-shadow:0 3px 12px rgba(0,0,0,0.4);
+              position:relative;z-index:2;
+            "></div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+
+      const map = L.map(mapContainerRef.current, {
+        center: [initialLat, initialLng],
+        zoom: location ? 16 : 14,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(map);
+
+      const marker = L.marker([initialLat, initialLng], {
+        icon: customPinIcon,
+        draggable: !disabled,
+      }).addTo(map);
+
+      const handleCoordsUpdate = async (lat: number, lng: number) => {
+        setIsResolving(true);
+        const details = await reverseGeocodeLocation(lat, lng);
+        setIsResolving(false);
+        onChangeRef.current?.(details);
+      };
+
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        handleCoordsUpdate(pos.lat, pos.lng);
+      });
+
+      map.on('click', (e) => {
+        if (disabled) return;
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        handleCoordsUpdate(lat, lng);
+      });
+
+      mapRef.current = map;
+      markerRef.current = marker;
+    });
+
     return () => {
-      isMounted = false;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markerRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update marker position when location coords change externally
+  // Update marker position when coords change
   useEffect(() => {
     if (!markerRef.current || !mapRef.current || !location?.lat || !location?.lng) return;
-    const newPos = { lat: location.lat, lng: location.lng };
-    markerRef.current.setPosition(newPos);
-    mapRef.current.panTo(newPos);
+    markerRef.current.setLatLng([location.lat, location.lng]);
   }, [location?.lat, location?.lng]);
 
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setIsSearching(true);
+    setShowDropdown(true);
+
+    try {
+      const q = query.includes('La Union') || query.includes('Philippines') ? query : `${query}, La Union, Philippines`;
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=5`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data: NominatimSearchResult[] = await res.json();
+      setSearchResults(data);
+    } catch (err) {
+      console.error('Search failed:', err);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const handleSelectResult = async (item: NominatimSearchResult) => {
+    const lat = parseFloat(item.lat);
+    const lng = parseFloat(item.lon);
+
+    if (mapRef.current && markerRef.current) {
+      mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+      markerRef.current.setLatLng([lat, lng]);
+    }
+
+    setShowDropdown(false);
+    setSearchQuery('');
+    setIsResolving(true);
+
+    const details = await reverseGeocodeLocation(lat, lng);
+    setIsResolving(false);
+    onChangeRef.current?.(details);
+  };
+
+  const handleTownChipClick = (town: { name: string; lat: number; lng: number }) => {
+    if (mapRef.current && markerRef.current) {
+      mapRef.current.flyTo([town.lat, town.lng], 15, { animate: true, duration: 1.0 });
+      markerRef.current.setLatLng([town.lat, town.lng]);
+    }
+
+    setIsResolving(true);
+    reverseGeocodeLocation(town.lat, town.lng).then((details) => {
+      setIsResolving(false);
+      onChangeRef.current?.({
+        ...details,
+        municipality: town.name,
+      });
+    });
+  };
+
   return (
-    <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-      {/* Google Maps Container */}
-      <div
-        ref={mapElementRef}
-        style={{
-          height: '22rem',
-          width: '100%',
-          backgroundColor: '#e5e7eb',
-        }}
-      />
+    <>
+      <style>{`
+        @keyframes liveMapPulse {
+          0% { transform: scale(0.6); opacity: 0.9; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+      `}</style>
 
-      {/* Floating guidance banner */}
-      <div style={{
-        position: 'absolute',
-        top: '0.75rem',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10,
-        padding: '0.45rem 1rem',
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        border: '1px solid var(--color-neutral-200)',
-        borderRadius: '9999px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        color: 'var(--color-neutral-800)',
-        pointerEvents: 'none',
-      }}>
-        <MapPin style={{ width: '0.875rem', height: '0.875rem', color: '#ea4335' }} />
-        <span>Tap anywhere on Google Maps or drag the pin</span>
-      </div>
+      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        {/* Search Bar on Map Header */}
+        <div style={{
+          position: 'relative',
+          padding: '0.65rem 0.85rem',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid var(--color-neutral-200)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+          zIndex: 1000,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-neutral-400)', position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                onFocus={() => {
+                  if (searchQuery) setShowDropdown(true);
+                }}
+                placeholder="Search municipality, barangay, or street (e.g. Agoo, San Nicolas)..."
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem 0.5rem 2.2rem',
+                  fontSize: '0.78rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-neutral-300)',
+                  outline: 'none',
+                  backgroundColor: 'var(--color-neutral-50)',
+                }}
+              />
+              {isSearching && (
+                <Loader2 style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)', animation: 'spin 0.8s linear infinite', position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+              )}
+            </div>
+          </div>
 
-      {/* Footer address info displaying Street, Barangay, and Municipality */}
-      <div style={{
-        padding: '0.85rem 1rem',
-        backgroundColor: '#ffffff',
-        borderTop: '1px solid var(--color-neutral-200)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.35rem',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <CheckCircle2 style={{ width: '1.1rem', height: '1.1rem', color: '#16a34a', flexShrink: 0 }} />
-            <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
-              {isResolving ? 'Locating neighborhood with Google Maps…' : 'Selected Neighborhood Location'}
+          {/* Quick Town Selection Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflowX: 'auto', paddingBottom: '0.15rem' }}>
+            <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', flexShrink: 0 }}>
+              Towns:
             </span>
+            {LA_UNION_TOWNS.map((town) => {
+              const isSelected = location?.municipality?.toLowerCase() === town.name.toLowerCase();
+              return (
+                <button
+                  key={town.name}
+                  type="button"
+                  onClick={() => handleTownChipClick(town)}
+                  style={{
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.6875rem',
+                    fontWeight: isSelected ? 800 : 600,
+                    backgroundColor: isSelected ? 'var(--color-primary-600)' : 'var(--color-neutral-100)',
+                    color: isSelected ? '#ffffff' : 'var(--color-neutral-700)',
+                    border: '1px solid ' + (isSelected ? 'var(--color-primary-600)' : 'var(--color-neutral-200)'),
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    transition: 'all 120ms',
+                  }}
+                >
+                  {town.name}
+                </button>
+              );
+            })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
-            <Navigation style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-primary-600)' }} />
-            <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-primary-700)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Google Maps</span>
-          </div>
+
+          {/* Search Autocomplete Dropdown */}
+          {showDropdown && searchResults.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: '0.85rem',
+              right: '0.85rem',
+              marginTop: '0.25rem',
+              backgroundColor: '#ffffff',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-neutral-300)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              maxHeight: '14rem',
+              overflowY: 'auto',
+              zIndex: 2000,
+            }}>
+              {searchResults.map((res, i) => (
+                <div
+                  key={i}
+                  onClick={() => handleSelectResult(res)}
+                  style={{
+                    padding: '0.6rem 0.85rem',
+                    borderBottom: i === searchResults.length - 1 ? 'none' : '1px solid var(--color-neutral-100)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'background-color 100ms',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-primary-50)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <MapPin style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--color-neutral-800)', fontWeight: 600 }}>{res.display_name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {isResolving ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', padding: '0.25rem 0' }}>
-            <Loader2 style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 0.8s linear infinite' }} />
-            <span>Resolving accurate Street, Barangay, and Municipality…</span>
+        {/* Leaflet Map Canvas */}
+        <div ref={mapContainerRef} style={{ height: '20rem', width: '100%', backgroundColor: '#e5e7eb' }} />
+
+        {/* Floating guidance banner */}
+        <div style={{
+          position: 'absolute',
+          top: '4.75rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 800,
+          padding: '0.4rem 0.85rem',
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          border: '1px solid var(--color-neutral-200)',
+          borderRadius: '9999px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          color: 'var(--color-neutral-800)',
+          pointerEvents: 'none',
+        }}>
+          <MapPin style={{ width: '0.8rem', height: '0.8rem', color: '#ef4444' }} />
+          <span>Tap anywhere on the map or drag the pin</span>
+        </div>
+
+        {/* Footer address info displaying Street, Barangay, and Municipality */}
+        <div style={{
+          padding: '0.85rem 1rem',
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid var(--color-neutral-200)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CheckCircle2 style={{ width: '1.1rem', height: '1.1rem', color: '#16a34a', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
+                {isResolving ? 'Locating neighborhood…' : 'Selected Neighborhood Location'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+              <Navigation style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-primary-600)' }} />
+              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-primary-700)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Interactive Map</span>
+            </div>
           </div>
-        ) : location ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem', backgroundColor: 'var(--color-neutral-50)', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
-            <div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Street / Landmark</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                {location.street || 'Main Street'}
-              </span>
+
+          {isResolving ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', padding: '0.25rem 0' }}>
+              <Loader2 style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 0.8s linear infinite' }} />
+              <span>Resolving accurate Street, Barangay, and Municipality…</span>
             </div>
-            <div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Barangay</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                {location.barangay || 'Poblacion'}
-              </span>
+          ) : location ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem', backgroundColor: 'var(--color-neutral-50)', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+              <div>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Street / Landmark</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                  {location.street || 'Main Street'}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Barangay</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                  {location.barangay || 'Poblacion'}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Municipality / City</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                  {location.municipality || 'Agoo'}
+                </span>
+              </div>
             </div>
-            <div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Municipality / City</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                {location.municipality || 'Agoo'}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>
-            Click anywhere on the Google Map to set Street, Barangay, and Municipality.
-          </span>
-        )}
+          ) : (
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>
+              Click anywhere on the map to set Street, Barangay, and Municipality.
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
