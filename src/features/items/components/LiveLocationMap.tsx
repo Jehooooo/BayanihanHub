@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { MapPin, CheckCircle2, Loader2, Navigation, Search } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
@@ -525,7 +525,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <CheckCircle2 style={{ width: '1.1rem', height: '1.1rem', color: '#16a34a', flexShrink: 0 }} />
               <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
-                {isResolving ? 'Resolving neighborhood…' : 'Selected Location (Auto-detected & Editable)'}
+                {isResolving ? 'Resolving neighborhood from map…' : 'Selected Location (Auto-detected from Map)'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
@@ -541,65 +541,29 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem' }}>
-              <div>
-                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+              <div style={{ backgroundColor: 'var(--color-neutral-50)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>
                   Street / Landmark
-                </label>
-                <input
-                  type="text"
-                  value={location?.street || ''}
-                  onChange={(e) => handleFieldChange('street', e.target.value)}
-                  placeholder="Street name"
-                  style={{
-                    width: '100%',
-                    padding: '0.4rem 0.55rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-neutral-300)',
-                    backgroundColor: '#fff',
-                  }}
-                />
+                </span>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: '0.15rem' }}>
+                  {location?.street || 'Main Street'}
+                </span>
               </div>
-              <div>
-                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+              <div style={{ backgroundColor: 'var(--color-neutral-50)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>
                   Barangay
-                </label>
-                <input
-                  type="text"
-                  value={location?.barangay || ''}
-                  onChange={(e) => handleFieldChange('barangay', e.target.value)}
-                  placeholder="Barangay name"
-                  style={{
-                    width: '100%',
-                    padding: '0.4rem 0.55rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-neutral-300)',
-                    backgroundColor: '#fff',
-                  }}
-                />
+                </span>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: '0.15rem' }}>
+                  {location?.barangay || 'Poblacion'}
+                </span>
               </div>
-              <div>
-                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+              <div style={{ backgroundColor: 'var(--color-neutral-50)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>
                   Municipality / City
-                </label>
-                <input
-                  type="text"
-                  value={location?.municipality || ''}
-                  onChange={(e) => handleFieldChange('municipality', e.target.value)}
-                  placeholder="Municipality"
-                  style={{
-                    width: '100%',
-                    padding: '0.4rem 0.55rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-neutral-300)',
-                    backgroundColor: '#fff',
-                  }}
-                />
+                </span>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: '0.15rem' }}>
+                  {location?.municipality || 'Agoo'}
+                </span>
               </div>
             </div>
           )}

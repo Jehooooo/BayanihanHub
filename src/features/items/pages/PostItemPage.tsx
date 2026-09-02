@@ -257,27 +257,30 @@ export default function PostItemPage() {
               </Button>
             </div>
 
-            {/* Editable Street, Barangay, and Municipality Fields */}
+            {/* Uneditable / Read-only Street, Barangay, and Municipality Fields driven by map */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
               <Input
                 label="Street / Landmark"
-                placeholder="e.g. Quezon Ave / Diversion Rd"
                 value={locationDetails.street}
-                onChange={(e) => setLocationDetails({ ...locationDetails, street: e.target.value })}
+                readOnly
+                helperText="Auto-filled from map selection"
+                style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }}
                 required
               />
               <Input
                 label="Barangay"
-                placeholder="e.g. Barangay Catbangen"
                 value={locationDetails.barangay}
-                onChange={(e) => setLocationDetails({ ...locationDetails, barangay: e.target.value })}
+                readOnly
+                helperText="Auto-filled from map selection"
+                style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }}
                 required
               />
               <Input
                 label="Municipality / City"
-                placeholder="e.g. San Fernando"
                 value={locationDetails.municipality}
-                onChange={(e) => setLocationDetails({ ...locationDetails, municipality: e.target.value })}
+                readOnly
+                helperText="Auto-filled from map selection"
+                style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }}
                 required
               />
             </div>
