@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, PackagePlus, ArrowLeft, MapPin, CheckCircle2 } from 'lucide-react';
+import { Upload, X, PackagePlus, ArrowLeft, MapPin, CheckCircle2, Gift, ArrowLeftRight, HandHelping } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -124,11 +124,87 @@ export default function PostItemPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Post a New Item</h1>
           <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: 0 }}>
-            Offer an item for donation or propose an item swap to your local community.
+            Donate, request, or exchange items with your local community.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+          {/* Posting Type Selector */}
+          <Card style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>What are you posting?</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0' }}>Select the type of listing you want to create.</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem' }}>
+              {([
+                {
+                  value: 'donation',
+                  label: 'Donation',
+                  desc: 'Give away items for free to those in need.',
+                  icon: <Gift style={{ width: '1.5rem', height: '1.5rem' }} />,
+                  accent: '#16a34a',
+                  bg: '#f0fdf4',
+                  border: '#bbf7d0',
+                  activeBg: '#dcfce7',
+                },
+                {
+                  value: 'request',
+                  label: 'Request',
+                  desc: 'Ask the community for an item you need.',
+                  icon: <HandHelping style={{ width: '1.5rem', height: '1.5rem' }} />,
+                  accent: '#2563eb',
+                  bg: '#eff6ff',
+                  border: '#bfdbfe',
+                  activeBg: '#dbeafe',
+                },
+                {
+                  value: 'exchange',
+                  label: 'Exchange',
+                  desc: 'Swap your item with something from someone else.',
+                  icon: <ArrowLeftRight style={{ width: '1.5rem', height: '1.5rem' }} />,
+                  accent: '#d97706',
+                  bg: '#fffbeb',
+                  border: '#fde68a',
+                  activeBg: '#fef3c7',
+                },
+              ] as const).map((opt) => {
+                const isActive = formData.type === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: opt.value as ItemType })}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: '0.5rem',
+                      padding: '1rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: `2px solid ${isActive ? opt.accent : opt.border}`,
+                      backgroundColor: isActive ? opt.activeBg : opt.bg,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'border-color 150ms, background-color 150ms, box-shadow 150ms',
+                      boxShadow: isActive ? `0 0 0 3px ${opt.accent}22` : 'none',
+                    }}
+                  >
+                    <span style={{ color: opt.accent }}>{opt.icon}</span>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: isActive ? opt.accent : 'var(--color-neutral-800)' }}>
+                        {opt.label}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--color-neutral-500)', marginTop: '0.125rem', lineHeight: 1.4 }}>
+                        {opt.desc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
           {/* Photos Upload */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem' }}>
             <div>
@@ -176,17 +252,7 @@ export default function PostItemPage() {
               required
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-              <Select
-                label="Post Type"
-                options={[
-                  { value: 'donation', label: 'Free Donation' },
-                  { value: 'exchange', label: 'For Exchange' },
-                ]}
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as ItemType })}
-              />
-
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <Select
                 label="Category"
                 options={categories.map((c) => ({ value: c.id, label: c.name }))}
