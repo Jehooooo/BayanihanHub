@@ -22,7 +22,7 @@ export default function PostItemPage() {
     title: '',
     category: 'clothing',
     condition: 'Good Condition' as ItemCondition,
-    type: 'donation' as ItemType,
+    type: null as ItemType | null,
     quantity: 1,
     description: '',
     pickupOptions: 'Meet up, Delivery',
@@ -73,6 +73,10 @@ export default function PostItemPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.type) {
+      toast.error('Please select a posting type.');
+      return;
+    }
     if (!formData.title || !formData.description) {
       toast.error('Please complete all required fields.');
       return;
@@ -84,7 +88,7 @@ export default function PostItemPage() {
         title: formData.title,
         category: formData.category,
         condition: formData.condition,
-        type: formData.type,
+        type: formData.type!,
         quantity: formData.quantity,
         description: formData.description,
         images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
@@ -204,6 +208,18 @@ export default function PostItemPage() {
               })}
             </div>
           </Card>
+
+          {/* Rest of form — only shown after type is selected */}
+          {formData.type && (
+            <>
+              {/* Step 2 divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-neutral-200)' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                  Fill in the details below
+                </span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-neutral-200)' }} />
+              </div>
 
           {/* Photos Upload */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem' }}>
@@ -389,6 +405,8 @@ export default function PostItemPage() {
               Publish Listing
             </Button>
           </div>
+            </>
+          )}
         </form>
       </div>
 
