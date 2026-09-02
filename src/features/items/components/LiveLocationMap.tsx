@@ -18,7 +18,7 @@ interface LiveLocationMapProps {
   disabled?: boolean;
 }
 
-const DEFAULT_COORDS = { lat: 16.6159, lng: 120.3167 }; // San Fernando, La Union
+const DEFAULT_COORDS = { lat: 16.32, lng: 120.36 }; // La Union
 
 interface NominatimAddress {
   house_number?: string;
@@ -53,28 +53,67 @@ interface NominatimResponse {
 export async function reverseGeocodeToLocation(lat: number, lng: number): Promise<LocationDetails> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lng=${lng}&format=json&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en' } }
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      {
+        headers: {
+          'Accept-Language': 'en',
+        },
+      }
     );
+
+    if (!res.ok) {
+      throw new Error(`Reverse geocode failed with status ${res.status}`);
+    }
+
     const data: NominatimResponse = await res.json();
     const a = data.address || {};
 
-    // 1. Street Name
-    const rawStreet = [a.house_number, a.road || a.street || a.pedestrian || a.path || a.highway || a.residential || a.building]
+    // 1. Municipality / City Name
+    const municipality =
+      a.town ||
+      a.city ||
+      a.municipality ||
+      a.county ||
+      '';
+
+    // 2. Barangay Name (often village, quarter, neighbourhood, suburb, hamlet in PH OSM data)
+    let rawBarangay =
+      a.village ||
+      a.quarter ||
+      a.neighbourhood ||
+      a.suburb ||
+      a.hamlet ||
+      a.borough ||
+      '';
+
+    if (!rawBarangay && data.display_name) {
+      const parts = data.display_name.split(',').map((p) => p.trim());
+      if (parts.length > 2) {
+        rawBarangay = parts[0];
+      }
+    }
+
+    const barangay = rawBarangay
+      ? rawBarangay.toLowerCase().startsWith('barangay') || rawBarangay.toLowerCase().startsWith('brgy')
+        ? rawBarangay
+        : `Barangay ${rawBarangay}`
+      : 'Poblacion';
+
+    // 3. Street / Landmark Name
+    const rawStreet = [
+      a.house_number,
+      a.road || a.street || a.pedestrian || a.path || a.highway || a.residential || a.building,
+    ]
       .filter(Boolean)
       .join(' ');
-    const street = rawStreet || (data.name && data.name !== a.city && data.name !== a.town ? data.name : '') || 'Street / Road';
 
-    // 2. Barangay Name
-    const rawBarangay = a.neighbourhood || a.suburb || a.village || a.quarter || a.hamlet || a.borough || 'Poblacion';
-    const barangay = rawBarangay.toLowerCase().startsWith('barangay') || rawBarangay.toLowerCase().startsWith('brgy')
-      ? rawBarangay
-      : `Barangay ${rawBarangay}`;
+    const street =
+      rawStreet ||
+      (data.name && data.name !== a.town && data.name !== a.city && data.name !== a.village ? data.name : '') ||
+      (a.quarter && a.quarter !== a.village ? a.quarter : '') ||
+      'Main Street';
 
-    // 3. Municipality / City Name
-    const municipality = a.city || a.town || a.municipality || a.county || 'San Fernando';
-
-    // 4. Province
+    // 4. Province / State
     const province = a.state || a.province || a.region || 'La Union';
 
     const formattedAddress = [street, barangay, municipality, province].filter(Boolean).join(', ');
@@ -84,19 +123,20 @@ export async function reverseGeocodeToLocation(lat: number, lng: number): Promis
       lng,
       street,
       barangay,
-      municipality,
+      municipality: municipality || 'Agoo',
       province,
       formattedAddress,
     };
-  } catch {
+  } catch (err) {
+    console.error('Reverse geocoding error:', err);
     return {
       lat,
       lng,
       street: 'Main Street',
       barangay: 'Barangay Poblacion',
-      municipality: 'San Fernando',
+      municipality: 'Agoo',
       province: 'La Union',
-      formattedAddress: 'Main Street, Barangay Poblacion, San Fernando, La Union',
+      formattedAddress: 'Main Street, Barangay Poblacion, Agoo, La Union',
     };
   }
 }
@@ -120,7 +160,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
     import('leaflet').then((L) => {
       if (!mapContainerRef.current || mapRef.current) return;
 
-      // Fix icon paths
+      // Fix icon paths for leaflet
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -300,7 +340,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
               <div>
                 <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Municipality / City</span>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                  {location.municipality || 'San Fernando'}
+                  {location.municipality || 'Agoo'}
                 </span>
               </div>
             </div>

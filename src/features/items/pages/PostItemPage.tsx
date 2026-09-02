@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, PackagePlus, ArrowLeft, MapPin, CheckCircle2 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
@@ -35,13 +35,13 @@ export default function PostItemPage() {
 
   // Structured location using Street, Barangay, and Municipality
   const [locationDetails, setLocationDetails] = useState<LocationDetails>({
-    street: user?.address || 'Rizal Avenue',
-    barangay: user?.barangay || 'Poblacion',
-    municipality: user?.municipality || 'San Fernando',
+    street: user?.address || 'San Nicolas',
+    barangay: user?.barangay || 'San Joaquin Norte',
+    municipality: user?.municipality || 'Agoo',
     province: user?.province || 'La Union',
-    formattedAddress: `${user?.address || 'Rizal Avenue'}, ${user?.barangay || 'Poblacion'}, ${user?.municipality || 'San Fernando'}, ${user?.province || 'La Union'}`,
-    lat: 16.6159,
-    lng: 120.3167,
+    formattedAddress: `${user?.address || 'San Nicolas'}, ${user?.barangay || 'San Joaquin Norte'}, ${user?.municipality || 'Agoo'}, ${user?.province || 'La Union'}`,
+    lat: 16.32,
+    lng: 120.36,
   });
 
   const [tempLocation, setTempLocation] = useState<LocationDetails | null>(null);
