@@ -280,7 +280,7 @@ export default function PostItemPage() {
         availability: 'Flexible',
       });
       toast.success('Exchange listing posted!');
-      navigate('/browse');
+      navigate('/exchanges');
     } catch { toast.error('Failed to post exchange.'); }
     finally { setIsLoading(false); }
   };
