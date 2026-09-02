@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { MapPin, Plus, Minus, Navigation, Info } from 'lucide-react';
+﻿import { useEffect, useRef, useState, useCallback } from 'react';
+import { Navigation, LocateFixed, MapPin, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 export interface LiveLocationPoint {
   lat: number;
@@ -12,294 +13,305 @@ interface LiveLocationMapProps {
   disabled?: boolean;
 }
 
-const DEFAULT_CENTER: LiveLocationPoint = { lat: 16.6159, lng: 120.3167 }; // San Fernando, La Union
-const DEFAULT_ZOOM = 14;
-const GOOGLE_MAPS_SCRIPT_ID = 'bayanihan-google-maps-script';
+const DEFAULT_CENTER: LiveLocationPoint = { lat: 16.6159, lng: 120.3167 };
 
-interface GoogleMapsWindow {
-  google?: {
-    maps?: {
-      Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMapInstance;
-      Marker: new (options: Record<string, unknown>) => GoogleMarkerInstance;
-    };
+type GpsStatus = 'idle' | 'loading' | 'success' | 'denied' | 'error';
+
+interface NominatimResult {
+  display_name: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    suburb?: string;
+    neighbourhood?: string;
+    county?: string;
+    state?: string;
   };
 }
 
-interface GoogleMapInstance {
-  setCenter: (center: LiveLocationPoint) => void;
-  setZoom: (zoom: number) => void;
-  addListener: (eventName: string, handler: (event: { latLng?: { lat: () => number; lng: () => number } }) => void) => void;
-}
-
-interface GoogleMarkerInstance {
-  setMap: (map: GoogleMapInstance | null) => void;
-  setPosition: (position: LiveLocationPoint) => void;
-}
-
-const googleMapsWindow = window as unknown as GoogleMapsWindow;
-
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (googleMapsWindow.google?.maps?.Map) return Promise.resolve();
-
-  const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID) as HTMLScriptElement | null;
-  if (existingScript) {
-    return new Promise((resolve, reject) => {
-      existingScript.addEventListener('load', () => resolve(), { once: true });
-      existingScript.addEventListener('error', () => reject(new Error('Google Maps could not be loaded.')), { once: true });
-    });
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lng=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en' } }
+    );
+    const data: NominatimResult = await res.json();
+    const a = data.address;
+    const parts = [
+      a?.neighbourhood ?? a?.suburb,
+      a?.village ?? a?.town ?? a?.city,
+      a?.state,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : data.display_name.split(',').slice(0, 2).join(',').trim();
+  } catch {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.id = GOOGLE_MAPS_SCRIPT_ID;
-    script.async = true;
-    script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Google Maps could not be loaded.'));
-    document.head.appendChild(script);
-  });
 }
 
 export default function LiveLocationMap({ location, onLocationChange, disabled = false }: LiveLocationMapProps) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const mapElementRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<GoogleMapInstance | null>(null);
-  const markerRef = useRef<GoogleMarkerInstance | null>(null);
-  const onLocationChangeRef = useRef(onLocationChange);
-  const disabledRef = useRef(disabled);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<import('leaflet').Map | null>(null);
+  const markerRef = useRef<import('leaflet').Marker | null>(null);
+  const onChangeRef = useRef(onLocationChange);
+  onChangeRef.current = onLocationChange;
 
-  // Fallback interactive map state
-  const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>('idle');
+  const [address, setAddress] = useState<string>('');
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
   const currentPoint = location ?? DEFAULT_CENTER;
 
+  // Update address when location changes
   useEffect(() => {
-    onLocationChangeRef.current = onLocationChange;
-  }, [onLocationChange]);
-
-  useEffect(() => {
-    disabledRef.current = disabled;
-  }, [disabled]);
-
-  // Handle Google Maps initialization if API key is provided
-  useEffect(() => {
-    if (!apiKey || !mapElementRef.current) return;
-
-    let cancelled = false;
-
-    loadGoogleMaps(apiKey)
-      .then(() => {
-        if (cancelled || !mapElementRef.current || !googleMapsWindow.google?.maps?.Map) return;
-
-        const maps = googleMapsWindow.google.maps;
-        const initialCenter = location ?? DEFAULT_CENTER;
-        const map = new maps.Map(mapElementRef.current, {
-          center: initialCenter,
-          zoom: location ? 16 : DEFAULT_ZOOM,
-          clickableIcons: false,
-          fullscreenControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-        });
-
-        mapRef.current = map;
-
-        map.addListener('click', (event) => {
-          if (disabledRef.current || !event.latLng || !onLocationChangeRef.current) return;
-          onLocationChangeRef.current({ lat: event.latLng.lat(), lng: event.latLng.lng() });
-        });
-
-        if (location) {
-          markerRef.current = new maps.Marker({
-            map,
-            position: location,
-            title: 'Live Location',
-          });
-        }
-      })
-      .catch(() => {
-        // Fallback gracefully to interactive canvas
-      });
-
-    return () => {
-      cancelled = true;
-      if (markerRef.current) markerRef.current.setMap(null);
-      markerRef.current = null;
-      mapRef.current = null;
-    };
-  }, [apiKey, location]);
-
-  useEffect(() => {
-    if (!location || !mapRef.current || !googleMapsWindow.google?.maps?.Marker) return;
-
-    mapRef.current.setCenter(location);
-    mapRef.current.setZoom(16);
-
-    if (!markerRef.current) {
-      markerRef.current = new googleMapsWindow.google.maps.Marker({
-        map: mapRef.current,
-        position: location,
-        title: 'Live Location',
-      });
-    } else {
-      markerRef.current.setPosition(location);
-    }
+    if (!location) return;
+    setIsGeocoding(true);
+    reverseGeocode(location.lat, location.lng).then((addr) => {
+      setAddress(addr);
+      setIsGeocoding(false);
+    });
   }, [location]);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (disabled || !onLocationChange) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
-    const y = (e.clientY - rect.top) / rect.height - 0.5; // -0.5 to 0.5
+  // Initialize Leaflet map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    // Adjust lat/lng based on click offset and zoom
-    const spread = 0.05 / Math.pow(2, zoomLevel - 12);
-    const newLat = currentPoint.lat - y * spread;
-    const newLng = currentPoint.lng + x * spread;
+    import('leaflet').then((L) => {
+      if (!mapContainerRef.current || mapRef.current) return;
 
-    onLocationChange({
-      lat: Number(newLat.toFixed(6)),
-      lng: Number(newLng.toFixed(6)),
-    });
-  };
+      // Fix default icon paths for bundlers
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      });
 
-  // If Google Maps API key is configured and active, render container for Google Maps
-  if (apiKey) {
-    return (
-      <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative' }}>
-        <div ref={mapElementRef} style={{ height: '22rem', width: '100%', backgroundColor: 'var(--color-neutral-100)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-700)', backgroundColor: '#fff', borderTop: '1px solid var(--color-neutral-200)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <MapPin style={{ width: '0.9rem', height: '0.9rem', color: 'var(--color-primary-600)' }} />
-            {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : 'Click anywhere on map to place pin'}
+      // Custom red pulsing icon like Instagram
+      const customIcon = L.divIcon({
+        className: '',
+        html: `
+          <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+            <div style="
+              position:absolute;
+              width:36px;height:36px;
+              border-radius:50%;
+              background:rgba(239,68,68,0.18);
+              animation:liveMapPulse 1.8s ease-out infinite;
+            "></div>
+            <div style="
+              position:absolute;
+              width:20px;height:20px;
+              border-radius:50%;
+              background:rgba(239,68,68,0.32);
+              animation:liveMapPulse 1.8s ease-out infinite 0.3s;
+            "></div>
+            <div style="
+              width:14px;height:14px;
+              border-radius:50%;
+              background:#ef4444;
+              border:2.5px solid #fff;
+              box-shadow:0 2px 8px rgba(0,0,0,0.35);
+              position:relative;z-index:2;
+            "></div>
           </div>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)' }}>Google Maps Live</span>
-        </div>
-      </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+
+      const map = L.map(mapContainerRef.current, {
+        center: [currentPoint.lat, currentPoint.lng],
+        zoom: location ? 16 : 14,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Attribution small
+      L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(map);
+
+      const marker = L.marker([currentPoint.lat, currentPoint.lng], {
+        icon: customIcon,
+        draggable: !disabled,
+      }).addTo(map);
+
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        onChangeRef.current?.({ lat: pos.lat, lng: pos.lng });
+      });
+
+      map.on('click', (e) => {
+        if (disabled) return;
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        onChangeRef.current?.({ lat, lng });
+      });
+
+      mapRef.current = map;
+      markerRef.current = marker;
+    });
+
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update marker when location changes externally
+  useEffect(() => {
+    if (!markerRef.current || !mapRef.current || !location) return;
+    markerRef.current.setLatLng([location.lat, location.lng]);
+    mapRef.current.setView([location.lat, location.lng], 16, { animate: true });
+  }, [location]);
+
+  const handleUseCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus('error');
+      return;
+    }
+    setGpsStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        onChangeRef.current?.(point);
+        setGpsStatus('success');
+        // Fly map to location
+        if (mapRef.current) {
+          mapRef.current.flyTo([point.lat, point.lng], 17, { animate: true, duration: 1.2 });
+        }
+        if (markerRef.current) {
+          markerRef.current.setLatLng([point.lat, point.lng]);
+        }
+      },
+      (err) => {
+        setGpsStatus(err.code === err.PERMISSION_DENIED ? 'denied' : 'error');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
-  }
+  }, []);
 
-  // Interactive Styled Map Canvas Fallback
   return (
-    <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-      {/* Interactive Map Canvas Container */}
-      <div
-        onClick={handleCanvasClick}
-        style={{
-          position: 'relative',
-          height: '22rem',
-          width: '100%',
-          backgroundColor: '#e5e7eb',
-          backgroundImage: `
-            radial-gradient(#94a3b8 1.5px, transparent 1.5px),
-            linear-gradient(to right, rgba(148, 163, 184, 0.15) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(148, 163, 184, 0.15) 1px, transparent 1px)
-          `,
-          backgroundSize: '24px 24px, 48px 48px, 48px 48px',
-          cursor: disabled ? 'not-allowed' : 'crosshair',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          userSelect: 'none',
-        }}
-      >
-        {/* Decorative Grid Roads / Geographic Features */}
-        <svg
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.35, pointerEvents: 'none' }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M0,60 Q150,120 300,80 T600,140 T900,100" fill="none" stroke="#60a5fa" strokeWidth="8" />
-          <path d="M120,0 Q180,150 140,300 T220,500" fill="none" stroke="#fbbf24" strokeWidth="6" />
-          <path d="M0,220 C200,200 400,260 700,210" fill="none" stroke="#cbd5e1" strokeWidth="12" />
-          <path d="M350,0 C380,180 320,320 360,500" fill="none" stroke="#cbd5e1" strokeWidth="10" />
-          <circle cx="50%" cy="50%" r="80" fill="rgba(34, 197, 94, 0.08)" stroke="rgba(34, 197, 94, 0.3)" strokeWidth="2" strokeDasharray="4 4" />
-        </svg>
+    <>
+      {/* Inject pulse keyframes once */}
+      <style>{`
+        @keyframes liveMapPulse {
+          0% { transform: scale(0.6); opacity: 0.9; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+      `}</style>
 
-        {/* Center Live Pin */}
-        <div
+      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        {/* Map */}
+        <div ref={mapContainerRef} style={{ height: '22rem', width: '100%', backgroundColor: '#e5e7eb' }} />
+
+        {/* Instagram-style "Use My Location" button — top right overlay */}
+        <button
+          type="button"
+          onClick={handleUseCurrentLocation}
+          disabled={gpsStatus === 'loading' || disabled}
           style={{
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -100%)',
+            top: '0.75rem',
+            right: '0.75rem',
+            zIndex: 1000,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            pointerEvents: 'none',
-            zIndex: 10,
-            transition: 'transform 120ms ease-out',
+            gap: '0.4rem',
+            padding: '0.5rem 0.875rem',
+            backgroundColor: gpsStatus === 'loading' ? 'rgba(255,255,255,0.85)' : '#ffffff',
+            border: '1px solid var(--color-neutral-200)',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            color: gpsStatus === 'denied' ? 'var(--color-danger)' : 'var(--color-primary-700)',
+            cursor: gpsStatus === 'loading' ? 'not-allowed' : 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.14)',
+            backdropFilter: 'blur(6px)',
+            transition: 'all 150ms',
           }}
         >
-          <div
-            style={{
-              padding: '0.25rem 0.5rem',
-              backgroundColor: 'var(--color-primary-800)',
-              color: '#fff',
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              borderRadius: '9999px',
-              boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
-              marginBottom: '0.25rem',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}
-          >
-            <Navigation style={{ width: '0.65rem', height: '0.65rem', transform: 'rotate(45deg)' }} />
-            {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : 'Tap to pin location'}
+          {gpsStatus === 'loading' ? (
+            <Loader2 style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 0.8s linear infinite' }} />
+          ) : gpsStatus === 'denied' ? (
+            <AlertCircle style={{ width: '0.875rem', height: '0.875rem' }} />
+          ) : (
+            <LocateFixed style={{ width: '0.875rem', height: '0.875rem' }} />
+          )}
+          {gpsStatus === 'loading' ? 'Locating…' : gpsStatus === 'denied' ? 'Location Denied' : 'Use My Location'}
+        </button>
+
+        {/* Hint overlay bottom-left */}
+        {!location && (
+          <div style={{
+            position: 'absolute',
+            bottom: '3.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            padding: '0.4rem 0.875rem',
+            backgroundColor: 'rgba(0,0,0,0.62)',
+            color: '#fff',
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            borderRadius: '9999px',
+            backdropFilter: 'blur(4px)',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}>
+            Tap on the map or drag the pin to set location
           </div>
+        )}
 
-          <div style={{ position: 'relative' }}>
-            <MapPin style={{ width: '2.5rem', height: '2.5rem', color: '#dc2626', fill: '#ef4444', filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.3))' }} />
+        {/* Footer address bar — Instagram style */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.65rem 0.875rem',
+          backgroundColor: '#fff',
+          borderTop: '1px solid var(--color-neutral-100)',
+          minHeight: '2.75rem',
+        }}>
+          {location ? (
+            <>
+              <CheckCircle2 style={{ width: '1rem', height: '1rem', color: '#16a34a', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {isGeocoding ? (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <Loader2 style={{ width: '0.75rem', height: '0.75rem', animation: 'spin 0.8s linear infinite' }} />
+                    Getting address…
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                    {address}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontFamily: 'monospace' }}>
+                  {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <MapPin style={{ width: '1rem', height: '1rem', color: 'var(--color-neutral-400)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>
+                {gpsStatus === 'loading' ? 'Detecting your location…' : 'No location selected yet'}
+              </span>
+            </>
+          )}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+            <Navigation style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-primary-500)' }} />
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--color-primary-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live</span>
           </div>
-          <div style={{ width: '0.75rem', height: '0.25rem', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: '9999px', marginTop: '-0.1rem', filter: 'blur(1px)' }} />
-        </div>
-
-        {/* Zoom Controls */}
-        <div style={{ position: 'absolute', right: '0.75rem', bottom: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', zIndex: 20 }}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setZoomLevel((z) => Math.min(18, z + 1));
-            }}
-            style={{ width: '2rem', height: '2rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#fff', border: '1px solid var(--color-neutral-300)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
-          >
-            <Plus style={{ width: '1rem', height: '1rem', color: 'var(--color-neutral-700)' }} />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setZoomLevel((z) => Math.max(10, z - 1));
-            }}
-            style={{ width: '2rem', height: '2rem', borderRadius: 'var(--radius-sm)', backgroundColor: '#fff', border: '1px solid var(--color-neutral-300)', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}
-          >
-            <Minus style={{ width: '1rem', height: '1rem', color: 'var(--color-neutral-700)' }} />
-          </button>
-        </div>
-
-        {/* Informational overlay badge */}
-        <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', padding: '0.35rem 0.65rem', borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)', border: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.6875rem', color: 'var(--color-neutral-600)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-          <Info style={{ width: '0.8rem', height: '0.8rem', color: 'var(--color-primary-600)' }} />
-          <span>Click anywhere to adjust coordinates</span>
         </div>
       </div>
-
-      {/* Footer info bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-700)', backgroundColor: '#fff', borderTop: '1px solid var(--color-neutral-200)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <MapPin style={{ width: '0.9rem', height: '0.9rem', color: 'var(--color-primary-600)' }} />
-          {location
-            ? `Pin selected at: ${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`
-            : 'Interactive map ready. Click to place your item pin.'}
-        </div>
-        <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)' }}>
-          Zoom: {zoomLevel}x
-        </span>
-      </div>
-    </div>
+    </>
   );
 }
