@@ -1,6 +1,6 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, PackagePlus, ArrowLeft, LocateFixed, MapPin, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, X, PackagePlus, ArrowLeft, MapPin, CheckCircle2 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -12,9 +12,7 @@ import { itemsService } from '@/services/items.service';
 import { useAuthStore } from '@/stores/authStore';
 import type { ItemCondition, ItemType } from '@/types';
 import toast from 'react-hot-toast';
-import LiveLocationMap, { type LiveLocationPoint } from '../components/LiveLocationMap';
-
-type LocationStatus = 'idle' | 'loading' | 'success' | 'denied' | 'unavailable' | 'timeout' | 'unsupported';
+import LiveLocationMap, { type LocationDetails } from '../components/LiveLocationMap';
 
 export default function PostItemPage() {
   const navigate = useNavigate();
@@ -33,10 +31,20 @@ export default function PostItemPage() {
 
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [liveLocation, setLiveLocation] = useState<LiveLocationPoint | null>(null);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
-  const [locationMessage, setLocationMessage] = useState('No location detected yet.');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
+  // Structured location using Street, Barangay, and Municipality
+  const [locationDetails, setLocationDetails] = useState<LocationDetails>({
+    street: user?.address || 'Rizal Avenue',
+    barangay: user?.barangay || 'Poblacion',
+    municipality: user?.municipality || 'San Fernando',
+    province: user?.province || 'La Union',
+    formattedAddress: `${user?.address || 'Rizal Avenue'}, ${user?.barangay || 'Poblacion'}, ${user?.municipality || 'San Fernando'}, ${user?.province || 'La Union'}`,
+    lat: 16.6159,
+    lng: 120.3167,
+  });
+
+  const [tempLocation, setTempLocation] = useState<LocationDetails | null>(null);
 
   const handleSimulateImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -51,72 +59,16 @@ export default function PostItemPage() {
   };
 
   const handleOpenLocationPicker = () => {
+    setTempLocation(locationDetails);
     setIsLocationModalOpen(true);
   };
 
   const handleConfirmLocation = () => {
-    if (!liveLocation) {
-      toast.error('Please choose a location first.');
-      return;
+    if (tempLocation) {
+      setLocationDetails(tempLocation);
     }
     setIsLocationModalOpen(false);
-    toast.success('Location selected for this item');
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationStatus('unsupported');
-      setLocationMessage('Your browser does not support location services.');
-      toast.error('Location services are not supported by this browser.');
-      return;
-    }
-
-    setLocationStatus('loading');
-    setLocationMessage('Requesting your current location…');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setLiveLocation(nextLocation);
-        setLocationStatus('success');
-        setLocationMessage('Current location detected successfully.');
-        toast.success('Current location detected');
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationStatus('denied');
-            setLocationMessage('Location permission was denied. Allow location access in your browser settings and try again.');
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationStatus('unavailable');
-            setLocationMessage('Your location could not be determined right now. Check your device location services and try again.');
-            break;
-          case error.TIMEOUT:
-            setLocationStatus('timeout');
-            setLocationMessage('The location request timed out. Please try again.');
-            break;
-          default:
-            setLocationStatus('unavailable');
-            setLocationMessage('We could not detect your location. Please try again.');
-        }
-        toast.error('Unable to detect your current location');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      }
-    );
-  };
-
-  const handleMapLocationChange = (location: LiveLocationPoint) => {
-    setLiveLocation(location);
-    setLocationStatus('success');
-    setLocationMessage('Location selected on the map.');
+    toast.success('Location updated from map');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,11 +91,12 @@ export default function PostItemPage() {
         status: 'available',
         ownerId: user?.id ?? 'user-1',
         location: {
-          address: liveLocation ? 'Current detected location' : (user?.address ?? 'Main St.'),
-          barangay: user?.barangay ?? 'Poblacion',
-          municipality: user?.municipality ?? 'San Fernando',
-          province: user?.province ?? 'La Union',
-          ...(liveLocation ? { lat: liveLocation.lat, lng: liveLocation.lng } : {}),
+          address: locationDetails.street || (user?.address ?? 'Main Street'),
+          barangay: locationDetails.barangay || (user?.barangay ?? 'Poblacion'),
+          municipality: locationDetails.municipality || (user?.municipality ?? 'San Fernando'),
+          province: locationDetails.province || (user?.province ?? 'La Union'),
+          lat: locationDetails.lat,
+          lng: locationDetails.lng,
         },
         pickupOptions: formData.pickupOptions.split(',').map((s) => s.trim()),
         availability: formData.availability,
@@ -157,9 +110,6 @@ export default function PostItemPage() {
       setIsLoading(false);
     }
   };
-
-  const isLocationSuccess = locationStatus === 'success';
-  const isLocationError = ['denied', 'unavailable', 'timeout', 'unsupported'].includes(locationStatus);
 
   return (
     <PageLayout>
@@ -179,6 +129,7 @@ export default function PostItemPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Photos Upload */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem' }}>
             <div>
               <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Upload Item Photos</h3>
@@ -209,6 +160,7 @@ export default function PostItemPage() {
             </div>
           </Card>
 
+          {/* Item Information */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
             <div style={{ borderBottom: '1px solid var(--color-neutral-100)', paddingBottom: '0.5rem' }}>
               <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>
@@ -281,15 +233,16 @@ export default function PostItemPage() {
             </div>
           </Card>
 
-          <Card style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
+          {/* Location Card — Street, Barangay, Municipality */}
+          <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <MapPin style={{ width: '1.1rem', height: '1.1rem', color: 'var(--color-primary-600)' }} />
-                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Live Location</h3>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Item Location</h3>
                 </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0' }}>
-                  Attach your current neighborhood location so nearby neighbors can easily find this listing.
+                  Provide the street, barangay, and municipality for local pickup and community discovery.
                 </p>
               </div>
 
@@ -297,74 +250,59 @@ export default function PostItemPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleUseCurrentLocation}
-                isLoading={locationStatus === 'loading'}
-                leftIcon={<LocateFixed style={{ width: '0.9rem', height: '0.9rem' }} />}
+                onClick={handleOpenLocationPicker}
+                leftIcon={<MapPin style={{ width: '0.875rem', height: '0.875rem' }} />}
               >
-                Use Current Location
+                Choose on Map
               </Button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenLocationPicker}
+            {/* Editable Street, Barangay, and Municipality Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <Input
+                label="Street / Landmark"
+                placeholder="e.g. Quezon Ave / Diversion Rd"
+                value={locationDetails.street}
+                onChange={(e) => setLocationDetails({ ...locationDetails, street: e.target.value })}
+                required
+              />
+              <Input
+                label="Barangay"
+                placeholder="e.g. Barangay Catbangen"
+                value={locationDetails.barangay}
+                onChange={(e) => setLocationDetails({ ...locationDetails, barangay: e.target.value })}
+                required
+              />
+              <Input
+                label="Municipality / City"
+                placeholder="e.g. San Fernando"
+                value={locationDetails.municipality}
+                onChange={(e) => setLocationDetails({ ...locationDetails, municipality: e.target.value })}
+                required
+              />
+            </div>
+
+            {/* Location Summary Box */}
+            <div
               style={{
-                width: '100%',
-                minHeight: '4.25rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '1rem',
+                gap: '0.75rem',
                 padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-neutral-50)',
                 border: '1px solid var(--color-neutral-200)',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: '#fff',
-                cursor: 'pointer',
-                textAlign: 'left',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '9999px', backgroundColor: isLocationSuccess ? '#f0fdf4' : 'var(--color-neutral-100)', display: 'grid', placeItems: 'center', flex: '0 0 auto' }}>
-                  <MapPin style={{ width: '1.1rem', height: '1.1rem', color: isLocationSuccess ? '#16a34a' : 'var(--color-neutral-600)' }} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>
-                    {liveLocation ? 'Location coordinates attached' : 'Select or view location on map'}
-                  </div>
-                  <div style={{ marginTop: '0.15rem', fontSize: '0.72rem', color: 'var(--color-neutral-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {liveLocation
-                      ? `Latitude: ${liveLocation.lat.toFixed(5)}, Longitude: ${liveLocation.lng.toFixed(5)}`
-                      : 'Tap to open interactive map or use current location'}
-                  </div>
-                </div>
+              <CheckCircle2 style={{ width: '1.125rem', height: '1.125rem', color: '#16a34a', flexShrink: 0 }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>
+                  Location for Listing
+                </span>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                  {locationDetails.street}, {locationDetails.barangay}, {locationDetails.municipality}, {locationDetails.province}
+                </span>
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary-700)', flex: '0 0 auto' }}>
-                {liveLocation ? 'Open Map / Change' : 'Open Map'}
-              </span>
-            </button>
-
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.5rem',
-                padding: '0.65rem 0.75rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: isLocationSuccess ? '#f0fdf4' : isLocationError ? '#fef2f2' : 'var(--color-neutral-50)',
-                color: isLocationSuccess ? '#166534' : isLocationError ? '#991b1b' : 'var(--color-neutral-600)',
-                fontSize: '0.75rem',
-              }}
-            >
-              {isLocationSuccess ? (
-                <CheckCircle2 style={{ width: '1rem', height: '1rem', flex: '0 0 auto' }} />
-              ) : isLocationError ? (
-                <AlertCircle style={{ width: '1rem', height: '1rem', flex: '0 0 auto' }} />
-              ) : (
-                <LocateFixed style={{ width: '1rem', height: '1rem', flex: '0 0 auto' }} />
-              )}
-              <span>{locationMessage}</span>
             </div>
           </Card>
 
@@ -385,6 +323,7 @@ export default function PostItemPage() {
         </form>
       </div>
 
+      {/* Location Picker Modal with Leaflet Map */}
       {isLocationModalOpen && (
         <div
           role="dialog"
@@ -405,44 +344,37 @@ export default function PostItemPage() {
           }}
         >
           <div style={{ width: 'min(52rem, 100%)', maxHeight: 'calc(100vh - 2rem)', backgroundColor: '#fff', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 24px 70px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '1rem 1.1rem', borderBottom: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            {/* Modal Header */}
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
               <div>
-                <h2 id="location-picker-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>Select Location</h2>
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.72rem', color: 'var(--color-neutral-500)' }}>Move the map, tap a point, or use your current location.</p>
+                <h2 id="location-picker-title" style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>Choose Location on Map</h2>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.72rem', color: 'var(--color-neutral-500)' }}>Tap the map or drag the pin to set your neighborhood Street, Barangay, and Municipality.</p>
               </div>
               <button type="button" onClick={() => setIsLocationModalOpen(false)} aria-label="Close location picker" style={{ width: '2rem', height: '2rem', border: 'none', borderRadius: '9999px', backgroundColor: 'var(--color-neutral-100)', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
                 <X style={{ width: '1rem', height: '1rem' }} />
               </button>
             </div>
 
-            <div style={{ position: 'relative', flex: 1, minHeight: '24rem' }}>
-              <LiveLocationMap location={liveLocation} onLocationChange={handleMapLocationChange} disabled={locationStatus === 'loading'} />
-
-              <div style={{ position: 'absolute', top: '0.8rem', right: '0.8rem' }}>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={handleUseCurrentLocation}
-                  isLoading={locationStatus === 'loading'}
-                  leftIcon={<LocateFixed style={{ width: '1rem', height: '1rem' }} />}
-                >
-                  Use Current Location
-                </Button>
-              </div>
+            {/* Map Canvas */}
+            <div style={{ position: 'relative', flex: 1, minHeight: '22rem' }}>
+              <LiveLocationMap
+                location={tempLocation}
+                onLocationChange={(details) => setTempLocation(details)}
+              />
             </div>
 
-            <div style={{ padding: '0.85rem 1rem', borderTop: '1px solid var(--color-neutral-200)', backgroundColor: '#fff' }}>
+            {/* Modal Footer */}
+            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--color-neutral-200)', backgroundColor: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-neutral-500)' }}>Selected location</div>
-                  <div style={{ marginTop: '0.2rem', fontSize: '0.78rem', color: 'var(--color-neutral-800)', fontFamily: liveLocation ? 'monospace' : 'inherit' }}>
-                    {liveLocation ? `${liveLocation.lat.toFixed(6)}, ${liveLocation.lng.toFixed(6)}` : 'No location selected'}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-neutral-500)' }}>Selected Location</div>
+                  <div style={{ marginTop: '0.15rem', fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tempLocation ? `${tempLocation.street}, ${tempLocation.barangay}, ${tempLocation.municipality}` : 'Tap map to select'}
                   </div>
-                  <div style={{ marginTop: '0.2rem', fontSize: '0.7rem', color: isLocationSuccess ? '#166534' : isLocationError ? '#991b1b' : 'var(--color-neutral-500)' }}>{locationMessage}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.6rem', marginLeft: 'auto' }}>
                   <Button type="button" variant="secondary" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
-                  <Button type="button" variant="primary" onClick={handleConfirmLocation} disabled={!liveLocation}>Confirm Location</Button>
+                  <Button type="button" variant="primary" onClick={handleConfirmLocation}>Apply Location</Button>
                 </div>
               </div>
             </div>
