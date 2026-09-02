@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+﻿import { useEffect, useRef, useState, useCallback } from 'react';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapPin, CheckCircle2, Loader2, Navigation, Search } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
 
 export interface LocationDetails {
   lat?: number;
@@ -102,7 +103,7 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
     const data = await res.json();
     const a = data.address || {};
 
-    // 1. Determine Municipality (with smart nearest town + postcode fallback)
+    // 1. Determine Municipality
     let municipality = a.town || a.city || a.municipality || a.county || '';
     if (!municipality || municipality.toLowerCase().includes('la union')) {
       municipality = findNearestMunicipality(lat, lng, a.postcode);
@@ -173,8 +174,8 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
 
 export default function LiveLocationMap({ location, onLocationChange, disabled = false }: LiveLocationMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<import('leaflet').Map | null>(null);
-  const markerRef = useRef<import('leaflet').Marker | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markerRef = useRef<maplibregl.Marker | null>(null);
   const onChangeRef = useRef(onLocationChange);
   onChangeRef.current = onLocationChange;
 
@@ -187,98 +188,109 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
   const initialLat = location?.lat ?? DEFAULT_COORDS.lat;
   const initialLng = location?.lng ?? DEFAULT_COORDS.lng;
 
-  // Initialize Leaflet Map
+  // Initialize MapLibre Map (mapcn component)
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    import('leaflet').then((L) => {
-      if (!mapContainerRef.current || mapRef.current) return;
+    // Custom shadcn-styled animated marker element
+    const el = document.createElement('div');
+    el.className = 'mapcn-marker';
+    el.style.width = '42px';
+    el.style.height = '42px';
+    el.style.position = 'relative';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.cursor = disabled ? 'default' : 'grab';
 
-      // Fix Leaflet icons
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      });
+    el.innerHTML = `
+      <div style="
+        position:absolute;
+        width:42px;height:42px;
+        border-radius:50%;
+        background:rgba(239,68,68,0.22);
+        animation:liveMapPulse 1.8s ease-out infinite;
+      "></div>
+      <div style="
+        position:absolute;
+        width:26px;height:26px;
+        border-radius:50%;
+        background:rgba(239,68,68,0.38);
+        animation:liveMapPulse 1.8s ease-out infinite 0.35s;
+      "></div>
+      <div style="
+        width:16px;height:16px;
+        border-radius:50%;
+        background:#ef4444;
+        border:2.5px solid #fff;
+        box-shadow:0 3px 12px rgba(0,0,0,0.4);
+        position:relative;z-index:2;
+      "></div>
+    `;
 
-      // Animated high-visibility Pin Icon
-      const customPinIcon = L.divIcon({
-        className: '',
-        html: `
-          <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
-            <div style="
-              position:absolute;
-              width:40px;height:40px;
-              border-radius:50%;
-              background:rgba(239,68,68,0.25);
-              animation:liveMapPulse 1.8s ease-out infinite;
-            "></div>
-            <div style="
-              position:absolute;
-              width:24px;height:24px;
-              border-radius:50%;
-              background:rgba(239,68,68,0.38);
-              animation:liveMapPulse 1.8s ease-out infinite 0.35s;
-            "></div>
-            <div style="
-              width:16px;height:16px;
-              border-radius:50%;
-              background:#ef4444;
-              border:2.5px solid #fff;
-              box-shadow:0 3px 12px rgba(0,0,0,0.4);
-              position:relative;z-index:2;
-            "></div>
-          </div>
-        `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-      });
-
-      const map = L.map(mapContainerRef.current, {
-        center: [initialLat, initialLng],
-        zoom: location ? 16 : 14,
-        zoomControl: true,
-        attributionControl: false,
-      });
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-      }).addTo(map);
-
-      L.control.attribution({ prefix: '© OpenStreetMap' }).addTo(map);
-
-      const marker = L.marker([initialLat, initialLng], {
-        icon: customPinIcon,
-        draggable: !disabled,
-      }).addTo(map);
-
-      const handleCoordsUpdate = async (lat: number, lng: number) => {
-        setIsResolving(true);
-        const details = await reverseGeocodeLocation(lat, lng);
-        setIsResolving(false);
-        onChangeRef.current?.(details);
-      };
-
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        handleCoordsUpdate(pos.lat, pos.lng);
-      });
-
-      map.on('click', (e) => {
-        if (disabled) return;
-        const { lat, lng } = e.latlng;
-        marker.setLatLng([lat, lng]);
-        handleCoordsUpdate(lat, lng);
-      });
-
-      mapRef.current = map;
-      markerRef.current = marker;
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'osm-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors | mapcn',
+          },
+        },
+        layers: [
+          {
+            id: 'osm-tiles-layer',
+            type: 'raster',
+            source: 'osm-tiles',
+            minzoom: 0,
+            maxzoom: 19,
+          },
+        ],
+      },
+      center: [initialLng, initialLat],
+      zoom: location ? 15 : 13.5,
     });
 
+    // Add navigation controls (Zoom in, Zoom out, Compass)
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+
+    // Create draggable marker
+    const marker = new maplibregl.Marker({
+      element: el,
+      draggable: !disabled,
+    })
+      .setLngLat([initialLng, initialLat])
+      .addTo(map);
+
+    const handleCoordsUpdate = async (lat: number, lng: number) => {
+      setIsResolving(true);
+      const details = await reverseGeocodeLocation(lat, lng);
+      setIsResolving(false);
+      onChangeRef.current?.(details);
+    };
+
+    marker.on('dragend', () => {
+      const pos = marker.getLngLat();
+      handleCoordsUpdate(pos.lat, pos.lng);
+    });
+
+    map.on('click', (e: maplibregl.MapMouseEvent) => {
+      if (disabled) return;
+      const { lng, lat } = e.lngLat;
+      marker.setLngLat([lng, lat]);
+      handleCoordsUpdate(lat, lng);
+    });
+
+    mapRef.current = map;
+    markerRef.current = marker;
+
     return () => {
-      mapRef.current?.remove();
+      map.remove();
       mapRef.current = null;
       markerRef.current = null;
     };
@@ -288,7 +300,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
   // Update marker position when coords change externally
   useEffect(() => {
     if (!markerRef.current || !mapRef.current || !location?.lat || !location?.lng) return;
-    markerRef.current.setLatLng([location.lat, location.lng]);
+    markerRef.current.setLngLat([location.lng, location.lat]);
   }, [location?.lat, location?.lng]);
 
   const handleSearch = useCallback(async (query: string) => {
@@ -321,8 +333,8 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
     const lng = parseFloat(item.lon);
 
     if (mapRef.current && markerRef.current) {
-      mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
-      markerRef.current.setLatLng([lat, lng]);
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 15.5, essential: true });
+      markerRef.current.setLngLat([lng, lat]);
     }
 
     setShowDropdown(false);
@@ -336,8 +348,8 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
 
   const handleTownChipClick = (town: { name: string; lat: number; lng: number }) => {
     if (mapRef.current && markerRef.current) {
-      mapRef.current.flyTo([town.lat, town.lng], 15, { animate: true, duration: 1.0 });
-      markerRef.current.setLatLng([town.lat, town.lng]);
+      mapRef.current.flyTo({ center: [town.lng, town.lat], zoom: 14.5, essential: true });
+      markerRef.current.setLngLat([town.lng, town.lat]);
     }
 
     setIsResolving(true);
@@ -350,16 +362,6 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
     });
   };
 
-  const handleFieldChange = (field: 'street' | 'barangay' | 'municipality', value: string) => {
-    if (!location) return;
-    const updated = {
-      ...location,
-      [field]: value,
-      formattedAddress: `${field === 'street' ? value : location.street}, ${field === 'barangay' ? value : location.barangay}, ${field === 'municipality' ? value : location.municipality}, ${location.province}`,
-    };
-    onChangeRef.current?.(updated);
-  };
-
   return (
     <>
       <style>{`
@@ -367,10 +369,14 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
           0% { transform: scale(0.6); opacity: 0.9; }
           100% { transform: scale(2.2); opacity: 0; }
         }
+        .maplibregl-ctrl-attrib {
+          font-size: 10px !important;
+          opacity: 0.85;
+        }
       `}</style>
 
       <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        {/* Search Bar on Map Header */}
+        {/* Search Bar & Town Chips (mapcn header) */}
         <div style={{
           position: 'relative',
           padding: '0.65rem 0.85rem',
@@ -484,8 +490,8 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
           )}
         </div>
 
-        {/* Leaflet Map Canvas */}
-        <div ref={mapContainerRef} style={{ height: '18rem', width: '100%', backgroundColor: '#e5e7eb' }} />
+        {/* MapLibre Container */}
+        <div ref={mapContainerRef} style={{ height: '20rem', width: '100%', backgroundColor: '#e5e7eb' }} />
 
         {/* Floating guidance banner */}
         <div style={{
@@ -512,7 +518,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
           <span>Tap anywhere on the map or drag the pin</span>
         </div>
 
-        {/* Footer address info with live editable fields */}
+        {/* Read-only Location Summary Badges */}
         <div style={{
           padding: '0.85rem 1rem',
           backgroundColor: '#ffffff',
@@ -530,7 +536,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
               <Navigation style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-primary-600)' }} />
-              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-primary-700)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Interactive Map</span>
+              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-primary-700)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>mapcn</span>
             </div>
           </div>
 
