@@ -18,24 +18,47 @@ interface LiveLocationMapProps {
   disabled?: boolean;
 }
 
-const LA_UNION_TOWNS: Array<{ name: string; lat: number; lng: number }> = [
-  { name: 'Agoo', lat: 16.3224, lng: 120.3670 },
-  { name: 'San Fernando', lat: 16.6159, lng: 120.3167 },
-  { name: 'San Juan', lat: 16.6749, lng: 120.3392 },
-  { name: 'Bauang', lat: 16.5333, lng: 120.3333 },
-  { name: 'Aringay', lat: 16.3983, lng: 120.3556 },
-  { name: 'Caba', lat: 16.4439, lng: 120.3444 },
-  { name: 'Rosario', lat: 16.2289, lng: 120.4878 },
-  { name: 'Santo Tomas', lat: 16.2861, lng: 120.3844 },
-  { name: 'Naguilian', lat: 16.5333, lng: 120.4000 },
-  { name: 'Tubao', lat: 16.3500, lng: 120.4167 },
-  { name: 'Bacnotan', lat: 16.7194, lng: 120.3528 },
-  { name: 'Balaoan', lat: 16.8222, lng: 120.4000 },
-  { name: 'Luna', lat: 16.8556, lng: 120.3750 },
-  { name: 'Bangar', lat: 16.8944, lng: 120.4250 },
+export const LA_UNION_TOWNS: Array<{ name: string; lat: number; lng: number; zip?: string }> = [
+  { name: 'Agoo', lat: 16.3224, lng: 120.3670, zip: '2504' },
+  { name: 'Aringay', lat: 16.3983, lng: 120.3556, zip: '2503' },
+  { name: 'Bacnotan', lat: 16.7194, lng: 120.3528, zip: '2516' },
+  { name: 'Bagulin', lat: 16.6000, lng: 120.4500, zip: '2512' },
+  { name: 'Balaoan', lat: 16.8222, lng: 120.4000, zip: '2518' },
+  { name: 'Bangar', lat: 16.8944, lng: 120.4250, zip: '2520' },
+  { name: 'Bauang', lat: 16.5333, lng: 120.3333, zip: '2501' },
+  { name: 'Burgos', lat: 16.5167, lng: 120.4500, zip: '2511' },
+  { name: 'Caba', lat: 16.4439, lng: 120.3444, zip: '2502' },
+  { name: 'Luna', lat: 16.8556, lng: 120.3750, zip: '2519' },
+  { name: 'Naguilian', lat: 16.5333, lng: 120.4000, zip: '2510' },
+  { name: 'Pugo', lat: 16.3167, lng: 120.4667, zip: '2508' },
+  { name: 'Rosario', lat: 16.2289, lng: 120.4878, zip: '2506' },
+  { name: 'San Fernando', lat: 16.6159, lng: 120.3167, zip: '2500' },
+  { name: 'San Gabriel', lat: 16.6833, lng: 120.4167, zip: '2513' },
+  { name: 'San Juan', lat: 16.6749, lng: 120.3392, zip: '2515' },
+  { name: 'Santo Tomas', lat: 16.2861, lng: 120.3844, zip: '2505' },
+  { name: 'Santol', lat: 16.7667, lng: 120.4500, zip: '2514' },
+  { name: 'Sudipen', lat: 16.9000, lng: 120.4667, zip: '2521' },
+  { name: 'Tubao', lat: 16.3500, lng: 120.4167, zip: '2507' },
 ];
 
 const DEFAULT_COORDS = { lat: 16.3224, lng: 120.3670 }; // Agoo, La Union
+
+export function findNearestMunicipality(lat: number, lng: number, postcode?: string): string {
+  if (postcode) {
+    const byZip = LA_UNION_TOWNS.find((t) => t.zip === postcode);
+    if (byZip) return byZip.name;
+  }
+  let closest = LA_UNION_TOWNS[0];
+  let minDistance = Infinity;
+  for (const t of LA_UNION_TOWNS) {
+    const d = Math.hypot(t.lat - lat, t.lng - lng);
+    if (d < minDistance) {
+      minDistance = d;
+      closest = t;
+    }
+  }
+  return closest.name;
+}
 
 interface NominatimSearchResult {
   display_name: string;
@@ -59,8 +82,7 @@ interface NominatimSearchResult {
     municipality?: string;
     county?: string;
     state?: string;
-    province?: string;
-    region?: string;
+    postcode?: string;
   };
 }
 
@@ -80,15 +102,13 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
     const data = await res.json();
     const a = data.address || {};
 
-    // Determine Municipality
-    const municipality =
-      a.town ||
-      a.city ||
-      a.municipality ||
-      a.county ||
-      'Agoo';
+    // 1. Determine Municipality (with smart nearest town + postcode fallback)
+    let municipality = a.town || a.city || a.municipality || a.county || '';
+    if (!municipality || municipality.toLowerCase().includes('la union')) {
+      municipality = findNearestMunicipality(lat, lng, a.postcode);
+    }
 
-    // Determine Barangay
+    // 2. Determine Barangay
     let rawBarangay =
       a.village ||
       a.quarter ||
@@ -99,7 +119,12 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
 
     if (!rawBarangay && data.display_name) {
       const parts = data.display_name.split(',').map((s: string) => s.trim());
-      if (parts.length > 2) rawBarangay = parts[0];
+      for (const p of parts) {
+        if (p.toLowerCase() !== municipality.toLowerCase() && !p.toLowerCase().includes('la union') && !p.toLowerCase().includes('philippines')) {
+          rawBarangay = p;
+          break;
+        }
+      }
     }
 
     const barangay = rawBarangay
@@ -108,7 +133,7 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
         : `Barangay ${rawBarangay}`
       : 'Barangay Poblacion';
 
-    // Determine Street / Landmark
+    // 3. Determine Street / Landmark
     const streetParts = [
       a.house_number,
       a.road || a.street || a.pedestrian || a.highway || a.residential || a.building,
@@ -119,7 +144,7 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
       (a.quarter && a.quarter !== a.village ? a.quarter : '') ||
       'Main Street';
 
-    const province = a.state || a.province || a.region || 'La Union';
+    const province = a.state || 'La Union';
     const formattedAddress = [street, barangay, municipality, province].filter(Boolean).join(', ');
 
     return {
@@ -133,14 +158,15 @@ export async function reverseGeocodeLocation(lat: number, lng: number): Promise<
     };
   } catch (err) {
     console.error('Reverse geocode error:', err);
+    const municipality = findNearestMunicipality(lat, lng);
     return {
       lat,
       lng,
       street: 'Main Street',
       barangay: 'Barangay Poblacion',
-      municipality: 'Agoo',
+      municipality,
       province: 'La Union',
-      formattedAddress: 'Main Street, Barangay Poblacion, Agoo, La Union',
+      formattedAddress: `Main Street, Barangay Poblacion, ${municipality}, La Union`,
     };
   }
 }
@@ -259,7 +285,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update marker position when coords change
+  // Update marker position when coords change externally
   useEffect(() => {
     if (!markerRef.current || !mapRef.current || !location?.lat || !location?.lng) return;
     markerRef.current.setLatLng([location.lat, location.lng]);
@@ -324,6 +350,16 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
     });
   };
 
+  const handleFieldChange = (field: 'street' | 'barangay' | 'municipality', value: string) => {
+    if (!location) return;
+    const updated = {
+      ...location,
+      [field]: value,
+      formattedAddress: `${field === 'street' ? value : location.street}, ${field === 'barangay' ? value : location.barangay}, ${field === 'municipality' ? value : location.municipality}, ${location.province}`,
+    };
+    onChangeRef.current?.(updated);
+  };
+
   return (
     <>
       <style>{`
@@ -358,7 +394,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
                 onFocus={() => {
                   if (searchQuery) setShowDropdown(true);
                 }}
-                placeholder="Search municipality, barangay, or street (e.g. Agoo, San Nicolas)..."
+                placeholder="Search municipality, barangay, or street (e.g. Agoo, San Nicolas, San Juan)..."
                 style={{
                   width: '100%',
                   padding: '0.5rem 0.75rem 0.5rem 2.2rem',
@@ -449,7 +485,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
         </div>
 
         {/* Leaflet Map Canvas */}
-        <div ref={mapContainerRef} style={{ height: '20rem', width: '100%', backgroundColor: '#e5e7eb' }} />
+        <div ref={mapContainerRef} style={{ height: '18rem', width: '100%', backgroundColor: '#e5e7eb' }} />
 
         {/* Floating guidance banner */}
         <div style={{
@@ -476,20 +512,20 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
           <span>Tap anywhere on the map or drag the pin</span>
         </div>
 
-        {/* Footer address info displaying Street, Barangay, and Municipality */}
+        {/* Footer address info with live editable fields */}
         <div style={{
           padding: '0.85rem 1rem',
           backgroundColor: '#ffffff',
           borderTop: '1px solid var(--color-neutral-200)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.35rem',
+          gap: '0.5rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <CheckCircle2 style={{ width: '1.1rem', height: '1.1rem', color: '#16a34a', flexShrink: 0 }} />
               <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
-                {isResolving ? 'Locating neighborhood…' : 'Selected Neighborhood Location'}
+                {isResolving ? 'Resolving neighborhood…' : 'Selected Location (Auto-detected & Editable)'}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
@@ -501,33 +537,71 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
           {isResolving ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', padding: '0.25rem 0' }}>
               <Loader2 style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 0.8s linear infinite' }} />
-              <span>Resolving accurate Street, Barangay, and Municipality…</span>
-            </div>
-          ) : location ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem', backgroundColor: 'var(--color-neutral-50)', padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
-              <div>
-                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Street / Landmark</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                  {location.street || 'Main Street'}
-                </span>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Barangay</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                  {location.barangay || 'Poblacion'}
-                </span>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>Municipality / City</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                  {location.municipality || 'Agoo'}
-                </span>
-              </div>
+              <span>Locating accurate Street, Barangay, and Municipality…</span>
             </div>
           ) : (
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>
-              Click anywhere on the map to set Street, Barangay, and Municipality.
-            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem' }}>
+              <div>
+                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+                  Street / Landmark
+                </label>
+                <input
+                  type="text"
+                  value={location?.street || ''}
+                  onChange={(e) => handleFieldChange('street', e.target.value)}
+                  placeholder="Street name"
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.55rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-neutral-300)',
+                    backgroundColor: '#fff',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+                  Barangay
+                </label>
+                <input
+                  type="text"
+                  value={location?.barangay || ''}
+                  onChange={(e) => handleFieldChange('barangay', e.target.value)}
+                  placeholder="Barangay name"
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.55rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-neutral-300)',
+                    backgroundColor: '#fff',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', display: 'block', marginBottom: '0.2rem' }}>
+                  Municipality / City
+                </label>
+                <input
+                  type="text"
+                  value={location?.municipality || ''}
+                  onChange={(e) => handleFieldChange('municipality', e.target.value)}
+                  placeholder="Municipality"
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.55rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-neutral-300)',
+                    backgroundColor: '#fff',
+                  }}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
