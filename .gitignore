@@ -39,3 +39,7 @@ env/
 *.njsproj
 *.sln
 *.sw?
+
+# Scratch & temporary testing files
+scratch/
+notes.txt

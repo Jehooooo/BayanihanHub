@@ -359,6 +359,34 @@ class VerificationService {
       return { success: true };
     }
   }
+
+  async requestRetry(verificationId: string, reason: string, instructions: string, adminId = 'admin-1'): Promise<any> {
+    try {
+      const res = await fetch(`/api/verification/applications/${verificationId}/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId, reason, retryInstructions: instructions }),
+      });
+      return await res.json();
+    } catch {
+      return { success: true };
+    }
+  }
+
+  async getApplications(status?: string): Promise<any> {
+    try {
+      const url = status
+        ? `/api/verification/applications?status=${encodeURIComponent(status)}`
+        : '/api/verification/applications';
+      const res = await fetch(url);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Could not fetch applications from backend:', e);
+    }
+    return null;
+  }
 }
 
 export const verificationService = new VerificationService();

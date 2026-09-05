@@ -68,8 +68,8 @@ class IdentityVerification(Base):
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     expiration_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     extra_info: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    document_reference: Mapped[str] = mapped_column(String(500), nullable=False)
-    facial_selfie_reference: Mapped[str] = mapped_column(String(500), nullable=False)
+    document_reference: Mapped[str] = mapped_column(Text, nullable=False)
+    facial_selfie_reference: Mapped[str] = mapped_column(Text, nullable=False)
     facial_verification_status_id: Mapped[int] = mapped_column(
         SmallInteger, ForeignKey("facial_verification_statuses.status_id"), nullable=False, default=1
     )

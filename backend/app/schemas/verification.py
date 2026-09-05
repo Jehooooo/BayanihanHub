@@ -73,6 +73,7 @@ class VerificationResponseDto(BaseModel):
 class AdminDecisionRequestDto(BaseModel):
     admin_id: Optional[str] = Field("admin-1", alias="adminId")
     reason: Optional[str] = None
+    retry_instructions: Optional[str] = Field(None, alias="retryInstructions")
 
     class Config:
         populate_by_name = True

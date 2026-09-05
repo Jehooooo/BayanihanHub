@@ -2,7 +2,7 @@
 // Bayanihan Hub — Admin Manage Approvals & Identity Verifications
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -42,8 +42,13 @@ export default function ManageApprovalsPage() {
     approveVerification,
     rejectVerification,
     requestRetry,
+    fetchVerifications,
     getPendingCount: getPendingVerifCount,
   } = useIdentityVerificationStore();
+
+  useEffect(() => {
+    fetchVerifications();
+  }, [fetchVerifications]);
 
   const [verifStatusFilter, setVerifStatusFilter] = useState<'all' | VerificationStatus>('PENDING');
   const [verifSearch, setVerifSearch] = useState('');

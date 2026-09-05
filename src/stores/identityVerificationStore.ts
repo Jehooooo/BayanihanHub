@@ -109,17 +109,19 @@ const initialVerifications: IdentityVerificationRecord[] = [
 
 interface IdentityVerificationState {
   verifications: IdentityVerificationRecord[];
+  isLoading: boolean;
+  fetchVerifications: () => Promise<void>;
   submitVerification: (
     data: Omit<IdentityVerificationRecord, 'id' | 'submittedAt' | 'maskedIdNumber'>
   ) => IdentityVerificationRecord;
-  approveVerification: (verificationId: string, reviewedBy?: string) => void;
-  rejectVerification: (verificationId: string, reason: string, reviewedBy?: string) => void;
+  approveVerification: (verificationId: string, reviewedBy?: string) => Promise<void>;
+  rejectVerification: (verificationId: string, reason: string, reviewedBy?: string) => Promise<void>;
   requestRetry: (
     verificationId: string,
     reason: string,
     instructions: string,
     reviewedBy?: string
-  ) => void;
+  ) => Promise<void>;
   getRecordByUserId: (userId: string) => IdentityVerificationRecord | undefined;
   getPendingCount: () => number;
 }
@@ -128,6 +130,24 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
   persist(
     (set, get) => ({
       verifications: initialVerifications,
+      isLoading: false,
+
+      fetchVerifications: async () => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch('/api/verification/applications');
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.applications) && data.applications.length > 0) {
+              set({ verifications: data.applications, isLoading: false });
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('[VerificationStore] Backend fetch failed, keeping current verifications:', err);
+        }
+        set({ isLoading: false });
+      },
 
       submitVerification: (data) => {
         const id = 'verif-' + generateId();
@@ -156,7 +176,7 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
         return newRecord;
       },
 
-      approveVerification: (verificationId: string, reviewedBy = 'Admin') => {
+      approveVerification: async (verificationId: string, reviewedBy = 'Admin') => {
         const target = get().verifications.find((v) => v.id === verificationId);
 
         set((state) => ({
@@ -195,10 +215,12 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
         }
 
         // Sync with backend asynchronously
-        verificationService.approveApplication(verificationId, reviewedBy).catch(() => {});
+        await verificationService.approveApplication(verificationId, reviewedBy).catch(() => {});
+        // Refresh from backend to get updated state
+        get().fetchVerifications().catch(() => {});
       },
 
-      rejectVerification: (verificationId: string, reason: string, reviewedBy = 'Admin') => {
+      rejectVerification: async (verificationId: string, reason: string, reviewedBy = 'Admin') => {
         const target = get().verifications.find((v) => v.id === verificationId);
 
         set((state) => ({
@@ -233,10 +255,12 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
         }
 
         // Sync with backend asynchronously
-        verificationService.rejectApplication(verificationId, reason, reviewedBy).catch(() => {});
+        await verificationService.rejectApplication(verificationId, reason, reviewedBy).catch(() => {});
+        // Refresh from backend to get updated state
+        get().fetchVerifications().catch(() => {});
       },
 
-      requestRetry: (verificationId: string, reason: string, instructions: string, reviewedBy = 'Admin') => {
+      requestRetry: async (verificationId: string, reason: string, instructions: string, reviewedBy = 'Admin') => {
         set((state) => ({
           verifications: state.verifications.map((v) => {
             if (v.id !== verificationId) return v;
@@ -249,6 +273,11 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
             };
           }),
         }));
+
+        // Sync with backend
+        await verificationService.requestRetry(verificationId, reason, instructions, reviewedBy).catch(() => {});
+        // Refresh from backend to get updated state
+        get().fetchVerifications().catch(() => {});
       },
 
       getRecordByUserId: (userId: string) => {
