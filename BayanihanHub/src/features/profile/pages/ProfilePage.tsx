@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { ShieldCheck, MapPin } from 'lucide-react';
+import { ShieldCheck, MapPin, Camera, Clock, AlertTriangle } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import Tabs from '@/components/ui/Tabs';
 import ItemCard from '@/features/items/components/ItemCard';
+import ProfilePictureUploadModal from '../components/ProfilePictureUploadModal';
 import { useAuthStore } from '@/stores/authStore';
 import { mockItems } from '@/data/mockData';
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('posted');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const myItems = mockItems.filter((i) => i.ownerId === user?.id || i.ownerId === 'user-1');
 
@@ -23,19 +26,61 @@ export default function ProfilePage() {
           <div style={{ height: '7rem', background: 'linear-gradient(to right, var(--color-primary-700), var(--color-primary-600), var(--color-primary-800))' }} />
 
           <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', position: 'relative', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyBetween: 'space-between', justifyContent: 'space-between', marginTop: '-3rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-neutral-100)', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '-3rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-neutral-100)', gap: '1rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
-                <Avatar
-                  src={user?.avatar}
-                  name={user?.fullName || 'Maria Santos'}
-                  size="xl"
-                  style={{ border: '4px solid #fff', boxShadow: 'var(--shadow-card)', flexShrink: 0 }}
-                />
+                <div style={{ position: 'relative', display: 'inline-flex', borderRadius: '9999px' }}>
+                  <Avatar
+                    src={user?.avatar || (user?.avatarStatus === 'pending' ? user?.pendingAvatar : undefined)}
+                    name={user?.fullName || 'Maria Santos'}
+                    size="xl"
+                    style={{ borderRadius: '9999px', flexShrink: 0 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadModalOpen(true)}
+                    title="Change Profile Picture"
+                    style={{
+                      position: 'absolute',
+                      bottom: '2px',
+                      right: '2px',
+                      width: '1.875rem',
+                      height: '1.875rem',
+                      borderRadius: '9999px',
+                      backgroundColor: 'var(--color-primary-600)',
+                      color: '#fff',
+                      border: '2px solid #fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                      transition: 'transform 120ms ease-in-out',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    <Camera style={{ width: '0.9rem', height: '0.9rem' }} />
+                  </button>
+                </div>
+
                 <div style={{ marginBottom: '0.25rem' }}>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                    {user?.fullName || 'Maria Santos'}
-                    <ShieldCheck style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-primary-600)' }} />
-                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                      {user?.fullName || 'Maria Santos'}
+                      <ShieldCheck style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-primary-600)' }} />
+                    </h1>
+
+                    {user?.avatarStatus === 'pending' && (
+                      <Badge variant="warning" size="sm">
+                        <Clock style={{ width: '0.75rem', height: '0.75rem', marginRight: '0.25rem' }} /> Photo Pending Approval
+                      </Badge>
+                    )}
+                    {user?.avatarStatus === 'rejected' && (
+                      <Badge variant="danger" size="sm">
+                        <AlertTriangle style={{ width: '0.75rem', height: '0.75rem', marginRight: '0.25rem' }} /> Photo Rejected
+                      </Badge>
+                    )}
+                  </div>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem', margin: 0 }}>
                     <MapPin style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)' }} /> {user?.barangay}, {user?.municipality}, {user?.province}
                   </p>
@@ -76,6 +121,36 @@ export default function ProfilePage() {
                 </Badge>
               ))}
             </div>
+
+            {/* Profile Photo Status Info Banner */}
+            {user?.avatarStatus === 'pending' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', border: '1px solid #fde68a', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: '#92400e' }}>
+                  <Clock style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+                  <span>Your profile photo was submitted and is pending administrator review.</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setIsUploadModalOpen(true)}>
+                  Update Submission
+                </Button>
+              </div>
+            )}
+
+            {user?.avatarStatus === 'rejected' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fef2f2', border: '1px solid #fecaca', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: '#991b1b' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                    <AlertTriangle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+                    <span>Your photo submission was declined by an administrator.</span>
+                  </div>
+                  {user.avatarRejectionReason && (
+                    <span style={{ fontSize: '0.75rem', color: '#b91c1c' }}>Reason: "{user.avatarRejectionReason}"</span>
+                  )}
+                </div>
+                <Button variant="danger" size="sm" onClick={() => setIsUploadModalOpen(true)}>
+                  Upload New Photo
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -113,6 +188,11 @@ export default function ProfilePage() {
             </Card>
           </div>
         )}
+
+        <ProfilePictureUploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+        />
       </div>
     </PageLayout>
   );

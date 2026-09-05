@@ -9,6 +9,7 @@ interface AvatarProps {
   className?: string;
   showStatus?: boolean;
   isOnline?: boolean;
+  style?: React.CSSProperties;
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -69,9 +70,10 @@ export default function Avatar({
   className = '',
   showStatus = false,
   isOnline = false,
+  style,
 }: AvatarProps) {
   return (
-    <div className={`relative inline-flex shrink-0 ${className}`}>
+    <div className={`relative inline-flex shrink-0 rounded-full ${className}`} style={{ borderRadius: '9999px', ...style }}>
       {src ? (
         <img
           src={src}

@@ -2,17 +2,20 @@ import { type ReactNode } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
+  ShieldCheck,
   Users,
   Package,
   HandHeart,
   AlertOctagon,
+  FolderTree,
   Star,
   Settings,
   ArrowLeft,
   LogOut,
-  FolderTree,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfilePictureStore } from '@/stores/profilePictureStore';
+import { useIdentityVerificationStore } from '@/stores/identityVerificationStore';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -20,6 +23,7 @@ interface AdminLayoutProps {
 
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/admin/approvals', icon: ShieldCheck, label: 'Identity & Approvals', badgeKey: 'approvals' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/posts', icon: Package, label: 'Posts' },
   { to: '/admin/requests', icon: HandHeart, label: 'Requests' },
@@ -31,6 +35,9 @@ const adminNavItems = [
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, logout } = useAuthStore();
+  const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
+  const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
+  const pendingApprovalsCount = getPendingPhotoCount() + getPendingVerifCount();
   const navigate = useNavigate();
 
   return (
@@ -51,7 +58,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }}
       >
         <div style={{ padding: '1.25rem', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
+          <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
             <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2rem', width: 'auto', objectFit: 'contain' }} />
             <div>
               <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#fff', display: 'block', margin: 0 }}>Bayanihan Hub</span>
@@ -69,6 +76,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               style={({ isActive }) => ({
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
                 gap: '0.75rem',
                 padding: '0.625rem 0.875rem',
                 borderRadius: 'var(--radius-md)',
@@ -80,8 +88,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 transition: 'all 150ms ease-in-out',
               })}
             >
-              <item.icon style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
-              <span>{item.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <item.icon style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+                <span>{item.label}</span>
+              </div>
+
+              {item.badgeKey === 'approvals' && pendingApprovalsCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#d97706',
+                    color: '#fff',
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '9999px',
+                  }}
+                >
+                  {pendingApprovalsCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

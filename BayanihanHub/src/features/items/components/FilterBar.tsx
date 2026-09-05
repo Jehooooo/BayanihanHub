@@ -1,3 +1,4 @@
+import { RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { categories } from '@/data/categories';
 import Select from '@/components/ui/Select';
 import SearchBar from '@/components/ui/SearchBar';
@@ -39,52 +40,119 @@ export default function FilterBar({ filters, onFilterChange, onReset }: FilterBa
     { value: 'popular', label: 'Most Popular' },
   ];
 
+  const hasActiveFilters = Boolean(
+    filters.query ||
+    filters.category ||
+    filters.condition ||
+    filters.distance ||
+    (filters.sortBy && filters.sortBy !== 'newest')
+  );
+
   return (
-    <div className="bg-white p-4 rounded-[var(--radius-lg)] border border-neutral-200 shadow-card space-y-4 mb-6">
+    <div
+      style={{
+        backgroundColor: '#ffffff',
+        padding: '1.25rem 1.5rem',
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--color-neutral-200)',
+        boxShadow: 'var(--shadow-card)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.25rem',
+        marginBottom: '1.5rem',
+      }}
+    >
       {/* Top Search Bar */}
-      <SearchBar
-        value={filters.query ?? ''}
-        onChange={(q) => onFilterChange({ ...filters, query: q })}
-        placeholder="Search items by title, category, or location..."
-      />
-
-      {/* Filter Dropdowns Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-neutral-100 items-end">
-        <Select
-          options={categoryOptions}
-          value={filters.category ?? ''}
-          onChange={(e) => onFilterChange({ ...filters, category: e.target.value })}
+      <div>
+        <SearchBar
+          value={filters.query ?? ''}
+          onChange={(q) => onFilterChange({ ...filters, query: q })}
+          placeholder="Search items by title, category, or location..."
         />
+      </div>
 
-        <Select
-          options={conditionOptions}
-          value={filters.condition ?? ''}
-          onChange={(e) => onFilterChange({ ...filters, condition: e.target.value as ItemCondition })}
-        />
+      {/* Filter Dropdowns & Reset Bar */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          paddingTop: '1rem',
+          borderTop: '1px solid var(--color-neutral-100)',
+        }}
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem', alignItems: 'center' }}>
+          <Select
+            options={categoryOptions}
+            value={filters.category ?? ''}
+            onChange={(e) => onFilterChange({ ...filters, category: e.target.value })}
+          />
 
-        <Select
-          options={distanceOptions}
-          value={filters.distance ? String(filters.distance) : ''}
-          onChange={(e) =>
-            onFilterChange({
-              ...filters,
-              distance: e.target.value ? Number(e.target.value) : undefined,
-            })
-          }
-        />
+          <Select
+            options={conditionOptions}
+            value={filters.condition ?? ''}
+            onChange={(e) => onFilterChange({ ...filters, condition: e.target.value as ItemCondition })}
+          />
 
-        <Select
-          options={sortOptions}
-          value={filters.sortBy ?? 'newest'}
-          onChange={(e) => onFilterChange({ ...filters, sortBy: e.target.value as any })}
-        />
+          <Select
+            options={distanceOptions}
+            value={filters.distance ? String(filters.distance) : ''}
+            onChange={(e) =>
+              onFilterChange({
+                ...filters,
+                distance: e.target.value ? Number(e.target.value) : undefined,
+              })
+            }
+          />
 
-        <div className="flex justify-end col-span-1 sm:col-span-2 lg:col-span-1">
+          <Select
+            options={sortOptions}
+            value={filters.sortBy ?? 'newest'}
+            onChange={(e) => onFilterChange({ ...filters, sortBy: e.target.value as any })}
+          />
+        </div>
+
+        {/* Action Row for Reset Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', fontWeight: 600 }}>
+            <SlidersHorizontal style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-neutral-400)' }} />
+            <span>Filter items by specific criteria</span>
+          </div>
+
           <button
+            type="button"
             onClick={onReset}
-            className="text-xs font-bold text-neutral-500 hover:text-neutral-900 underline cursor-pointer py-2 px-1"
+            disabled={!hasActiveFilters}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              padding: '0.45rem 0.875rem',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid',
+              borderColor: hasActiveFilters ? 'var(--color-neutral-300)' : 'transparent',
+              backgroundColor: hasActiveFilters ? 'var(--color-neutral-100)' : 'transparent',
+              color: hasActiveFilters ? 'var(--color-neutral-800)' : 'var(--color-neutral-400)',
+              cursor: hasActiveFilters ? 'pointer' : 'default',
+              transition: 'all 150ms',
+            }}
+            onMouseEnter={(e) => {
+              if (hasActiveFilters) {
+                e.currentTarget.style.backgroundColor = 'var(--color-neutral-200)';
+                e.currentTarget.style.color = 'var(--color-neutral-900)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (hasActiveFilters) {
+                e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
+                e.currentTarget.style.color = 'var(--color-neutral-800)';
+              }
+            }}
           >
-            Reset Filters
+            <RotateCcw style={{ width: '0.8125rem', height: '0.8125rem' }} />
+            <span>Reset Filters</span>
           </button>
         </div>
       </div>

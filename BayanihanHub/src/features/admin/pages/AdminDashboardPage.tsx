@@ -1,17 +1,24 @@
+import { Link } from 'react-router-dom';
 import AdminLayout from '@/components/layout/AdminLayout';
 import Card from '@/components/ui/Card';
 import { mockAdminStats } from '@/data/mockData';
+import { useProfilePictureStore } from '@/stores/profilePictureStore';
+import { useIdentityVerificationStore } from '@/stores/identityVerificationStore';
 
 export default function AdminDashboardPage() {
+  const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
+  const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
+  const pendingApprovals = getPendingPhotoCount() + getPendingVerifCount();
+
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Admin Dashboard</h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>System overview and community statistics</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>System Overview</h1>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>Bayanihan Hub live operational community stats and reports.</p>
         </div>
 
-        {/* 5 Stats Cards Grid */}
+        {/* Quick Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
           <Card padding="sm" style={{ backgroundColor: '#fff', border: '1px solid var(--color-neutral-200)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>Total Users</p>
@@ -28,10 +35,12 @@ export default function AdminDashboardPage() {
             <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0.25rem 0 0 0' }}>{mockAdminStats.totalRequests}</p>
           </Card>
 
-          <Card padding="sm" style={{ backgroundColor: '#fff', border: '1px solid var(--color-neutral-200)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>Pending Approvals</p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706', margin: '0.25rem 0 0 0' }}>{mockAdminStats.pendingApprovals}</p>
-          </Card>
+          <Link to="/admin/approvals" style={{ textDecoration: 'none' }}>
+            <Card padding="sm" style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', display: 'flex', flexDirection: 'column', justifyContent: 'center', cursor: 'pointer', transition: 'transform 120ms ease-in-out' }}>
+              <p style={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 700, margin: 0 }}>Pending Approvals</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706', margin: '0.25rem 0 0 0' }}>{pendingApprovals}</p>
+            </Card>
+          </Link>
 
           <Card padding="sm" style={{ backgroundColor: '#fff', border: '1px solid var(--color-neutral-200)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>Completed Exchanges</p>
@@ -44,15 +53,15 @@ export default function AdminDashboardPage() {
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}>
             <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '1rem', margin: 0 }}>Reports & Moderation Summary</h3>
             <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
-              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between', borderBottom: '1px solid var(--color-neutral-100)' }}>
+              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-neutral-100)' }}>
                 <span>Reported Posts</span>
                 <span style={{ fontWeight: 700, color: 'var(--color-neutral-900)' }}>23</span>
               </div>
-              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between', borderBottom: '1px solid var(--color-neutral-100)' }}>
+              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-neutral-100)' }}>
                 <span>Reported Users</span>
                 <span style={{ fontWeight: 700, color: 'var(--color-neutral-900)' }}>8</span>
               </div>
-              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between' }}>
+              <div style={{ padding: '0.75rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>Pending Post Approvals</span>
                 <span style={{ fontWeight: 700, color: '#d97706' }}>15</span>
               </div>

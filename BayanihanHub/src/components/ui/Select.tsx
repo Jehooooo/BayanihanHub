@@ -19,7 +19,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
+      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
         {label && (
           <label htmlFor={selectId} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>
             {label}

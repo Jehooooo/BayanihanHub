@@ -27,7 +27,7 @@ export default function ExchangeCard({ exchange, currentUserId, onStatusUpdate }
   return (
     <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
       {/* Header: Partner Info & Status Badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--color-neutral-100)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid var(--color-neutral-100)' }}>
         {partner && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Avatar src={partner.avatar} name={partner.fullName} size="sm" />

@@ -1,4 +1,4 @@
-import type { Item, SearchFilters, ItemCondition, ItemType } from '../types';
+import type { Item, SearchFilters } from '../types';
 import { mockItems, generateId, getUserById } from '../data/mockData';
 
 let itemsStore: Item[] = [...mockItems];

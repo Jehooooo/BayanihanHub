@@ -8,6 +8,7 @@ import {
   Bell,
   User,
   ArrowLeftRight,
+  Bookmark,
 } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
 
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/post', icon: PlusCircle, label: 'Post Item' },
   { to: '/requests', icon: HandHeart, label: 'Requests' },
   { to: '/exchanges', icon: ArrowLeftRight, label: 'Exchanges' },
+  { to: '/saved', icon: Bookmark, label: 'Saved Items' },
   { to: '/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
   { to: '/profile', icon: User, label: 'Profile' },

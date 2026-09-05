@@ -10,13 +10,6 @@ interface ModalProps {
   showClose?: boolean;
 }
 
-const sizeClasses = {
-  sm: 'max-w-md',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-};
-
 export default function Modal({
   isOpen,
   onClose,
@@ -48,7 +41,15 @@ export default function Modal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.5rem',
+      }}
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
@@ -57,39 +58,87 @@ export default function Modal({
       aria-label={title}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(4px)',
+        }}
+      />
 
       {/* Modal Content */}
       <div
-        className={`
-          relative w-full ${sizeClasses[size]}
-          bg-white rounded-[var(--radius-lg)] shadow-modal
-          animate-scale-in
-          max-h-[90vh] overflow-y-auto
-        `}
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: size === 'sm' ? '30rem' : size === 'md' ? '36rem' : size === 'lg' ? '48rem' : '56rem',
+          backgroundColor: '#ffffff',
+          borderRadius: '1.25rem',
+          boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '90vh',
+          overflow: 'hidden',
+          border: '1px solid var(--color-neutral-200)',
+          zIndex: 10,
+        }}
       >
         {/* Header */}
         {(title || showClose) && (
-          <div className="flex items-center justify-between p-5 pb-4 border-b border-neutral-100">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1.25rem 1.75rem',
+              borderBottom: '1px solid var(--color-neutral-100)',
+              backgroundColor: '#fafbfc',
+              flexShrink: 0,
+            }}
+          >
             {title && (
-              <h2 className="text-lg font-semibold text-neutral-900">
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0, letterSpacing: '-0.015em' }}>
                 {title}
               </h2>
             )}
             {showClose && (
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-[var(--radius-sm)] text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                style={{
+                  padding: '0.375rem',
+                  borderRadius: '0.5rem',
+                  color: 'var(--color-neutral-400)',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 150ms',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-neutral-200)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X style={{ width: '1.25rem', height: '1.25rem' }} />
               </button>
             )}
           </div>
         )}
 
         {/* Body */}
-        <div className="p-5">{children}</div>
+        <div
+          style={{
+            padding: '1.5rem 1.75rem 1.75rem 1.75rem',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

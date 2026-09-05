@@ -1,10 +1,31 @@
 import { useEffect } from 'react';
-import { Bell, Check, Trash2, MessageSquare, Heart, RefreshCw, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, Check, Trash2, AlertTriangle, CheckCircle2, MessageSquare, Repeat, Heart } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
+import type { NotificationType } from '@/types';
+
+function getNotificationIcon(type: NotificationType) {
+  switch (type) {
+    case 'profile_picture_approved':
+      return <CheckCircle2 className="w-4 h-4 text-primary-600" />;
+    case 'profile_picture_rejected':
+      return <AlertTriangle className="w-4 h-4 text-red-600" />;
+    case 'new_message':
+      return <MessageSquare className="w-4 h-4 text-blue-600" />;
+    case 'exchange_request':
+    case 'exchange_accepted':
+    case 'exchange_completed':
+      return <Repeat className="w-4 h-4 text-primary-600" />;
+    case 'item_favorited':
+      return <Heart className="w-4 h-4 text-pink-600" />;
+    default:
+      return <Bell className="w-4 h-4 text-primary-600" />;
+  }
+}
 
 export default function NotificationsPage() {
   const { user } = useAuthStore();
@@ -13,7 +34,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications(user?.id ?? 'user-1');
-  }, [user]);
+  }, [user, fetchNotifications]);
 
   return (
     <PageLayout>
@@ -22,7 +43,7 @@ export default function NotificationsPage() {
           <div className="space-y-1">
             <h1 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Notifications</h1>
             <p className="text-xs text-neutral-500">
-              Stay updated with your exchange requests, messages, and community activity.
+              Stay updated with your exchange requests, profile verifications, and community activity.
             </p>
           </div>
 
@@ -49,16 +70,42 @@ export default function NotificationsPage() {
                   !n.isRead ? 'bg-primary-50/40 border-primary-200/80 shadow-sm' : 'bg-white'
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <Bell className="w-4 h-4" />
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${
+                  n.type === 'profile_picture_rejected'
+                    ? 'bg-red-100 text-red-700'
+                    : n.type === 'profile_picture_approved'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'bg-primary-100 text-primary-700'
+                }`}>
+                  {getNotificationIcon(n.type)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-neutral-900">{n.title}</h4>
+                    {n.link ? (
+                      <Link
+                        to={n.link}
+                        onClick={() => markAsRead(n.id)}
+                        className="text-xs font-bold text-neutral-900 hover:text-primary-600 transition-colors"
+                      >
+                        {n.title}
+                      </Link>
+                    ) : (
+                      <h4 className="text-xs font-bold text-neutral-900">{n.title}</h4>
+                    )}
                     <span className="text-[10px] text-neutral-400 font-medium">Recently</span>
                   </div>
-                  <p className="text-xs text-neutral-600 mt-0.5 leading-relaxed">{n.message}</p>
+                  {n.link ? (
+                    <Link
+                      to={n.link}
+                      onClick={() => markAsRead(n.id)}
+                      className="text-xs text-neutral-600 hover:text-neutral-900 mt-0.5 leading-relaxed block no-underline"
+                    >
+                      {n.message}
+                    </Link>
+                  ) : (
+                    <p className="text-xs text-neutral-600 mt-0.5 leading-relaxed">{n.message}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">

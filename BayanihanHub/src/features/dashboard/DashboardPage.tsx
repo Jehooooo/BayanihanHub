@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PlusCircle,
-  Search,
   HandHeart,
   ArrowLeftRight,
   TrendingUp,
@@ -25,7 +24,6 @@ export default function DashboardPage() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([]);
   const [activeRequests, setActiveRequests] = useState<ItemRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -34,7 +32,6 @@ export default function DashboardPage() {
     ]).then(([items, reqs]) => {
       setRecentItems(items.slice(0, 6));
       setActiveRequests(reqs.slice(0, 3));
-      setIsLoading(false);
     });
   }, []);
 

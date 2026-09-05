@@ -3,12 +3,15 @@ import { Toaster } from 'react-hot-toast';
 import LandingPage from '@/features/landing/LandingPage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
+import PendingVerificationPage from '@/features/auth/pages/PendingVerificationPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
 import BrowsePage from '@/features/items/pages/BrowsePage';
 import ItemDetailsPage from '@/features/items/pages/ItemDetailsPage';
 import PostItemPage from '@/features/items/pages/PostItemPage';
 import RequestsPage from '@/features/requests/pages/RequestsPage';
+import SavedItemsPage from '@/features/items/pages/SavedItemsPage';
+import RequestItemPage from '@/features/items/pages/RequestItemPage';
 import ExchangePage from '@/features/exchange/pages/ExchangePage';
 import MessagingPage from '@/features/messaging/pages/MessagingPage';
 import NotificationsPage from '@/features/notifications/pages/NotificationsPage';
@@ -21,11 +24,21 @@ import ManagePostsPage from '@/features/admin/pages/ManagePostsPage';
 import ManageRequestsPage from '@/features/admin/pages/ManageRequestsPage';
 import ManageReportsPage from '@/features/admin/pages/ManageReportsPage';
 import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
+import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
 import { useAuthStore } from '@/stores/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore();
+  return isAuthenticated ? (
+    <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
+  ) : (
+    <>{children}</>
+  );
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -37,16 +50,70 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+function CatchAllRoute() {
+  const { isAuthenticated, user } = useAuthStore();
+  return (
+    <Navigate
+      to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/'}
+      replace
+    />
+  );
+}
+
 export default function App() {
   return (
     <Router>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        {/* Public Routes (redirect to dashboard if already authenticated) */}
+        <Route
+          path="/"
+          element={
+            <PublicOnlyRoute>
+              <LandingPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/pending-verification"
+          element={
+            <PublicOnlyRoute>
+              <PendingVerificationPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/registration-submitted"
+          element={
+            <PublicOnlyRoute>
+              <PendingVerificationPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPasswordPage />
+            </PublicOnlyRoute>
+          }
+        />
         <Route path="/browse" element={<BrowsePage />} />
         <Route path="/items/:id" element={<ItemDetailsPage />} />
 
@@ -64,6 +131,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PostItemPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/saved"
+          element={
+            <ProtectedRoute>
+              <SavedItemsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/request/:itemId"
+          element={
+            <ProtectedRoute>
+              <RequestItemPage />
             </ProtectedRoute>
           }
         />
@@ -181,9 +264,17 @@ export default function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/admin/approvals"
+          element={
+            <AdminRoute>
+              <ManageApprovalsPage />
+            </AdminRoute>
+          }
+        />
 
         {/* Catch-all fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<CatchAllRoute />} />
       </Routes>
     </Router>
   );

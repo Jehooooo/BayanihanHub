@@ -22,13 +22,13 @@ export default function MessagingPage() {
 
   useEffect(() => {
     fetchChats(currentUserId);
-  }, [currentUserId]);
+  }, [currentUserId, fetchChats]);
 
   useEffect(() => {
     if (chats.length > 0 && !activeChat) {
       setActiveChat(chats[0].id);
     }
-  }, [chats]);
+  }, [chats, activeChat, setActiveChat]);
 
   const partner = activeChat
     ? getOtherParticipant(activeChat, currentUserId)

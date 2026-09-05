@@ -5,16 +5,24 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "backend": "python backend/run.py",
+    "backend:venv": "backend\\.venv\\Scripts\\python.exe backend\\run.py",
+    "dev:all": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run backend:venv\" \"npm run dev\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
     "@hookform/resolvers": "^5.7.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.101.4",
+    "@types/google.maps": "^3.66.1",
+    "@types/leaflet": "^1.9.22",
     "date-fns": "^4.4.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.29.0",
+    "maplibre-gl": "^6.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-dropzone": "^20.0.0",
@@ -31,6 +39,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "concurrently": "^10.0.5",
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"

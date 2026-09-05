@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 interface Tab {
   id: string;
@@ -78,10 +78,5 @@ export default function Tabs({ tabs, activeTab, onChange, className = '' }: Tabs
       })}
     </div>
   );
-}
-
-export function useTabs(defaultTab: string) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
-  return { activeTab, setActiveTab };
 }
 

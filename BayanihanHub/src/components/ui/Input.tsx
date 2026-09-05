@@ -32,7 +32,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
+      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
         {label && (
           <label
             htmlFor={inputId}

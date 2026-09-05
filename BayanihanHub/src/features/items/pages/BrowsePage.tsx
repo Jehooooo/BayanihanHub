@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import FilterBar from '../components/FilterBar';
@@ -19,22 +19,39 @@ export default function BrowsePage() {
     query: initialQuery,
     sortBy: 'newest',
   });
+  const scrollRestored = useRef(false);
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await itemsService.getItems(filters);
       setItems(data);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load items.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     loadItems();
-  }, [filters]);
+  }, [loadItems]);
+
+  // Restore scroll position when returning from item details
+  useEffect(() => {
+    if (!isLoading && !scrollRestored.current) {
+      const saved = sessionStorage.getItem('browse-scroll-pos');
+      if (saved) {
+        const y = parseInt(saved, 10);
+        sessionStorage.removeItem('browse-scroll-pos');
+        scrollRestored.current = true;
+        // Small delay to let the grid render fully before scrolling
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: y, behavior: 'instant' });
+        });
+      }
+    }
+  }, [isLoading]);
 
   const handleFavoriteToggle = async (id: string) => {
     const isFav = await itemsService.toggleFavorite(id);

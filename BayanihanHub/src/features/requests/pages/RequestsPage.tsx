@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { HandHeart, Plus, Clock, MessageSquare } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
@@ -32,16 +32,16 @@ export default function RequestsPage() {
     neededBefore: '2026-08-20',
   });
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setIsLoading(true);
     const data = await requestsService.getRequests(activeTab);
     setRequests(data);
     setIsLoading(false);
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     loadRequests();
-  }, [activeTab]);
+  }, [loadRequests]);
 
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +76,7 @@ export default function RequestsPage() {
     <PageLayout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Community Requests</h1>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>

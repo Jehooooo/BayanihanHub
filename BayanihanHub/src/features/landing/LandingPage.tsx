@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   Heart,
   ArrowRight,
@@ -10,8 +10,15 @@ import {
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function LandingPage() {
+  const { isAuthenticated, user } = useAuthStore();
+
+  if (isAuthenticated) {
+    return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-neutral-50)' }}>
       <Header />
@@ -37,9 +44,9 @@ export default function LandingPage() {
               </p>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingTop: '0.5rem' }}>
-                <Link to="/register" style={{ textDecoration: 'none' }}>
+                <Link to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/register'} style={{ textDecoration: 'none' }}>
                   <Button variant="primary" size="lg" className="font-bold px-8 shadow-button" rightIcon={<ArrowRight style={{ width: '1.25rem', height: '1.25rem' }} />}>
-                    Join the Community
+                    {isAuthenticated ? 'Go to Dashboard' : 'Join the Community'}
                   </Button>
                 </Link>
                 <Link to="/browse" style={{ textDecoration: 'none' }}>
@@ -138,7 +145,7 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
             <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#f0fdf4', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyCenter: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#f0fdf4', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                   <Heart style={{ width: '1.5rem', height: '1.5rem' }} />
                 </div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.5rem' }}>Item Donations</h3>
@@ -225,9 +232,9 @@ export default function LandingPage() {
             Join thousands of neighbors fostering sustainability, trust, and mutual aid across the Philippines.
           </p>
           <div style={{ paddingTop: '0.5rem' }}>
-            <Link to="/register" style={{ textDecoration: 'none' }}>
+            <Link to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/register'} style={{ textDecoration: 'none' }}>
               <Button variant="secondary" size="lg" className="font-bold px-8 shadow-button">
-                Get Started Now
+                {isAuthenticated ? 'Go to Dashboard' : 'Get Started Now'}
               </Button>
             </Link>
           </div>

@@ -15,7 +15,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const currentLength = typeof value === 'string' ? value.length : 0;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
+      <div className={className} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }}>
         {label && (
           <label htmlFor={textareaId} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>
             {label}

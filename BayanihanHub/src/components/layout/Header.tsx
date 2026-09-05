@@ -2,32 +2,24 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
-  Menu,
-  X,
   LogOut,
   User,
   Settings,
   Shield,
   ChevronDown,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import Avatar from '@/components/ui/Avatar';
-import SearchBar from '@/components/ui/SearchBar';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
 
-  const handleSearch = (value: string) => {
-    if (value.trim()) {
-      navigate(`/browse?q=${encodeURIComponent(value.trim())}`);
-    }
-  };
+  const homePath = isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/';
 
   return (
     <header
@@ -45,7 +37,7 @@ export default function Header() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', gap: '1rem' }}>
           {/* Brand Logo */}
           <Link
-            to="/"
+            to={homePath}
             style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0, textDecoration: 'none' }}
           >
             <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2.25rem', width: 'auto', objectFit: 'contain' }} />
@@ -54,23 +46,32 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Search — Desktop */}
-          {isAuthenticated && (
-            <div style={{ flex: 1, maxWidth: '28rem', margin: '0 1rem' }}>
-              <SearchBar
-                value={searchValue}
-                onChange={setSearchValue}
-                onSearch={handleSearch}
-                placeholder="Search items, requests..."
-                size="sm"
-              />
-            </div>
-          )}
-
           {/* Right Navigation & Profile */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {isAuthenticated ? (
               <>
+                {/* Quick Dashboard link */}
+                <Link
+                  to={user?.role === 'admin' ? '/admin' : '/dashboard'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.375rem 0.75rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: 'var(--color-primary-700)',
+                    backgroundColor: 'var(--color-primary-50)',
+                    borderRadius: 'var(--radius-md)',
+                    textDecoration: 'none',
+                    border: '1px solid var(--color-primary-200)',
+                    transition: 'all 150ms',
+                  }}
+                >
+                  <LayoutDashboard style={{ width: '0.9375rem', height: '0.9375rem' }} />
+                  <span>Dashboard</span>
+                </Link>
+
                 {/* Notifications Link */}
                 <Link
                   to="/notifications"
@@ -141,6 +142,14 @@ export default function Header() {
                         </div>
                         <div style={{ padding: '0.25rem 0' }}>
                           <Link
+                            to={user?.role === 'admin' ? '/admin' : '/dashboard'}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-700)', textDecoration: 'none' }}
+                            onClick={() => setProfileMenuOpen(false)}
+                          >
+                            <LayoutDashboard style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
+                            {user?.role === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+                          </Link>
+                          <Link
                             to="/profile"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-neutral-700)', textDecoration: 'none' }}
                             onClick={() => setProfileMenuOpen(false)}
@@ -201,35 +210,8 @@ export default function Header() {
                 </Link>
               </div>
             )}
-
-            {/* Mobile Menu Button */}
-            {isAuthenticated && (
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                style={{ padding: '0.5rem', color: 'var(--color-neutral-600)', background: 'none', border: 'none', cursor: 'pointer' }}
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? <X style={{ width: '1.25rem', height: '1.25rem' }} /> : <Menu style={{ width: '1.25rem', height: '1.25rem' }} />}
-              </button>
-            )}
           </div>
         </div>
-
-        {/* Mobile Search Input */}
-        {isAuthenticated && mobileMenuOpen && (
-          <div style={{ paddingBottom: '0.75rem', borderTop: '1px solid var(--color-neutral-100)', paddingTop: '0.75rem' }}>
-            <SearchBar
-              value={searchValue}
-              onChange={setSearchValue}
-              onSearch={(v) => {
-                handleSearch(v);
-                setMobileMenuOpen(false);
-              }}
-              placeholder="Search items..."
-              size="sm"
-            />
-          </div>
-        )}
       </div>
     </header>
   );

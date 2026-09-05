@@ -4,7 +4,6 @@ import {
   Heart,
   Share2,
   MapPin,
-  Clock,
   ArrowLeftRight,
   MessageCircle,
   ShieldCheck,
@@ -17,13 +16,13 @@ import ImageGallery from '../components/ImageGallery';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import { itemsService } from '@/services/items.service';
 import { exchangeService } from '@/services/exchange.service';
 import { useAuthStore } from '@/stores/authStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useSavedItemsStore } from '@/stores/savedItemsStore';
 import type { Item } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -32,6 +31,7 @@ export default function ItemDetailsPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const { createChat } = useChatStore();
+  const { saveItem, unsaveItem, isSaved } = useSavedItemsStore();
 
   const [item, setItem] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,45 +119,103 @@ export default function ItemDetailsPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
-        {/* Navigation Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 inline-flex items-center gap-1.5 cursor-pointer py-1 transition-colors"
+      <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Navigation Back Button — sticky so always visible */}
+        <div
+          style={{
+            position: 'sticky',
+            top: '4rem',
+            zIndex: 10,
+            backgroundColor: 'var(--color-neutral-50)',
+            paddingTop: '0.5rem',
+            paddingBottom: '0.5rem',
+            marginTop: '-0.5rem',
+          }}
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Browse
-        </button>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--color-neutral-600)',
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--color-neutral-200)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.5rem 0.875rem',
+              cursor: 'pointer',
+              transition: 'all 150ms',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
+              e.currentTarget.style.color = 'var(--color-primary-700)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.color = 'var(--color-neutral-600)';
+            }}
+          >
+            <ArrowLeft style={{ width: '1rem', height: '1rem' }} /> Back to Browse
+          </button>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2rem', alignItems: 'start' }}>
           {/* Left Column: Image Gallery & Detailed Description */}
-          <div className="lg:col-span-7 space-y-6">
+          <div style={{ gridColumn: 'span 7 / span 7', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <ImageGallery images={item.images} title={item.title} />
 
-            <div className="bg-white p-6 rounded-[var(--radius-lg)] border border-neutral-200 shadow-card space-y-5">
-              <h3 className="text-base font-bold text-neutral-900 border-b border-neutral-100 pb-3">
-                Item Description
-              </h3>
-              <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                padding: '1.75rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--color-neutral-200)',
+                boxShadow: 'var(--shadow-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.875rem', borderBottom: '1px solid var(--color-neutral-100)' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>
+                  Item Description
+                </h3>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-400)', backgroundColor: 'var(--color-neutral-100)', padding: '0.2rem 0.6rem', borderRadius: '9999px' }}>
+                  ID: #{item.id}
+                </span>
+              </div>
+
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-700)', lineHeight: '1.7', margin: 0, whiteSpace: 'pre-line' }}>
                 {item.description}
               </p>
 
               {/* Pickup & Availability Grid */}
-              <div className="pt-4 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="flex items-start gap-2.5 p-3 rounded-[var(--radius-md)] bg-neutral-50 border border-neutral-100">
-                  <Truck className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-neutral-400 block font-medium">Pickup Options</span>
-                    <span className="font-semibold text-neutral-800">
+              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
+                  <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Truck style={{ width: '1.25rem', height: '1.25rem' }} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>Pickup Options</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-800)', display: 'block', marginTop: '0.125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.pickupOptions.join(', ')}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5 p-3 rounded-[var(--radius-md)] bg-neutral-50 border border-neutral-100">
-                  <Calendar className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-neutral-400 block font-medium">Availability</span>
-                    <span className="font-semibold text-neutral-800">{item.availability}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
+                  <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Calendar style={{ width: '1.25rem', height: '1.25rem' }} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>Availability</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-800)', display: 'block', marginTop: '0.125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.availability}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -165,63 +223,99 @@ export default function ItemDetailsPage() {
           </div>
 
           {/* Right Column: Title, Badges, Owner Card, CTAs */}
-          <div className="lg:col-span-5 space-y-6 sticky top-20">
-            <div className="bg-white p-6 rounded-[var(--radius-lg)] border border-neutral-200 shadow-card space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant={item.type === 'donation' ? 'success' : 'primary'}>
+          <div style={{ gridColumn: 'span 5 / span 5', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '5rem' }}>
+            <div
+              style={{
+                backgroundColor: '#ffffff',
+                padding: '1.75rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--color-neutral-200)',
+                boxShadow: 'var(--shadow-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm">
                     {item.type === 'donation' ? 'Donation' : 'For Exchange'}
                   </Badge>
-                  <Badge variant="default">{item.condition}</Badge>
+                  <Badge variant="default" size="sm">{item.condition}</Badge>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-neutral-900 leading-tight">
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: '1.2', margin: 0, letterSpacing: '-0.025em' }}>
                   {item.title}
                 </h1>
-                <p className="text-xs text-neutral-500 flex items-center gap-1.5 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-primary-600" />
-                  {item.location.barangay}, {item.location.municipality} • {item.distance} km away
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0, fontWeight: 500 }}>
+                  <MapPin style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)' }} />
+                  <span>{item.location.barangay}, {item.location.municipality} • {item.distance} km away</span>
                 </p>
               </div>
 
               {/* Owner Profile Card */}
               {item.owner && (
-                <div className="p-4 rounded-[var(--radius-md)] bg-neutral-50 border border-neutral-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div
+                  style={{
+                    padding: '1rem 1.25rem',
+                    borderRadius: 'var(--radius-lg)',
+                    backgroundColor: 'var(--color-neutral-50)',
+                    border: '1px solid var(--color-neutral-200)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
                     <Avatar src={item.owner.avatar} name={item.owner.fullName} size="md" />
-                    <div>
-                      <h4 className="text-xs font-bold text-neutral-900 flex items-center gap-1">
-                        {item.owner.fullName}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <h4 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.owner.fullName}</span>
                         {item.owner.isTrusted && (
-                          <ShieldCheck className="w-4 h-4 text-primary-600 fill-primary-100" />
+                          <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
                         )}
                       </h4>
-                      <p className="text-[11px] text-neutral-500 font-medium">
+                      <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.6875rem', color: 'var(--color-neutral-500)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         ★ {item.owner.rating.toFixed(1)} • {item.owner.totalExchanges} exchanges
                       </p>
                     </div>
                   </div>
                   <Link
                     to={`/profile/${item.owner.id}`}
-                    className="text-xs font-bold text-primary-600 hover:text-primary-700"
+                    style={{
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      color: 'var(--color-primary-700)',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid var(--color-neutral-200)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.375rem 0.75rem',
+                      textDecoration: 'none',
+                      flexShrink: 0,
+                      transition: 'background-color 150ms',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-primary-50)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                   >
-                    View
+                    View Profile
                   </Link>
                 </div>
               )}
 
               {/* Action Buttons */}
               {!isOwner && (
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {item.type === 'exchange' ? (
                     <Button
                       variant="primary"
                       size="lg"
                       fullWidth
+                      style={{ fontWeight: 800, fontSize: '0.875rem', height: '3rem' }}
                       onClick={() => {
                         if (!isAuthenticated) navigate('/login');
                         else setExchangeModalOpen(true);
                       }}
-                      leftIcon={<ArrowLeftRight className="w-4 h-4" />}
+                      leftIcon={<ArrowLeftRight style={{ width: '1.125rem', height: '1.125rem' }} />}
                     >
                       Propose Exchange
                     </Button>
@@ -230,8 +324,15 @@ export default function ItemDetailsPage() {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      onClick={handleMessageOwner}
-                      leftIcon={<MessageCircle className="w-4 h-4" />}
+                      style={{ fontWeight: 800, fontSize: '0.875rem', height: '3rem' }}
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          navigate('/login');
+                        } else {
+                          navigate(`/request/${item.id}`);
+                        }
+                      }}
+                      leftIcon={<MessageCircle style={{ width: '1.125rem', height: '1.125rem' }} />}
                     >
                       Request Donation
                     </Button>
@@ -239,35 +340,78 @@ export default function ItemDetailsPage() {
 
                   <Button
                     variant="outline"
-                    size="md"
+                    size="lg"
                     fullWidth
+                    style={{ fontWeight: 700, fontSize: '0.875rem', height: '3rem' }}
                     onClick={handleMessageOwner}
-                    leftIcon={<MessageCircle className="w-4 h-4" />}
+                    leftIcon={<MessageCircle style={{ width: '1.125rem', height: '1.125rem' }} />}
                   >
                     Message Owner
                   </Button>
                 </div>
               )}
 
-              {/* Share & Save Item Row */}
-              <div className="flex items-center justify-between pt-4 border-t border-neutral-100 text-xs text-neutral-500 font-semibold">
+              {/* Share & Save Row */}
+              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-500)' }}>
                 <button
+                  type="button"
                   onClick={() => {
-                    itemsService.toggleFavorite(item.id);
-                    toast.success('Saved to favorites');
+                    if (!isAuthenticated) {
+                      toast.error('Please log in to save items.');
+                      navigate('/login');
+                      return;
+                    }
+                    if (isSaved(item.id)) {
+                      unsaveItem(item.id);
+                      toast.success('Removed from saved items');
+                    } else {
+                      saveItem(item.id);
+                      toast.success('Saved! View in Saved Items.');
+                    }
                   }}
-                  className="flex items-center gap-1.5 hover:text-danger cursor-pointer transition-colors"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    background: 'none',
+                    border: 'none',
+                    color: isSaved(item.id) ? 'var(--color-danger)' : 'var(--color-neutral-600)',
+                    cursor: 'pointer',
+                    padding: '0.375rem 0.5rem',
+                    borderRadius: 'var(--radius-sm)',
+                    transition: 'all 150ms',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                  }}
                 >
-                  <Heart className="w-4 h-4 text-neutral-400 hover:text-danger" /> Save Item
+                  <Heart
+                    style={{
+                      width: '1rem',
+                      height: '1rem',
+                      fill: isSaved(item.id) ? 'var(--color-danger)' : 'none',
+                      color: isSaved(item.id) ? 'var(--color-danger)' : 'var(--color-neutral-600)',
+                    }}
+                  />
+                  <span>{isSaved(item.id) ? 'Saved ✓' : 'Save Item'}</span>
                 </button>
+
                 <button
+                  type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                     toast.success('Item link copied!');
                   }}
-                  className="flex items-center gap-1.5 hover:text-neutral-900 cursor-pointer transition-colors"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'none', border: 'none', color: 'var(--color-neutral-600)', cursor: 'pointer', padding: '0.375rem 0.5rem', borderRadius: 'var(--radius-sm)', transition: 'all 150ms' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
+                    e.currentTarget.style.color = 'var(--color-neutral-900)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--color-neutral-600)';
+                  }}
                 >
-                  <Share2 className="w-4 h-4 text-neutral-400" /> Share Link
+                  <Share2 style={{ width: '1rem', height: '1rem' }} /> <span>Share Link</span>
                 </button>
               </div>
             </div>
