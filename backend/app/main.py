@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from app.routers import verification
+from app.db import get_db
 import app.config as config
 
 app = FastAPI(
@@ -29,6 +32,22 @@ async def health_check():
         "service": "BayanihanHub-Python-Backend",
         "version": "1.0.0",
     }
+
+
+@app.get("/db-health")
+def db_health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "connected",
+            "engine": "MySQL 8.4 (Laragon)",
+            "database": "bayanihan_hub",
+        }
+    except Exception as exc:
+        return {
+            "status": "disconnected",
+            "error": str(exc),
+        }
 
 
 if __name__ == "__main__":
