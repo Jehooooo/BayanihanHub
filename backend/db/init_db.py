@@ -25,7 +25,7 @@ def get_db_url():
 
 def read_sql_file(file_path: Path) -> list[str]:
     """Read and split an SQL file into individual statements."""
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="utf-8-sig") as f:
         content = f.read()
 
     # Remove full-line comments and split by semicolon

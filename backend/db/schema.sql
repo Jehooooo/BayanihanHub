@@ -1,5 +1,5 @@
 -- ========================================================================
--- Bayanihan Hub — Complete Normalized Relational Database Architecture (3NF)
+-- Bayanihan Hub â€” Complete Normalized Relational Database Architecture (3NF)
 -- Engine: MySQL (InnoDB)
 -- Character Set: utf8mb4 (utf8mb4_unicode_ci)
 -- Notice: AI Assistant tables are strictly excluded per project requirements.
@@ -59,7 +59,7 @@ DROP TABLE IF EXISTS `audit_actions`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- 1. Account Statuses (Lookup)
-CREATE TABLE `account_statuses` (
+CREATE TABLE IF NOT EXISTS `account_statuses` (
     `account_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_code` VARCHAR(32) NOT NULL,
     `display_name` VARCHAR(64) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE `account_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. Roles (Lookup)
-CREATE TABLE `roles` (
+CREATE TABLE IF NOT EXISTS `roles` (
     `role_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `role_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -78,7 +78,7 @@ CREATE TABLE `roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. Profile Picture Statuses (Lookup)
-CREATE TABLE `profile_picture_statuses` (
+CREATE TABLE IF NOT EXISTS `profile_picture_statuses` (
     `status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_code` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -87,7 +87,7 @@ CREATE TABLE `profile_picture_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Community Badges (Lookup)
-CREATE TABLE `badges` (
+CREATE TABLE IF NOT EXISTS `badges` (
     `badge_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `badge_code` VARCHAR(64) NOT NULL,
     `name` VARCHAR(100) NOT NULL,
@@ -98,7 +98,7 @@ CREATE TABLE `badges` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. Philippine ID Types (Lookup)
-CREATE TABLE `id_types` (
+CREATE TABLE IF NOT EXISTS `id_types` (
     `id_type_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_name` VARCHAR(120) NOT NULL,
     `label` VARCHAR(120) NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE `id_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Facial Verification Statuses (Lookup)
-CREATE TABLE `facial_verification_statuses` (
+CREATE TABLE IF NOT EXISTS `facial_verification_statuses` (
     `status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_code` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -123,7 +123,7 @@ CREATE TABLE `facial_verification_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Verification Statuses (Lookup)
-CREATE TABLE `verification_statuses` (
+CREATE TABLE IF NOT EXISTS `verification_statuses` (
     `verification_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_code` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -132,7 +132,7 @@ CREATE TABLE `verification_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. Item Categories (Lookup)
-CREATE TABLE `item_categories` (
+CREATE TABLE IF NOT EXISTS `item_categories` (
     `category_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `slug` VARCHAR(64) NOT NULL,
     `name` VARCHAR(100) NOT NULL,
@@ -144,7 +144,7 @@ CREATE TABLE `item_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Item Conditions (Lookup)
-CREATE TABLE `item_conditions` (
+CREATE TABLE IF NOT EXISTS `item_conditions` (
     `condition_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `condition_name` VARCHAR(50) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -153,7 +153,7 @@ CREATE TABLE `item_conditions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. Item Types (Lookup: donation, exchange, request)
-CREATE TABLE `item_types` (
+CREATE TABLE IF NOT EXISTS `item_types` (
     `item_type_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -162,7 +162,7 @@ CREATE TABLE `item_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. Item Statuses (Lookup: available, reserved, exchanged, donated, draft, reported, removed)
-CREATE TABLE `item_statuses` (
+CREATE TABLE IF NOT EXISTS `item_statuses` (
     `item_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -171,7 +171,7 @@ CREATE TABLE `item_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. Item Geographic Locations
-CREATE TABLE `item_locations` (
+CREATE TABLE IF NOT EXISTS `item_locations` (
     `location_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `address_line` VARCHAR(255) NOT NULL,
     `barangay` VARCHAR(100) NOT NULL,
@@ -187,7 +187,7 @@ CREATE TABLE `item_locations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 13. Request Urgencies (Lookup: low, medium, high, critical)
-CREATE TABLE `request_urgencies` (
+CREATE TABLE IF NOT EXISTS `request_urgencies` (
     `urgency_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `urgency_name` VARCHAR(32) NOT NULL,
     `level` TINYINT UNSIGNED NOT NULL DEFAULT 1,
@@ -196,7 +196,7 @@ CREATE TABLE `request_urgencies` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 14. Request Statuses (Lookup: active, in_progress, completed, cancelled)
-CREATE TABLE `request_statuses` (
+CREATE TABLE IF NOT EXISTS `request_statuses` (
     `request_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -205,7 +205,7 @@ CREATE TABLE `request_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 15. Exchange Statuses (Lookup: pending, accepted, meeting_scheduled, completed, cancelled, rejected)
-CREATE TABLE `exchange_statuses` (
+CREATE TABLE IF NOT EXISTS `exchange_statuses` (
     `exchange_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -214,7 +214,7 @@ CREATE TABLE `exchange_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 16. Message Types (Lookup: text, image, file, system)
-CREATE TABLE `message_types` (
+CREATE TABLE IF NOT EXISTS `message_types` (
     `message_type_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_name` VARCHAR(32) NOT NULL,
     PRIMARY KEY (`message_type_id`),
@@ -222,7 +222,7 @@ CREATE TABLE `message_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 17. Notification Types (Lookup)
-CREATE TABLE `notification_types` (
+CREATE TABLE IF NOT EXISTS `notification_types` (
     `notification_type_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_code` VARCHAR(64) NOT NULL,
     `display_name` VARCHAR(100) NOT NULL,
@@ -232,7 +232,7 @@ CREATE TABLE `notification_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 18. Report Reasons (Lookup: inappropriate, spam, scam, offensive, duplicate, other)
-CREATE TABLE `report_reasons` (
+CREATE TABLE IF NOT EXISTS `report_reasons` (
     `reason_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `reason_code` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -241,7 +241,7 @@ CREATE TABLE `report_reasons` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 19. Report Statuses (Lookup: pending, reviewed, resolved, dismissed)
-CREATE TABLE `report_statuses` (
+CREATE TABLE IF NOT EXISTS `report_statuses` (
     `report_status_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status_name` VARCHAR(32) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -250,7 +250,7 @@ CREATE TABLE `report_statuses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 20. Report Target Types (Lookup: user, item, message)
-CREATE TABLE `report_target_types` (
+CREATE TABLE IF NOT EXISTS `report_target_types` (
     `target_type_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `type_name` VARCHAR(32) NOT NULL,
     PRIMARY KEY (`target_type_id`),
@@ -258,7 +258,7 @@ CREATE TABLE `report_target_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 21. Audit Action Catalog (Lookup)
-CREATE TABLE `audit_actions` (
+CREATE TABLE IF NOT EXISTS `audit_actions` (
     `action_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `action_name` VARCHAR(64) NOT NULL,
     `description` VARCHAR(255) NULL,
@@ -271,7 +271,7 @@ CREATE TABLE `audit_actions` (
 -- ------------------------------------------------------------------------
 
 -- 22. Users (Core Entity)
-CREATE TABLE `users` (
+CREATE TABLE IF NOT EXISTS `users` (
     `user_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `email` VARCHAR(191) NOT NULL,
     `password_hash` VARCHAR(255) NOT NULL,
@@ -290,7 +290,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 23. User Roles (M:N Junction Table)
-CREATE TABLE `user_roles` (
+CREATE TABLE IF NOT EXISTS `user_roles` (
     `user_id` BIGINT UNSIGNED NOT NULL,
     `role_id` TINYINT UNSIGNED NOT NULL,
     `assigned_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -304,7 +304,7 @@ CREATE TABLE `user_roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 24. User Profiles (1:1 with users)
-CREATE TABLE `profiles` (
+CREATE TABLE IF NOT EXISTS `profiles` (
     `profile_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `username` VARCHAR(64) NOT NULL,
@@ -331,7 +331,7 @@ CREATE TABLE `profiles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 25. User Badges (M:N Junction Table)
-CREATE TABLE `user_badges` (
+CREATE TABLE IF NOT EXISTS `user_badges` (
     `user_id` BIGINT UNSIGNED NOT NULL,
     `badge_id` INT UNSIGNED NOT NULL,
     `earned_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -345,7 +345,7 @@ CREATE TABLE `user_badges` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 26. Profile Picture Submissions (History & Moderation)
-CREATE TABLE `profile_pictures` (
+CREATE TABLE IF NOT EXISTS `profile_pictures` (
     `profile_picture_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `file_reference` VARCHAR(500) NOT NULL,
@@ -374,7 +374,7 @@ CREATE TABLE `profile_pictures` (
 -- ------------------------------------------------------------------------
 
 -- 27. Identity Verifications
-CREATE TABLE `identity_verifications` (
+CREATE TABLE IF NOT EXISTS `identity_verifications` (
     `identity_verification_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `id_type_id` SMALLINT UNSIGNED NOT NULL,
@@ -420,7 +420,7 @@ CREATE TABLE `identity_verifications` (
 -- ------------------------------------------------------------------------
 
 -- 28. Items
-CREATE TABLE `items` (
+CREATE TABLE IF NOT EXISTS `items` (
     `item_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `owner_id` BIGINT UNSIGNED NOT NULL,
     `category_id` INT UNSIGNED NOT NULL,
@@ -462,7 +462,7 @@ CREATE TABLE `items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 29. Item Images (1:M gallery)
-CREATE TABLE `item_images` (
+CREATE TABLE IF NOT EXISTS `item_images` (
     `item_image_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `item_id` BIGINT UNSIGNED NOT NULL,
     `image_url` VARCHAR(500) NOT NULL,
@@ -476,7 +476,7 @@ CREATE TABLE `item_images` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 30. Item Pickup Options
-CREATE TABLE `item_pickup_options` (
+CREATE TABLE IF NOT EXISTS `item_pickup_options` (
     `pickup_option_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `item_id` BIGINT UNSIGNED NOT NULL,
     `option_name` VARCHAR(50) NOT NULL, -- Meet up, Delivery, Pickup
@@ -488,7 +488,7 @@ CREATE TABLE `item_pickup_options` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 31. Saved Items (M:N Junction Table)
-CREATE TABLE `saved_items` (
+CREATE TABLE IF NOT EXISTS `saved_items` (
     `user_id` BIGINT UNSIGNED NOT NULL,
     `item_id` BIGINT UNSIGNED NOT NULL,
     `saved_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -506,7 +506,7 @@ CREATE TABLE `saved_items` (
 -- ------------------------------------------------------------------------
 
 -- 32. Item Requests
-CREATE TABLE `item_requests` (
+CREATE TABLE IF NOT EXISTS `item_requests` (
     `request_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `category_id` INT UNSIGNED NOT NULL,
@@ -541,7 +541,7 @@ CREATE TABLE `item_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 33. Request Images (1:M gallery)
-CREATE TABLE `request_images` (
+CREATE TABLE IF NOT EXISTS `request_images` (
     `request_image_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `request_id` BIGINT UNSIGNED NOT NULL,
     `image_url` VARCHAR(500) NOT NULL,
@@ -559,7 +559,7 @@ CREATE TABLE `request_images` (
 -- ------------------------------------------------------------------------
 
 -- 34. Exchanges
-CREATE TABLE `exchanges` (
+CREATE TABLE IF NOT EXISTS `exchanges` (
     `exchange_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `exchange_status_id` TINYINT UNSIGNED NOT NULL DEFAULT 1, -- pending
     `meeting_date` DATETIME NULL,
@@ -576,7 +576,7 @@ CREATE TABLE `exchanges` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 35. Exchange Participants (M:N)
-CREATE TABLE `exchange_participants` (
+CREATE TABLE IF NOT EXISTS `exchange_participants` (
     `exchange_id` BIGINT UNSIGNED NOT NULL,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `participant_role` ENUM('offerer', 'receiver') NOT NULL,
@@ -591,7 +591,7 @@ CREATE TABLE `exchange_participants` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 36. Exchange Items (M:N items mapped to exchange and contributor)
-CREATE TABLE `exchange_items` (
+CREATE TABLE IF NOT EXISTS `exchange_items` (
     `exchange_item_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `exchange_id` BIGINT UNSIGNED NOT NULL,
     `item_id` BIGINT UNSIGNED NOT NULL,
@@ -612,7 +612,7 @@ CREATE TABLE `exchange_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 37. Exchange History (Audit Trail)
-CREATE TABLE `exchange_history` (
+CREATE TABLE IF NOT EXISTS `exchange_history` (
     `history_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `exchange_id` BIGINT UNSIGNED NOT NULL,
     `action` VARCHAR(64) NOT NULL,
@@ -634,7 +634,7 @@ CREATE TABLE `exchange_history` (
 -- ------------------------------------------------------------------------
 
 -- 38. Conversations
-CREATE TABLE `conversations` (
+CREATE TABLE IF NOT EXISTS `conversations` (
     `conversation_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `title` VARCHAR(100) NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -643,7 +643,7 @@ CREATE TABLE `conversations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 39. Conversation Participants (M:N)
-CREATE TABLE `conversation_participants` (
+CREATE TABLE IF NOT EXISTS `conversation_participants` (
     `conversation_id` BIGINT UNSIGNED NOT NULL,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `joined_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -658,7 +658,7 @@ CREATE TABLE `conversation_participants` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 40. Messages
-CREATE TABLE `messages` (
+CREATE TABLE IF NOT EXISTS `messages` (
     `message_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `conversation_id` BIGINT UNSIGNED NOT NULL,
     `sender_id` BIGINT UNSIGNED NOT NULL,
@@ -686,7 +686,7 @@ CREATE TABLE `messages` (
 -- ------------------------------------------------------------------------
 
 -- 41. Notifications
-CREATE TABLE `notifications` (
+CREATE TABLE IF NOT EXISTS `notifications` (
     `notification_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `notification_type_id` SMALLINT UNSIGNED NOT NULL,
@@ -719,7 +719,7 @@ CREATE TABLE `notifications` (
 -- ------------------------------------------------------------------------
 
 -- 42. Ratings
-CREATE TABLE `ratings` (
+CREATE TABLE IF NOT EXISTS `ratings` (
     `rating_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `exchange_id` BIGINT UNSIGNED NOT NULL,
     `rater_id` BIGINT UNSIGNED NOT NULL,
@@ -747,7 +747,7 @@ CREATE TABLE `ratings` (
 -- ------------------------------------------------------------------------
 
 -- 43. Reports
-CREATE TABLE `reports` (
+CREATE TABLE IF NOT EXISTS `reports` (
     `report_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `reporter_id` BIGINT UNSIGNED NOT NULL,
     `target_type_id` TINYINT UNSIGNED NOT NULL,
@@ -780,7 +780,7 @@ CREATE TABLE `reports` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 44. Administrative Audit Logs
-CREATE TABLE `audit_logs` (
+CREATE TABLE IF NOT EXISTS `audit_logs` (
     `audit_log_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `admin_id` BIGINT UNSIGNED NOT NULL,
     `action_id` SMALLINT UNSIGNED NOT NULL,
