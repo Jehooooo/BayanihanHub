@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import LandingPage from '@/features/landing/LandingPage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
+import PendingVerificationPage from '@/features/auth/pages/PendingVerificationPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
 import BrowsePage from '@/features/items/pages/BrowsePage';
@@ -31,6 +32,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore();
+  return isAuthenticated ? (
+    <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
+  ) : (
+    <>{children}</>
+  );
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuthStore();
   return isAuthenticated && user?.role === 'admin' ? (
@@ -40,16 +50,70 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+function CatchAllRoute() {
+  const { isAuthenticated, user } = useAuthStore();
+  return (
+    <Navigate
+      to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/'}
+      replace
+    />
+  );
+}
+
 export default function App() {
   return (
     <Router>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        {/* Public Routes (redirect to dashboard if already authenticated) */}
+        <Route
+          path="/"
+          element={
+            <PublicOnlyRoute>
+              <LandingPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/pending-verification"
+          element={
+            <PublicOnlyRoute>
+              <PendingVerificationPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/registration-submitted"
+          element={
+            <PublicOnlyRoute>
+              <PendingVerificationPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPasswordPage />
+            </PublicOnlyRoute>
+          }
+        />
         <Route path="/browse" element={<BrowsePage />} />
         <Route path="/items/:id" element={<ItemDetailsPage />} />
 
@@ -210,7 +274,7 @@ export default function App() {
         />
 
         {/* Catch-all fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<CatchAllRoute />} />
       </Routes>
     </Router>
   );

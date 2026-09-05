@@ -3,10 +3,12 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import Card from '@/components/ui/Card';
 import { mockAdminStats } from '@/data/mockData';
 import { useProfilePictureStore } from '@/stores/profilePictureStore';
+import { useIdentityVerificationStore } from '@/stores/identityVerificationStore';
 
 export default function AdminDashboardPage() {
-  const { getPendingCount } = useProfilePictureStore();
-  const pendingApprovals = getPendingCount();
+  const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
+  const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
+  const pendingApprovals = getPendingPhotoCount() + getPendingVerifCount();
 
   return (
     <AdminLayout>

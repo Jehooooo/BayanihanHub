@@ -7,6 +7,9 @@ import { persist } from 'zustand/middleware';
 import type { User, AuthCredentials, RegisterData } from '../types';
 import { mockUsers, generateId } from '../data/mockData';
 import { useSavedItemsStore } from './savedItemsStore';
+import { useIdentityVerificationStore } from './identityVerificationStore';
+import { maskIdNumber } from '../services/verification.service';
+import { safeSetLocalStorageItem } from '../utils/imageCompression';
 
 interface AuthState {
   user: User | null;
@@ -30,20 +33,26 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (credentials: AuthCredentials) => {
         set({ isLoading: true, error: null });
-        
-        // Simulate API call
+
+        // Simulate API verification call
         await new Promise((resolve) => setTimeout(resolve, 800));
-        
+
+        const cleanEmail = credentials.email.trim().toLowerCase();
         const user = mockUsers.find(
-          (u) => u.email === credentials.email
+          (u) =>
+            u.email.toLowerCase() === cleanEmail ||
+            u.username.toLowerCase() === cleanEmail
         );
 
-        if (user && !user.isSuspended) {
-          set({ user, isAuthenticated: true, isLoading: false });
-          return true;
+        if (!user) {
+          set({
+            error: 'Invalid email or password. Please try again.',
+            isLoading: false,
+          });
+          return false;
         }
 
-        if (user?.isSuspended) {
+        if (user.isSuspended) {
           set({
             error: 'Your account has been suspended. Please contact support.',
             isLoading: false,
@@ -51,16 +60,33 @@ export const useAuthStore = create<AuthState>()(
           return false;
         }
 
-        // For demo: accept any email/password combo and create a session
-        // with a default user if not found in mock data
-        if (credentials.email && credentials.password) {
-          const demoUser = mockUsers[0];
-          set({ user: demoUser, isAuthenticated: true, isLoading: false });
+        // Enforce account status check before creating session
+        const status = user.account_status || (user.isVerified ? 'APPROVED' : 'PENDING');
+
+        if (status === 'PENDING') {
+          set({
+            error: 'Your account is still pending administrator verification. Please wait until your registration has been reviewed.',
+            isLoading: false,
+          });
+          return false;
+        }
+
+        if (status === 'REJECTED') {
+          set({
+            error: 'Your registration was not approved. Please review the provided information or contact an administrator.',
+            isLoading: false,
+          });
+          return false;
+        }
+
+        if (status === 'APPROVED') {
+          // Administrator has approved this account
+          set({ user, isAuthenticated: true, isLoading: false, error: null });
           return true;
         }
 
         set({
-          error: 'Invalid email or password. Please try again.',
+          error: 'Your account requires administrator review before sign in.',
           isLoading: false,
         });
         return false;
@@ -73,7 +99,9 @@ export const useAuthStore = create<AuthState>()(
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Check if email already exists
-        const existingUser = mockUsers.find((u) => u.email === data.email);
+        const existingUser = mockUsers.find(
+          (u) => u.email.toLowerCase() === data.email.trim().toLowerCase()
+        );
         if (existingUser) {
           set({
             error: 'An account with this email already exists.',
@@ -83,7 +111,9 @@ export const useAuthStore = create<AuthState>()(
         }
 
         // Check if username already exists
-        const existingUsername = mockUsers.find((u) => u.username === data.username);
+        const existingUsername = mockUsers.find(
+          (u) => u.username.toLowerCase() === data.username.trim().toLowerCase()
+        );
         if (existingUsername) {
           set({
             error: 'This username is already taken.',
@@ -92,8 +122,13 @@ export const useAuthStore = create<AuthState>()(
           return false;
         }
 
+        const userId = generateId();
+        const maskedIdNumber = data.idNumber ? maskIdNumber(data.idNumber) : undefined;
+
+        // CRITICAL RULE: Newly registered users are created with status PENDING.
+        // Facial verification success does NOT mean administrator approval.
         const newUser: User = {
-          id: generateId(),
+          id: userId,
           fullName: data.fullName,
           username: data.username,
           email: data.email,
@@ -102,12 +137,19 @@ export const useAuthStore = create<AuthState>()(
           barangay: data.barangay,
           municipality: data.municipality,
           province: data.province,
-          avatar: data.avatar ?? '',
+          avatar: data.avatar || data.faceImageUrl || '',
           role: 'user',
           isVerified: false,
+          account_status: 'PENDING',
+          facial_verification_status: 'PASSED',
+          id_verification_status: 'SUBMITTED',
+          verificationStatus: 'PENDING',
+          verificationCompletedAt: undefined,
+          idType: data.idType,
+          maskedIdNumber,
           isTrusted: false,
           isSuspended: false,
-          rating: 0,
+          rating: 5.0,
           totalRatings: 0,
           totalExchanges: 0,
           totalDonations: 0,
@@ -116,8 +158,37 @@ export const useAuthStore = create<AuthState>()(
           lastActive: new Date().toISOString(),
         };
 
+        // Create the identity verification application record for administrator review
+        if (data.idType && data.idNumber) {
+          useIdentityVerificationStore.getState().submitVerification({
+            userId,
+            user: newUser,
+            idType: data.idType,
+            idNumber: data.idNumber,
+            fullNameOnId: data.fullNameOnId || data.fullName,
+            dob: data.dob || '',
+            expirationDate: data.expirationDate,
+            extraInfo: data.extraInfo,
+            idDocumentUrl: data.idDocumentUrl || '',
+            faceImageUrl: data.faceImageUrl || '',
+            status: 'PENDING',
+            provider: 'BayanihanHub-Python-FastAPI-Engine',
+            confidenceScore: data.verificationConfidence || 95,
+            matchDetails: {
+              faceMatch: true,
+              nameMatch: true,
+              livenessVerified: true,
+            },
+            verifiedAt: undefined,
+            reviewedBy: 'Pending Administrator Review',
+          });
+        }
+
+        // Add user to registry
         mockUsers.push(newUser);
-        set({ user: newUser, isAuthenticated: true, isLoading: false });
+
+        // NEVER AUTO-LOGIN: User remains logged out until administrator review and approval
+        set({ user: null, isAuthenticated: false, isLoading: false, error: null });
         return true;
       },
 
@@ -131,7 +202,7 @@ export const useAuthStore = create<AuthState>()(
         if (user) {
           const updatedUser = { ...user, ...updates };
           set({ user: updatedUser });
-          
+
           // Update in mock data
           const idx = mockUsers.findIndex((u) => u.id === user.id);
           if (idx !== -1) {
@@ -148,6 +219,24 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      storage: {
+        getItem: (name) => {
+          try {
+            const val = localStorage.getItem(name);
+            return val ? JSON.parse(val) : null;
+          } catch {
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          safeSetLocalStorageItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch {}
+        },
+      },
     }
   )
 );

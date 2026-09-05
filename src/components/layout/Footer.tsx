@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function Footer() {
+  const { isAuthenticated, user } = useAuthStore();
+  const homePath = isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/';
+
   const footerLinks = [
     { to: '/terms', label: 'Terms of Service' },
     { to: '/privacy', label: 'Privacy Policy' },
@@ -15,7 +19,7 @@ export default function Footer() {
       <div className="page-container" style={{ paddingTop: '2.5rem', paddingBottom: '2.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.25rem' }}>
           {/* Brand */}
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
+          <Link to={homePath} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
             <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2.5rem', width: 'auto', objectFit: 'contain' }} />
             <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
               Bayanihan Hub

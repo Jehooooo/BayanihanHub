@@ -7,15 +7,19 @@ import {
   Settings,
   Shield,
   ChevronDown,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import Avatar from '@/components/ui/Avatar';
+
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const navigate = useNavigate();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const homePath = isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/';
 
   return (
     <header
@@ -33,7 +37,7 @@ export default function Header() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', gap: '1rem' }}>
           {/* Brand Logo */}
           <Link
-            to="/"
+            to={homePath}
             style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0, textDecoration: 'none' }}
           >
             <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2.25rem', width: 'auto', objectFit: 'contain' }} />
@@ -46,6 +50,28 @@ export default function Header() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {isAuthenticated ? (
               <>
+                {/* Quick Dashboard link */}
+                <Link
+                  to={user?.role === 'admin' ? '/admin' : '/dashboard'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.375rem 0.75rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: 'var(--color-primary-700)',
+                    backgroundColor: 'var(--color-primary-50)',
+                    borderRadius: 'var(--radius-md)',
+                    textDecoration: 'none',
+                    border: '1px solid var(--color-primary-200)',
+                    transition: 'all 150ms',
+                  }}
+                >
+                  <LayoutDashboard style={{ width: '0.9375rem', height: '0.9375rem' }} />
+                  <span>Dashboard</span>
+                </Link>
+
                 {/* Notifications Link */}
                 <Link
                   to="/notifications"
@@ -115,6 +141,14 @@ export default function Header() {
                           </p>
                         </div>
                         <div style={{ padding: '0.25rem 0' }}>
+                          <Link
+                            to={user?.role === 'admin' ? '/admin' : '/dashboard'}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-700)', textDecoration: 'none' }}
+                            onClick={() => setProfileMenuOpen(false)}
+                          >
+                            <LayoutDashboard style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
+                            {user?.role === 'admin' ? 'Admin Dashboard' : 'Dashboard'}
+                          </Link>
                           <Link
                             to="/profile"
                             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-neutral-700)', textDecoration: 'none' }}
