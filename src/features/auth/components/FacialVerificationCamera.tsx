@@ -20,12 +20,32 @@ export default function FacialVerificationCamera({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [hasStream, setHasStream] = useState<boolean>(false);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
+
+  // Clean up camera stream
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {
+          // ignore
+        }
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setHasStream(false);
+    setCameraActive(false);
+  }, []);
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -35,16 +55,29 @@ export default function FacialVerificationCamera({
         throw new Error('Camera API not supported in this browser. Please upload a selfie image below.');
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 720 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
-        audio: false,
-      });
+      // Stop any existing stream first
+      stopCamera();
 
-      setStream(mediaStream);
+      let mediaStream: MediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 720 },
+            height: { ideal: 720 },
+            facingMode: 'user',
+          },
+          audio: false,
+        });
+      } catch {
+        // Fallback to generic video constraints
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
+      streamRef.current = mediaStream;
+      setHasStream(true);
       setCameraActive(true);
 
       if (videoRef.current) {
@@ -54,23 +87,24 @@ export default function FacialVerificationCamera({
     } catch (err: any) {
       console.warn('Camera access denied or failed:', err);
       setCameraActive(false);
+      setHasStream(false);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraError('Camera permission was denied. Please allow camera permissions in your browser or upload a face selfie.');
       } else {
         setCameraError(err.message || 'Unable to access camera. You can upload a photo of your face instead.');
       }
     }
-  }, []);
+  }, [stopCamera]);
 
-  // Clean up camera stream
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+  // Attach stream to video element when stream is ready
+  useEffect(() => {
+    if (hasStream && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
     }
-    setCameraActive(false);
-  }, [stream]);
+  }, [hasStream]);
 
+  // Mount/Unmount camera lifecycle
   useEffect(() => {
     if (!selfieDataUrl) {
       startCamera();
@@ -78,7 +112,7 @@ export default function FacialVerificationCamera({
     return () => {
       stopCamera();
     };
-  }, [selfieDataUrl, startCamera, stopCamera]);
+  }, [selfieDataUrl]);
 
   // Handle capture with optional flash animation
   const handleSnap = () => {

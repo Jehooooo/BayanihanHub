@@ -26,6 +26,7 @@ app.include_router(verification.router)
 
 
 @app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {
         "status": "online",
@@ -35,6 +36,7 @@ async def health_check():
 
 
 @app.get("/db-health")
+@app.get("/api/db-health")
 def db_health_check(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
