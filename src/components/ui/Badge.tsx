@@ -31,8 +31,8 @@ const dotVariantClasses: Record<BadgeVariant, string> = {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'px-2.5 py-1 text-[11px] font-bold leading-none tracking-tight',
-  md: 'px-3 py-1.5 text-xs font-bold leading-none tracking-tight',
+  sm: 'px-3.5 py-1 text-[11px] font-bold leading-tight tracking-wide',
+  md: 'px-4 py-1.5 text-xs font-bold leading-tight tracking-wide',
 };
 
 export default function Badge({
@@ -45,10 +45,13 @@ export default function Badge({
 }: BadgeProps) {
   return (
     <span
-      style={style}
+      style={{
+        borderRadius: '9999px',
+        whiteSpace: 'nowrap',
+        ...style,
+      }}
       className={`
-        inline-flex items-center gap-1.5 font-medium
-        rounded-[var(--radius-full)]
+        inline-flex items-center justify-center gap-1.5 font-medium
         ${variantClasses[variant]}
         ${sizeClasses[size]}
         ${className}
@@ -56,7 +59,7 @@ export default function Badge({
     >
       {dot && (
         <span
-          className={`w-1.5 h-1.5 rounded-full ${dotVariantClasses[variant]}`}
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotVariantClasses[variant]}`}
         />
       )}
       {children}

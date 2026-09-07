@@ -73,25 +73,23 @@ export default function Avatar({
   style,
 }: AvatarProps) {
   return (
-    <div className={`relative inline-flex shrink-0 rounded-full ${className}`} style={{ borderRadius: '9999px', ...style }}>
+    <div
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-full ${sizeClasses[size]} ${className}`}
+      style={{ borderRadius: '9999px', ...style }}
+    >
       {src ? (
         <img
           src={src}
           alt={name}
-          className={`
-            ${sizeClasses[size]}
-            rounded-full object-cover
-            border-2 border-white shadow-sm
-          `}
+          className="w-full h-full rounded-full object-cover shadow-sm"
         />
       ) : (
         <div
           className={`
-            ${sizeClasses[size]}
+            w-full h-full
             ${getColorFromName(name)}
             rounded-full flex items-center justify-center
-            text-white font-semibold
-            border-2 border-white shadow-sm
+            text-white font-semibold shadow-sm
           `}
           aria-label={name}
         >
@@ -104,7 +102,7 @@ export default function Avatar({
           className={`
             absolute bottom-0 right-0
             ${statusSizeClasses[size]}
-            rounded-full border-white
+            rounded-full border-2 border-white
             ${isOnline ? 'bg-green-500' : 'bg-neutral-400'}
           `}
         />

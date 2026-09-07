@@ -190,20 +190,23 @@ export default function DashboardPage() {
                     <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', lineHeight: '1.6', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{req.description}</p>
                   </div>
 
-                  <div style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>
+                  <div style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {req.location.barangay}, {req.location.municipality}
                     </span>
-                    <Link to="/requests" style={{ textDecoration: 'none' }}>
+                    <Link to="/requests" style={{ textDecoration: 'none', flexShrink: 0 }}>
                       <button
                         type="button"
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
+                          justifyContent: 'center',
                           gap: '0.45rem',
-                          padding: '0.45rem 0.95rem',
+                          height: '2.125rem',
+                          padding: '0 0.875rem',
                           fontSize: '0.75rem',
                           fontWeight: 700,
+                          whiteSpace: 'nowrap',
                           borderRadius: '9999px',
                           backgroundColor: '#f0fdf4',
                           color: '#15803d',
@@ -211,6 +214,7 @@ export default function DashboardPage() {
                           cursor: 'pointer',
                           boxShadow: '0 1px 3px rgba(22, 163, 74, 0.1)',
                           transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                          flexShrink: 0,
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = '#16a34a';
@@ -231,8 +235,8 @@ export default function DashboardPage() {
                           if (icon) icon.style.color = '#16a34a';
                         }}
                       >
-                        <HandHeart style={{ width: '0.875rem', height: '0.875rem', color: '#16a34a', transition: 'color 200ms' }} />
-                        <span>Fulfill Request</span>
+                        <HandHeart style={{ width: '0.875rem', height: '0.875rem', color: '#16a34a', transition: 'color 200ms', flexShrink: 0 }} />
+                        <span style={{ whiteSpace: 'nowrap' }}>Fulfill Request</span>
                       </button>
                     </Link>
                   </div>
