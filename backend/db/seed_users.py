@@ -19,14 +19,15 @@ from app.services.biometric_engine import mask_id_number
 
 
 def hash_pw(pw: str) -> str:
-    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+    """Password hashing disabled per project requirements: plain-text storage."""
+    return pw
 
 
 def seed():
     db = SessionLocal()
     try:
-        # Default password for seed users
-        default_hash = hash_pw("password123")
+        # Plain text password for seed users
+        default_hash = "password123"
 
         users_data = [
             {
@@ -120,7 +121,7 @@ def seed():
         role_id = user_role.role_id if user_role else 2
 
         # Get admin user id for reviewed_by
-        admin_user = db.query(User).filter(User.email == "admin@bayanihan.ph").first()
+        admin_user = db.query(User).filter(User.email == "admin@bayanihanhub.com").first()
         admin_id = admin_user.user_id if admin_user else 1
 
         for udata in users_data:

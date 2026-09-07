@@ -9,6 +9,8 @@ export const requestsService = {
     let list = [...requestsStore];
     if (status) {
       list = list.filter((r) => r.status === status);
+    } else {
+      list = list.filter((r) => r.status !== 'cancelled');
     }
     return list.map((req) => ({
       ...req,

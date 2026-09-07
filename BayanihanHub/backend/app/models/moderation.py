@@ -91,3 +91,20 @@ class AuditLog(Base):
 
     admin = relationship("app.models.user.User", foreign_keys=[admin_id])
     action: Mapped["AuditAction"] = relationship("AuditAction", back_populates="logs")
+
+
+class UserSuspension(Base):
+    __tablename__ = "user_suspensions"
+
+    suspension_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    suspended_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), nullable=False)
+    start_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+
+    user = relationship("app.models.user.User", foreign_keys=[user_id])
+    admin = relationship("app.models.user.User", foreign_keys=[suspended_by])

@@ -83,9 +83,17 @@ export default function ExchangePage() {
 
           <Button
             variant="primary"
+            size="md"
             onClick={() => navigate('/post')}
-            leftIcon={<Plus style={{ width: '1rem', height: '1rem' }} />}
-            className="font-bold shadow-button"
+            leftIcon={<Plus style={{ width: '1.125rem', height: '1.125rem' }} />}
+            style={{
+              padding: '0.625rem 1.45rem',
+              gap: '0.5rem',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              borderRadius: 'var(--radius-md)',
+            }}
+            className="shadow-button shrink-0"
           >
             Post Item for Exchange
           </Button>

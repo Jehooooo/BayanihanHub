@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Calendar,
   Truck,
+  Star,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ImageGallery from '../components/ImageGallery';
@@ -195,25 +196,25 @@ export default function ItemDetailsPage() {
 
               {/* Pickup & Availability Grid */}
               <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
-                  <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Truck style={{ width: '1.25rem', height: '1.25rem' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1.125rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Truck style={{ width: '1.35rem', height: '1.35rem' }} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>Pickup Options</span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-800)', display: 'block', marginTop: '0.125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Pickup Options</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', display: 'block', marginTop: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.pickupOptions.join(', ')}
                     </span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
-                  <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Calendar style={{ width: '1.25rem', height: '1.25rem' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1.125rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Calendar style={{ width: '1.35rem', height: '1.35rem' }} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>Availability</span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-800)', display: 'block', marginTop: '0.125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>Availability</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', display: 'block', marginTop: '0.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.availability}
                     </span>
                   </div>
@@ -275,27 +276,34 @@ export default function ItemDetailsPage() {
                           <ShieldCheck style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
                         )}
                       </h4>
-                      <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.6875rem', color: 'var(--color-neutral-500)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        ★ {item.owner.rating.toFixed(1)} • {item.owner.totalExchanges} exchanges
+                      <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.6875rem', color: 'var(--color-neutral-500)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Star style={{ width: '0.75rem', height: '0.75rem', fill: '#f59e0b', color: '#f59e0b', flexShrink: 0 }} />
+                        <span>{item.owner.rating.toFixed(1)} • {item.owner.totalExchanges} exchanges</span>
                       </p>
                     </div>
                   </div>
                   <Link
                     to={`/profile/${item.owner.id}`}
                     style={{
-                      fontSize: '0.6875rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
                       color: 'var(--color-primary-700)',
                       backgroundColor: '#ffffff',
                       border: '1px solid var(--color-neutral-200)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '0.375rem 0.75rem',
+                      borderRadius: '9999px',
+                      padding: '0.45rem 0.95rem',
                       textDecoration: 'none',
                       flexShrink: 0,
-                      transition: 'background-color 150ms',
+                      transition: 'all 150ms',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-primary-50)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                      e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.borderColor = 'var(--color-neutral-200)';
+                    }}
                   >
                     View Profile
                   </Link>
@@ -304,18 +312,18 @@ export default function ItemDetailsPage() {
 
               {/* Action Buttons */}
               {!isOwner && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                   {item.type === 'exchange' ? (
                     <Button
                       variant="primary"
                       size="lg"
                       fullWidth
-                      style={{ fontWeight: 800, fontSize: '0.875rem', height: '3rem' }}
+                      style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
                       onClick={() => {
                         if (!isAuthenticated) navigate('/login');
                         else setExchangeModalOpen(true);
                       }}
-                      leftIcon={<ArrowLeftRight style={{ width: '1.125rem', height: '1.125rem' }} />}
+                      leftIcon={<ArrowLeftRight style={{ width: '1.2rem', height: '1.2rem' }} />}
                     >
                       Propose Exchange
                     </Button>
@@ -324,7 +332,7 @@ export default function ItemDetailsPage() {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      style={{ fontWeight: 800, fontSize: '0.875rem', height: '3rem' }}
+                      style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
                       onClick={() => {
                         if (!isAuthenticated) {
                           navigate('/login');
@@ -332,7 +340,7 @@ export default function ItemDetailsPage() {
                           navigate(`/request/${item.id}`);
                         }
                       }}
-                      leftIcon={<MessageCircle style={{ width: '1.125rem', height: '1.125rem' }} />}
+                      leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
                     >
                       Request Donation
                     </Button>
@@ -342,9 +350,9 @@ export default function ItemDetailsPage() {
                     variant="outline"
                     size="lg"
                     fullWidth
-                    style={{ fontWeight: 700, fontSize: '0.875rem', height: '3rem' }}
+                    style={{ fontWeight: 700, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
                     onClick={handleMessageOwner}
-                    leftIcon={<MessageCircle style={{ width: '1.125rem', height: '1.125rem' }} />}
+                    leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
                   >
                     Message Owner
                   </Button>
@@ -352,7 +360,7 @@ export default function ItemDetailsPage() {
               )}
 
               {/* Share & Save Row */}
-              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-500)' }}>
+              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-neutral-500)' }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -372,27 +380,33 @@ export default function ItemDetailsPage() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.375rem',
+                    gap: '0.5rem',
                     background: 'none',
                     border: 'none',
                     color: isSaved(item.id) ? 'var(--color-danger)' : 'var(--color-neutral-600)',
                     cursor: 'pointer',
-                    padding: '0.375rem 0.5rem',
-                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
                     transition: 'all 150ms',
                     fontWeight: 600,
-                    fontSize: '0.75rem',
+                    fontSize: '0.8125rem',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
                   <Heart
                     style={{
-                      width: '1rem',
-                      height: '1rem',
+                      width: '1.125rem',
+                      height: '1.125rem',
                       fill: isSaved(item.id) ? 'var(--color-danger)' : 'none',
                       color: isSaved(item.id) ? 'var(--color-danger)' : 'var(--color-neutral-600)',
                     }}
                   />
-                  <span>{isSaved(item.id) ? 'Saved ✓' : 'Save Item'}</span>
+                  <span>{isSaved(item.id) ? 'Saved' : 'Save Item'}</span>
                 </button>
 
                 <button
@@ -401,7 +415,20 @@ export default function ItemDetailsPage() {
                     navigator.clipboard.writeText(window.location.href);
                     toast.success('Item link copied!');
                   }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: 'none', border: 'none', color: 'var(--color-neutral-600)', cursor: 'pointer', padding: '0.375rem 0.5rem', borderRadius: 'var(--radius-sm)', transition: 'all 150ms' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-neutral-600)',
+                    cursor: 'pointer',
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    transition: 'all 150ms',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                  }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
                     e.currentTarget.style.color = 'var(--color-neutral-900)';
@@ -411,7 +438,7 @@ export default function ItemDetailsPage() {
                     e.currentTarget.style.color = 'var(--color-neutral-600)';
                   }}
                 >
-                  <Share2 style={{ width: '1rem', height: '1rem' }} /> <span>Share Link</span>
+                  <Share2 style={{ width: '1.125rem', height: '1.125rem' }} /> <span>Share Link</span>
                 </button>
               </div>
             </div>

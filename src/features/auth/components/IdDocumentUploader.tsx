@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useState, useRef } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, FileText, Sparkles } from 'lucide-react';
+import { Upload, X, Check, CheckCircle, AlertCircle, FileText, Sparkles } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { validateIdDocumentFile } from '@/services/verification.service';
 
@@ -161,9 +161,15 @@ export default function IdDocumentUploader({
               borderTop: '1px solid var(--color-neutral-100)',
             }}
           >
-            <span>✓ Lay on flat surface</span>
-            <span>✓ No flash glare</span>
-            <span>✓ All 4 corners visible</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Check style={{ width: '0.75rem', height: '0.75rem', color: '#16a34a' }} /> Lay on flat surface
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Check style={{ width: '0.75rem', height: '0.75rem', color: '#16a34a' }} /> No flash glare
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Check style={{ width: '0.75rem', height: '0.75rem', color: '#16a34a' }} /> All 4 corners visible
+            </span>
           </div>
         </div>
       ) : (

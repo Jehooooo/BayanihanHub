@@ -9,10 +9,12 @@ import { mockNotifications, generateId } from '../data/mockData';
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
+  readIds: Set<string>;
   isLoading: boolean;
-  fetchNotifications: (userId: string) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
+  currentUserId: string | null;
+  fetchNotifications: (userId: string) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
 }
@@ -20,40 +22,104 @@ interface NotificationState {
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
+  readIds: new Set<string>(),
   isLoading: false,
+  currentUserId: null,
 
-  fetchNotifications: (userId: string) => {
-    set({ isLoading: true });
-    
-    // Simulate API call
-    setTimeout(() => {
-      const userNotifications = mockNotifications
-        .filter((n) => n.userId === userId)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  fetchNotifications: async (userId: string) => {
+    set({ isLoading: true, currentUserId: userId });
+    const currentReadIds = get().readIds;
 
-      set({
-        notifications: userNotifications,
-        unreadCount: userNotifications.filter((n) => !n.isRead).length,
-        isLoading: false,
-      });
-    }, 300);
-  },
+    try {
+      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const apiNotifs: Notification[] = (data.notifications || []).map((n: any) => ({
+          id: String(n.id),
+          userId: String(n.userId || userId),
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          link: n.link,
+          isRead: Boolean(n.isRead) || currentReadIds.has(String(n.id)),
+          createdAt: n.createdAt,
+        }));
 
-  markAsRead: (id: string) => {
-    const { notifications } = get();
-    const updated = notifications.map((n) =>
-      n.id === id ? { ...n, isRead: true } : n
-    );
+        // Also merge mock notifications for any demo items that don't collide
+        const userMockNotifs = mockNotifications.filter((n) => n.userId === userId);
+        const existingIds = new Set(apiNotifs.map((n) => n.id));
+        const combined = [
+          ...apiNotifs,
+          ...userMockNotifs.filter((n) => !existingIds.has(n.id)),
+        ]
+          .map((n) => (currentReadIds.has(n.id) ? { ...n, isRead: true } : n))
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        set({
+          notifications: combined,
+          unreadCount: combined.filter((n) => !n.isRead).length,
+          isLoading: false,
+        });
+        return;
+      }
+    } catch {
+      // Graceful fallback to mock data on network error
+    }
+
+    const fallback = mockNotifications
+      .filter((n) => n.userId === userId)
+      .map((n) => (currentReadIds.has(n.id) ? { ...n, isRead: true } : n))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     set({
-      notifications: updated,
-      unreadCount: updated.filter((n) => !n.isRead).length,
+      notifications: fallback,
+      unreadCount: fallback.filter((n) => !n.isRead).length,
+      isLoading: false,
     });
   },
 
-  markAllAsRead: () => {
-    const { notifications } = get();
+  markAsRead: async (id: string) => {
+    const { notifications, readIds } = get();
+    const updatedReadIds = new Set(readIds);
+    updatedReadIds.add(id);
+
+    const updated = notifications.map((n) =>
+      n.id === id ? { ...n, isRead: true } : n
+    );
+    const newUnread = updated.filter((n) => !n.isRead).length;
+
+    set({
+      readIds: updatedReadIds,
+      notifications: updated,
+      unreadCount: newUnread,
+    });
+
+    try {
+      await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
+    } catch {
+      // Best-effort
+    }
+  },
+
+  markAllAsRead: async () => {
+    const { notifications, currentUserId, readIds } = get();
+    const updatedReadIds = new Set(readIds);
+    notifications.forEach((n) => updatedReadIds.add(n.id));
+
     const updated = notifications.map((n) => ({ ...n, isRead: true }));
-    set({ notifications: updated, unreadCount: 0 });
+    set({
+      readIds: updatedReadIds,
+      notifications: updated,
+      unreadCount: 0,
+    });
+
+    if (currentUserId) {
+      try {
+        await fetch(`/api/notifications/read-all?userId=${encodeURIComponent(currentUserId)}`, { method: 'PATCH' });
+      } catch {
+        // Best-effort
+      }
+    }
   },
 
   deleteNotification: (id: string) => {

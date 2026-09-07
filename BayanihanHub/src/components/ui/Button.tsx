@@ -27,9 +27,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-sm gap-2.5',
+  sm: 'h-9 px-4 text-xs gap-2',
+  md: 'h-10 px-5 text-sm gap-2.5',
+  lg: 'h-12 px-6 text-sm gap-3',
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -66,12 +66,20 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
         ) : (
-          leftIcon
+          leftIcon && (
+            <span className="inline-flex shrink-0 items-center justify-center">
+              {leftIcon}
+            </span>
+          )
         )}
-        {children}
-        {!isLoading && rightIcon}
+        <span>{children}</span>
+        {!isLoading && rightIcon && (
+          <span className="inline-flex shrink-0 items-center justify-center">
+            {rightIcon}
+          </span>
+        )}
       </button>
     );
   }

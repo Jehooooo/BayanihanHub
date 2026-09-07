@@ -15,6 +15,7 @@ import {
   CreditCard,
   RotateCcw,
   Check,
+  X,
 } from 'lucide-react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import Card from '@/components/ui/Card';
@@ -386,7 +387,7 @@ export default function ManageApprovalsPage() {
                                 />
                               </div>
                               <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)' }}>
-                                {record.matchDetails.faceMatch ? '✓ Face Matched' : '✗ Face Discrepancy'}
+                                {record.matchDetails.faceMatch ? 'Face Matched' : 'Face Discrepancy'}
                               </span>
                             </div>
                           </td>
@@ -513,8 +514,8 @@ export default function ManageApprovalsPage() {
                           <Camera style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
                           Captured Facial Biometric Selfie
                         </span>
-                        <span style={{ fontSize: '0.6875rem', color: '#16a34a', fontWeight: 600 }}>
-                          ✓ Live Camera Frame
+                        <span style={{ fontSize: '0.6875rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Check style={{ width: '0.75rem', height: '0.75rem' }} /> Live Camera Frame
                         </span>
                       </div>
 
@@ -544,22 +545,25 @@ export default function ManageApprovalsPage() {
                   <div style={{ padding: '1rem', backgroundColor: 'var(--color-neutral-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                     <div>
                       <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>FACIAL GEOMETRY</p>
-                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.faceMatch ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0' }}>
-                        {selectedVerif.matchDetails.faceMatch ? '✓ Features Match' : '✗ Discrepancy Detected'}
+                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.faceMatch ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        {selectedVerif.matchDetails.faceMatch ? <Check style={{ width: '0.875rem', height: '0.875rem' }} /> : <X style={{ width: '0.875rem', height: '0.875rem' }} />}
+                        <span>{selectedVerif.matchDetails.faceMatch ? 'Features Match' : 'Discrepancy Detected'}</span>
                       </p>
                     </div>
 
                     <div>
                       <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>LEGAL NAME MATCH</p>
-                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.nameMatch ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0' }}>
-                        {selectedVerif.matchDetails.nameMatch ? '✓ 100% Name Match' : '✗ Name Mismatch'}
+                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.nameMatch ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        {selectedVerif.matchDetails.nameMatch ? <Check style={{ width: '0.875rem', height: '0.875rem' }} /> : <X style={{ width: '0.875rem', height: '0.875rem' }} />}
+                        <span>{selectedVerif.matchDetails.nameMatch ? '100% Name Match' : 'Name Mismatch'}</span>
                       </p>
                     </div>
 
                     <div>
                       <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>LIVENESS DETECTION</p>
-                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.livenessVerified ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0' }}>
-                        {selectedVerif.matchDetails.livenessVerified ? '✓ Genuine Liveness' : '✗ Spoof Suspected'}
+                      <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.livenessVerified ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        {selectedVerif.matchDetails.livenessVerified ? <Check style={{ width: '0.875rem', height: '0.875rem' }} /> : <X style={{ width: '0.875rem', height: '0.875rem' }} />}
+                        <span>{selectedVerif.matchDetails.livenessVerified ? 'Genuine Liveness' : 'Spoof Suspected'}</span>
                       </p>
                     </div>
                   </div>
@@ -634,7 +638,7 @@ export default function ManageApprovalsPage() {
                       leftIcon={<Check style={{ width: '1.125rem', height: '1.125rem' }} />}
                       className="font-bold px-6 shadow-button"
                     >
-                      {selectedVerif.status === 'APPROVED' ? 'Account Approved ✓' : 'Approve Account (PENDING → APPROVED)'}
+                      {selectedVerif.status === 'APPROVED' ? 'Account Approved' : 'Approve Account (PENDING → APPROVED)'}
                     </Button>
                   </div>
                 </div>

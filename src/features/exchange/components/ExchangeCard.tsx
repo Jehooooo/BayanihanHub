@@ -71,17 +71,34 @@ export default function ExchangeCard({ exchange, currentUserId, onStatusUpdate }
       <div style={{ paddingTop: '0.5rem', display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', alignItems: 'center' }}>
         {exchange.status === 'pending' && !isOfferer && (
           <>
-            <Button variant="danger" size="sm" onClick={() => onStatusUpdate(exchange.id, 'rejected')}>
+            <Button
+              variant="danger"
+              size="sm"
+              style={{ padding: '0.5rem 1rem', fontWeight: 600 }}
+              onClick={() => onStatusUpdate(exchange.id, 'rejected')}
+            >
               Decline
             </Button>
-            <Button variant="primary" size="sm" className="font-bold" onClick={() => onStatusUpdate(exchange.id, 'accepted')}>
+            <Button
+              variant="primary"
+              size="sm"
+              style={{ padding: '0.5rem 1.125rem', fontWeight: 700 }}
+              className="font-bold"
+              onClick={() => onStatusUpdate(exchange.id, 'accepted')}
+            >
               Accept Exchange
             </Button>
           </>
         )}
 
         {exchange.status === 'accepted' && (
-          <Button variant="primary" size="sm" className="font-bold" onClick={() => onStatusUpdate(exchange.id, 'completed')}>
+          <Button
+            variant="primary"
+            size="sm"
+            style={{ padding: '0.5rem 1.125rem', fontWeight: 700 }}
+            className="font-bold"
+            onClick={() => onStatusUpdate(exchange.id, 'completed')}
+          >
             Mark Completed
           </Button>
         )}

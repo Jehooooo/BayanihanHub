@@ -29,6 +29,8 @@ export const itemsService = {
 
     if (filters?.status) {
       result = result.filter((i) => i.status === filters.status);
+    } else {
+      result = result.filter((i) => i.status !== 'removed');
     }
 
     // Populate owner

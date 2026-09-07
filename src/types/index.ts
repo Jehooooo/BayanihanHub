@@ -27,7 +27,7 @@ export type PhilippineIdType =
   | "School ID"
   | "Other Government-Issued ID";
 
-export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REQUIRES_REVIEW';
+export type AccountStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REQUIRES_REVIEW' | 'SUSPENDED';
 export type FacialVerificationStatus = 'PASSED' | 'FAILED' | 'NOT_STARTED';
 export type IdVerificationStatus = 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
 
@@ -111,6 +111,16 @@ export interface User {
   maskedIdNumber?: string;
   isTrusted: boolean;
   isSuspended: boolean;
+  userId?: number;
+  suspension?: {
+    id: number;
+    reason: string;
+    message?: string;
+    startAt: string;
+    expiresAt?: string | null;
+    isPermanent: boolean;
+    expiresAtFormatted?: string;
+  } | null;
   rating: number;
   totalRatings: number;
   totalExchanges: number;
@@ -273,6 +283,11 @@ export type NotificationType =
   | 'profile_picture_rejected'
   | 'identity_verification_approved'
   | 'identity_verification_rejected'
+  | 'post_removed'
+  | 'request_removed'
+  | 'report_resolved'
+  | 'account_suspended'
+  | 'account_unsuspended'
   | 'system';
 
 export interface Notification {

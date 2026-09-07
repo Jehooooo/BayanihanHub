@@ -208,7 +208,7 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           useNotificationStore.getState().addNotification({
             userId: target.userId,
             type: 'system',
-            title: 'Account Approved! 🛡️',
+            title: 'Account Approved!',
             message: 'Your Bayanihan Hub account has been approved! You can now log in and start using Bayanihan Hub.',
             isRead: false,
           });

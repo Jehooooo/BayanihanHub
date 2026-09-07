@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.routers import verification, auth
+from app.routers import verification, auth, admin, notifications
 from app.db import get_db
 import app.config as config
 
@@ -24,6 +24,8 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(verification.router)
+app.include_router(admin.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health")

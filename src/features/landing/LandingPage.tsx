@@ -6,6 +6,7 @@ import {
   Repeat,
   Sparkles,
   CheckCircle,
+  BookOpen,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -89,7 +90,9 @@ export default function LandingPage() {
                 </div>
 
                 <div style={{ height: '13rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-100)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-neutral-200)', padding: '1.5rem', textAlign: 'center' }}>
-                  <span style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📚</span>
+                  <div style={{ width: '4rem', height: '4rem', borderRadius: '1rem', backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                    <BookOpen style={{ width: '2rem', height: '2rem', color: 'var(--color-primary-600)' }} />
+                  </div>
                   <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '1rem', margin: 0 }}>Grade 10 Textbooks & Uniform</h3>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem', lineHeight: '1.5', maxWidth: '18rem', margin: '0.25rem 0 0 0' }}>
                     Donating a complete set of high school books and uniforms to a student in need.

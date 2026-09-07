@@ -86,9 +86,17 @@ export default function RequestsPage() {
 
           <Button
             variant="primary"
-            className="font-bold shadow-button shrink-0"
+            size="md"
+            className="shadow-button shrink-0"
             onClick={() => setCreateModalOpen(true)}
-            leftIcon={<Plus style={{ width: '1rem', height: '1rem' }} />}
+            leftIcon={<Plus style={{ width: '1.125rem', height: '1.125rem' }} />}
+            style={{
+              padding: '0.625rem 1.35rem',
+              gap: '0.5rem',
+              fontWeight: 700,
+              fontSize: '0.875rem',
+              borderRadius: 'var(--radius-md)',
+            }}
           >
             New Request
           </Button>
@@ -132,6 +140,7 @@ export default function RequestsPage() {
                           : 'primary'
                       }
                       size="sm"
+                      style={{ padding: '0.35rem 0.75rem', letterSpacing: '0.02em' }}
                     >
                       Urgency: {req.urgency.toUpperCase()}
                     </Badge>
@@ -159,9 +168,17 @@ export default function RequestsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="font-semibold text-xs"
                     onClick={() => toast.success('Response sent to request owner!')}
-                    leftIcon={<MessageSquare style={{ width: '0.875rem', height: '0.875rem' }} />}
+                    leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
+                    style={{
+                      padding: '0.45rem 1rem',
+                      gap: '0.5rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-md)',
+                      borderColor: 'var(--color-neutral-300)',
+                      backgroundColor: '#ffffff',
+                    }}
                   >
                     Fulfill Request
                   </Button>

@@ -8,6 +8,7 @@ import {
   Package,
   Clock,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
@@ -54,12 +55,22 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-              <Link to="/post">
+              <Link to="/post" style={{ textDecoration: 'none' }}>
                 <Button
                   variant="secondary"
                   size="md"
-                  className="font-bold text-xs"
-                  leftIcon={<PlusCircle style={{ width: '1rem', height: '1rem' }} />}
+                  leftIcon={<PlusCircle style={{ width: '1.05rem', height: '1.05rem', color: 'var(--color-primary-700)' }} />}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    color: 'var(--color-primary-800)',
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: '9999px',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    gap: '0.5rem',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                    border: 'none',
+                  }}
                 >
                   Post Item
                 </Button>
@@ -106,7 +117,9 @@ export default function DashboardPage() {
             </div>
             <div>
               <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rating</p>
-              <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>★ {user?.rating || 4.8}</p>
+              <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Star style={{ width: '1rem', height: '1rem', fill: '#f59e0b', color: '#f59e0b' }} /> {user?.rating || 4.8}
+              </p>
             </div>
           </Card>
         </div>

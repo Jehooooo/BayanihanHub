@@ -9,6 +9,7 @@ interface BadgeProps {
   size?: BadgeSize;
   dot?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
@@ -30,8 +31,8 @@ const dotVariantClasses: Record<BadgeVariant, string> = {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-xs',
+  sm: 'px-3 py-1 text-[11px] font-semibold leading-none',
+  md: 'px-3.5 py-1.5 text-xs font-semibold leading-none',
 };
 
 export default function Badge({
@@ -40,9 +41,11 @@ export default function Badge({
   size = 'sm',
   dot = false,
   className = '',
+  style,
 }: BadgeProps) {
   return (
     <span
+      style={style}
       className={`
         inline-flex items-center gap-1.5 font-medium
         rounded-[var(--radius-full)]

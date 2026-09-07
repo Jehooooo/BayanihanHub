@@ -79,7 +79,23 @@ function LocationCard({
             Provide your street, barangay, and municipality for community discovery.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={onOpenPicker} leftIcon={<MapPin style={{ width: '0.875rem', height: '0.875rem' }} />}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onOpenPicker}
+          leftIcon={<MapPin style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
+          style={{
+            padding: '0.45rem 1rem',
+            gap: '0.5rem',
+            fontWeight: 600,
+            fontSize: '0.75rem',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-neutral-300)',
+            backgroundColor: '#ffffff',
+            color: 'var(--color-neutral-800)',
+          }}
+        >
           Choose on Map
         </Button>
       </div>
@@ -143,9 +159,40 @@ function PhotoUploadCard({
 // ─── Submit Row (shared) ─────────────────────────────────────────────────────
 function SubmitRow({ isLoading, onCancel, label }: { isLoading: boolean; onCancel: () => void; label: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem' }}>
-      <Button variant="secondary" type="button" onClick={onCancel}>Cancel</Button>
-      <Button variant="primary" type="submit" isLoading={isLoading} leftIcon={<PackagePlus style={{ width: '1rem', height: '1rem' }} />}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem' }}>
+      <Button
+        variant="secondary"
+        type="button"
+        size="md"
+        onClick={onCancel}
+        style={{
+          padding: '0.625rem 1.35rem',
+          fontWeight: 600,
+          fontSize: '0.875rem',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'var(--color-neutral-100)',
+          border: '1px solid var(--color-neutral-200)',
+          color: 'var(--color-neutral-700)',
+        }}
+      >
+        Cancel
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        size="md"
+        isLoading={isLoading}
+        leftIcon={<PackagePlus style={{ width: '1.125rem', height: '1.125rem' }} />}
+        style={{
+          padding: '0.625rem 1.5rem',
+          fontWeight: 700,
+          fontSize: '0.875rem',
+          gap: '0.625rem',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'var(--color-primary-600)',
+          boxShadow: 'var(--shadow-button)',
+        }}
+      >
         {label}
       </Button>
     </div>
@@ -272,7 +319,7 @@ export default function PostItemPage() {
       await itemsService.createItem({
         title: exchangeForm.offerTitle, category: exchangeForm.offerCategory,
         condition: exchangeForm.offerCondition, type: 'exchange', quantity: 1,
-        description: `${exchangeForm.offerDescription}\n\n🔄 Looking for: ${exchangeForm.wantItem}`,
+        description: `${exchangeForm.offerDescription}\n\nLooking for: ${exchangeForm.wantItem}`,
         images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
         status: 'available', ownerId: user?.id ?? 'user-1',
         location: locationPayload,
@@ -466,8 +513,9 @@ export default function PostItemPage() {
             {/* What you want in return */}
             <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
               <div style={{ borderBottom: '1px solid var(--color-neutral-100)', paddingBottom: '0.5rem' }}>
-                <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#d97706', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  🔄 What Do You Want in Return?
+                <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#d97706', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ArrowLeftRight style={{ width: '1rem', height: '1rem', color: '#d97706', flexShrink: 0 }} />
+                  What Do You Want in Return?
                 </h3>
               </div>
               <Input label="Item You Want *" placeholder="e.g. School backpack for Grade 7, any color" value={exchangeForm.wantItem} onChange={(e) => setExchangeForm({ ...exchangeForm, wantItem: e.target.value })} required />

@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   RefreshCw,
   Clock,
+  Info,
   X,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -232,7 +233,7 @@ export default function RegisterPage() {
         if (registerSuccess) {
           setShowPendingNotification(true);
           toast('Verifying your profile please wait within an our', {
-            icon: '⏳',
+            icon: <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b' }} />,
             duration: 8000,
             style: {
               fontWeight: 700,
@@ -499,8 +500,9 @@ export default function RegisterPage() {
               placeholder="-- Select your Valid Philippine ID --"
             />
             {selectedIdConfig && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-primary-700)', marginTop: '0.375rem', fontWeight: 500 }}>
-                ℹ️ {selectedIdConfig.helpText}
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-primary-700)', marginTop: '0.375rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <Info style={{ width: '0.875rem', height: '0.875rem', flexShrink: 0 }} />
+                <span>{selectedIdConfig.helpText}</span>
               </p>
             )}
           </div>
@@ -921,7 +923,7 @@ export default function RegisterPage() {
               >
                 <ShieldCheck style={{ width: '1.5rem', height: '1.5rem', color: '#059669', flexShrink: 0 }} />
                 <span>
-                  Once verified, your profile will automatically receive the <strong>Verified Neighbor 🛡️</strong> badge and full community exchange privileges.
+                  Once verified, your profile will automatically receive the <strong>Verified Neighbor</strong> badge and full community exchange privileges.
                 </span>
               </div>
 

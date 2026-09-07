@@ -13,6 +13,7 @@ from app.models.verification import (
     VerificationStatus,
     FacialVerificationStatus,
 )
+from app.models.moderation import UserSuspension
 from app.schemas.auth import RegisterRequestDto, LoginRequestDto, AuthResponseDto
 from app.services.biometric_engine import mask_id_number
 
@@ -20,8 +21,8 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication & Registration"])
 
 
 def hash_password(password: str) -> str:
-    """Hash password using SHA-256 matching the database seed standard."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    """Password hashing disabled per project requirements: plain-text storage."""
+    return password
 
 
 def parse_date(date_str: Optional[str]) -> Optional[date]:
@@ -223,7 +224,11 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
     """
     identifier = dto.email.strip().lower()
 
-    # Find user by email or by profile username
+    # Find user by email, profile username, or admin aliases
+    user_filters = [User.email == identifier, Profile.username == identifier]
+    if identifier in ("admin@bayanihanhub.com", "admin@bayanihan.ph", "admin"):
+        user_filters.extend([User.email == "admin@bayanihanhub.com", User.email == "admin@bayanihan.ph", Profile.username == "admin"])
+
     user = (
         db.query(User)
         .options(
@@ -232,7 +237,7 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
             joinedload(User.user_roles).joinedload(UserRole.role),
         )
         .outerjoin(Profile, Profile.user_id == User.user_id)
-        .filter(or_(User.email == identifier, Profile.username == identifier))
+        .filter(or_(*user_filters))
         .first()
     )
 
@@ -242,20 +247,58 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
             detail="Invalid email or password. Please try again.",
         )
 
-    # Verify password hash
-    input_hash = hash_password(dto.password)
-    if user.password_hash != input_hash:
+    # Verify password (plain-text comparison, no hashing per request)
+    is_valid_password = (user.password_hash == dto.password)
+    if not is_valid_password:
+        # Check legacy SHA-256 hash in case legacy hashed entries exist
+        legacy_hash = hashlib.sha256(dto.password.encode("utf-8")).hexdigest()
+        if user.password_hash == legacy_hash:
+            is_valid_password = True
+
+    if not is_valid_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password. Please try again.",
         )
 
-    # Check suspension
-    if user.is_suspended:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Your account has been suspended. Please contact support.",
-        )
+    # Check suspension lifecycle
+    now_dt = datetime.now()
+    active_suspension = (
+        db.query(UserSuspension)
+        .filter(UserSuspension.user_id == user.user_id, UserSuspension.status == "ACTIVE")
+        .order_by(UserSuspension.suspension_id.desc())
+        .first()
+    )
+
+    if user.is_suspended or (user.account_status and user.account_status.status_code == "SUSPENDED"):
+        if active_suspension:
+            # Check if temporary suspension has expired
+            if active_suspension.expires_at and active_suspension.expires_at <= now_dt:
+                # Auto-lift expired suspension
+                active_suspension.status = "EXPIRED"
+                user.is_suspended = False
+                user.account_status_id = 2  # APPROVED
+                db.commit()
+                db.refresh(user)
+            else:
+                # Suspension is actively in effect
+                if active_suspension.expires_at:
+                    date_str = active_suspension.expires_at.strftime("%B %d, %Y")
+                    time_str = active_suspension.expires_at.strftime("%I:%M %p")
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Your Bayanihan Hub account is currently suspended until {date_str} at {time_str}.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your Bayanihan Hub account has been permanently suspended.",
+                    )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your Bayanihan Hub account has been suspended by an administrator.",
+            )
 
     status_code = user.account_status.status_code if user.account_status else "PENDING"
 

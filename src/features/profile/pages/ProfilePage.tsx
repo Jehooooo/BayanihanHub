@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShieldCheck, MapPin, Camera, Clock, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, MapPin, Camera, Clock, AlertTriangle, Star, Award, Repeat, Trophy } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
@@ -10,6 +10,25 @@ import ItemCard from '@/features/items/components/ItemCard';
 import ProfilePictureUploadModal from '../components/ProfilePictureUploadModal';
 import { useAuthStore } from '@/stores/authStore';
 import { mockItems } from '@/data/mockData';
+
+function getBadgeIcon(nameOrIcon?: string) {
+  switch (nameOrIcon?.toLowerCase()) {
+    case 'award':
+    case 'trusted donor':
+      return <Award style={{ width: '0.875rem', height: '0.875rem' }} />;
+    case 'star':
+    case 'community star':
+      return <Star style={{ width: '0.875rem', height: '0.875rem' }} />;
+    case 'repeat':
+    case 'active exchanger':
+      return <Repeat style={{ width: '0.875rem', height: '0.875rem' }} />;
+    case 'trophy':
+    case 'top contributor':
+      return <Trophy style={{ width: '0.875rem', height: '0.875rem' }} />;
+    default:
+      return <Award style={{ width: '0.875rem', height: '0.875rem' }} />;
+  }
+}
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -28,61 +47,39 @@ export default function ProfilePage() {
           <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', position: 'relative', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '-3rem', paddingBottom: '1rem', borderBottom: '1px solid var(--color-neutral-100)', gap: '1rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
-                <div style={{ position: 'relative', display: 'inline-flex', borderRadius: '9999px' }}>
+                <div style={{ position: 'relative' }}>
                   <Avatar
-                    src={user?.avatar || (user?.avatarStatus === 'pending' ? user?.pendingAvatar : undefined)}
-                    name={user?.fullName || 'Maria Santos'}
+                    src={user?.avatar}
+                    name={user?.fullName ?? 'User'}
                     size="xl"
-                    style={{ borderRadius: '9999px', flexShrink: 0 }}
+                    style={{ width: '6rem', height: '6rem', border: '4px solid #fff', boxShadow: 'var(--shadow-elevated)' }}
                   />
                   <button
-                    type="button"
                     onClick={() => setIsUploadModalOpen(true)}
+                    style={{ position: 'absolute', bottom: 0, right: 0, padding: '0.375rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', border: '2px solid #fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-card)' }}
                     title="Change Profile Picture"
-                    style={{
-                      position: 'absolute',
-                      bottom: '2px',
-                      right: '2px',
-                      width: '1.875rem',
-                      height: '1.875rem',
-                      borderRadius: '9999px',
-                      backgroundColor: 'var(--color-primary-600)',
-                      color: '#fff',
-                      border: '2px solid #fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                      transition: 'transform 120ms ease-in-out',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                   >
-                    <Camera style={{ width: '0.9rem', height: '0.9rem' }} />
+                    <Camera style={{ width: '0.875rem', height: '0.875rem' }} />
                   </button>
                 </div>
 
-                <div style={{ marginBottom: '0.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <div style={{ paddingBottom: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>
                       {user?.fullName || 'Maria Santos'}
-                      <ShieldCheck style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-primary-600)' }} />
                     </h1>
-
-                    {user?.avatarStatus === 'pending' && (
-                      <Badge variant="warning" size="sm">
-                        <Clock style={{ width: '0.75rem', height: '0.75rem', marginRight: '0.25rem' }} /> Photo Pending Approval
-                      </Badge>
-                    )}
-                    {user?.avatarStatus === 'rejected' && (
-                      <Badge variant="danger" size="sm">
-                        <AlertTriangle style={{ width: '0.75rem', height: '0.75rem', marginRight: '0.25rem' }} /> Photo Rejected
-                      </Badge>
+                    {user?.isVerified && (
+                      <span title="Verified Resident" style={{ display: 'inline-flex' }}>
+                        <ShieldCheck style={{ width: '1.125rem', height: '1.125rem', color: 'var(--color-primary-600)' }} />
+                      </span>
                     )}
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem', margin: 0 }}>
-                    <MapPin style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)' }} /> {user?.barangay}, {user?.municipality}, {user?.province}
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-500)', margin: '0.125rem 0 0 0' }}>
+                    @{user?.username || 'mariasantos'}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0.25rem 0 0 0' }}>
+                    <MapPin style={{ width: '0.75rem', height: '0.75rem' }} />
+                    {user?.barangay || 'San Isidro'}, {user?.municipality || 'Quezon City'}
                   </p>
                 </div>
               </div>
@@ -90,8 +87,9 @@ export default function ProfilePage() {
               {/* User Stats Pill Bar */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textAlign: 'center', backgroundColor: 'var(--color-neutral-50)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
                 <div>
-                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    ★ {user?.rating || 4.8}
+                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                    <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: '#f59e0b', color: '#f59e0b' }} />
+                    {user?.rating || 4.8}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Rating</span>
                 </div>
@@ -116,8 +114,9 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.5rem' }}>Badges:</span>
               {user?.badges?.map((b) => (
-                <Badge key={b.id} variant="primary" size="md">
-                  {b.icon} {b.name}
+                <Badge key={b.id} variant="primary" size="md" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
+                  {getBadgeIcon(b.icon || b.name)}
+                  <span>{b.name}</span>
                 </Badge>
               ))}
             </div>
@@ -174,12 +173,25 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {activeTab === 'favorites' && (
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)' }}>
+            <p>Saved items will appear here.</p>
+          </div>
+        )}
+
         {activeTab === 'reviews' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>Juan Dela Cruz</span>
-                <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700 }}>★★★★★ 5.0</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', gap: '0.125rem' }}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} style={{ width: '0.75rem', height: '0.75rem', fill: '#f59e0b', color: '#f59e0b' }} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700, marginLeft: '0.25rem' }}>5.0</span>
+                </div>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
                 Very friendly and punctual! The textbooks were in excellent condition.

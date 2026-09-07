@@ -41,8 +41,8 @@ export const mockUsers: User[] = [
     totalExchanges: 18,
     totalDonations: 12,
     badges: [
-      { id: 'b1', name: 'Trusted Donor', icon: '🏅', description: 'Completed 10+ donations', earnedAt: '2026-03-15' },
-      { id: 'b2', name: 'Community Star', icon: '⭐', description: 'Rated 4.5+ average', earnedAt: '2026-05-20' },
+      { id: 'b1', name: 'Trusted Donor', icon: 'award', description: 'Completed 10+ donations', earnedAt: '2026-03-15' },
+      { id: 'b2', name: 'Community Star', icon: 'star', description: 'Rated 4.5+ average', earnedAt: '2026-05-20' },
     ],
     joinedAt: '2025-06-15T08:00:00Z',
     lastActive: '2026-08-06T10:30:00Z',
@@ -71,7 +71,7 @@ export const mockUsers: User[] = [
     totalExchanges: 10,
     totalDonations: 5,
     badges: [
-      { id: 'b3', name: 'Active Exchanger', icon: '🔄', description: 'Completed 10+ exchanges', earnedAt: '2026-06-01' },
+      { id: 'b3', name: 'Active Exchanger', icon: 'repeat', description: 'Completed 10+ exchanges', earnedAt: '2026-06-01' },
     ],
     joinedAt: '2025-09-10T08:00:00Z',
     lastActive: '2026-08-06T09:15:00Z',
@@ -100,7 +100,7 @@ export const mockUsers: User[] = [
     totalExchanges: 22,
     totalDonations: 20,
     badges: [
-      { id: 'b4', name: 'Top Contributor', icon: '🎖️', description: 'Top 10 most active users', earnedAt: '2026-07-01' },
+      { id: 'b4', name: 'Top Contributor', icon: 'trophy', description: 'Top 10 most active users', earnedAt: '2026-07-01' },
     ],
     joinedAt: '2025-05-01T08:00:00Z',
     lastActive: '2026-08-06T11:00:00Z',

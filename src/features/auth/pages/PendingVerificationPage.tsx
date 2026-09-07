@@ -3,7 +3,7 @@
 // ============================================================
 
 import { Link } from 'react-router-dom';
-import { Clock, ShieldAlert, ArrowRight, Home } from 'lucide-react';
+import { Clock, ShieldAlert, ArrowRight, Home, CheckCircle2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
 export default function PendingVerificationPage() {
@@ -155,10 +155,13 @@ export default function PendingVerificationPage() {
               borderTop: '1px solid #e2e8f0',
               fontSize: '0.8125rem',
               color: '#059669',
-              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
             }}
           >
-            ✓ You will be able to log in once your account has been approved.
+            <CheckCircle2 style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+            <span>You will be able to log in once your account has been approved.</span>
           </div>
         </div>
 

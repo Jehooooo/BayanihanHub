@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, AlertCircle, Camera, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Upload, X, AlertCircle, Camera, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
@@ -134,7 +134,7 @@ export default function ProfilePictureUploadModal({ isOpen, onClose }: ProfilePi
             <Avatar src={user?.avatar} name={user?.fullName || 'User'} size="lg" />
           </div>
 
-          <div style={{ fontSize: '1.25rem', color: 'var(--color-neutral-300)' }}>➔</div>
+          <ArrowRight style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-neutral-400)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-primary-700)', textTransform: 'uppercase' }}>New Preview</span>

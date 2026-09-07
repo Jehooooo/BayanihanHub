@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, Trash2, ArrowLeft, PackageOpen } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';

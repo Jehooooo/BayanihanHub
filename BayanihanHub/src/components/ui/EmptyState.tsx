@@ -31,7 +31,18 @@ export default function EmptyState({
         <p className="text-sm text-neutral-500 max-w-sm mb-6">{description}</p>
       )}
       {actionLabel && onAction && (
-        <Button variant="primary" onClick={onAction}>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={onAction}
+          style={{
+            padding: '0.625rem 1.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 700,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-button)',
+          }}
+        >
           {actionLabel}
         </Button>
       )}
