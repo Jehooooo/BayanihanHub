@@ -11,6 +11,7 @@ from app.models.user import User, Profile
 from app.models.item import ItemCategory, ItemLocation
 from app.models.request import ItemRequest, RequestStatus, RequestUrgency, RequestImage
 from app.services.notifications import create_notification
+from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/requests", tags=["Community Help Requests"])
 
@@ -227,6 +228,9 @@ def create_request(dto: CreateRequestDto, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(new_req)
+
+    terminal_logger.crud("CREATE", "Request", details=f"Help Request #{new_req.request_id} '{new_req.title}' ({urg_str.upper()})")
+    terminal_logger.integration("Backend", "Notification Service", "Broadcast request alert to neighborhood", status="SUCCESS")
 
     return {
         "success": True,

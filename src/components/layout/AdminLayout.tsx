@@ -12,6 +12,7 @@ import {
   Settings,
   ArrowLeft,
   LogOut,
+  Terminal,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfilePictureStore } from '@/stores/profilePictureStore';
@@ -23,6 +24,7 @@ interface AdminLayoutProps {
 
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/admin/terminal', icon: Terminal, label: 'Backend Terminal' },
   { to: '/admin/approvals', icon: ShieldCheck, label: 'Identity & Approvals', badgeKey: 'approvals' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/posts', icon: Package, label: 'Posts' },

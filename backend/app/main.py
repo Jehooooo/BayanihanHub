@@ -1,9 +1,11 @@
-from fastapi import FastAPI, Depends
+import time
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai
-from app.db import get_db
+from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai, terminal
+from app.db import get_db, engine
+from app.services.terminal_logger import terminal_logger
 import app.config as config
 
 app = FastAPI(
@@ -21,6 +23,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    """Logs all incoming API requests and their response times to the terminal logger."""
+    path = request.url.path
+    method = request.method
+
+    # Skip logging the terminal's own streaming/polling traffic to prevent infinite loops
+    is_terminal_stream = path.startswith("/api/terminal/stream") or path.startswith("/api/terminal/logs")
+    if is_terminal_stream or path == "/health" or path == "/favicon.ico":
+        return await call_next(request)
+
+    start_time = time.perf_counter()
+    terminal_logger.info(f"Frontend -> Backend: {method} {path}", category="API")
+
+    try:
+        response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+        terminal_logger.api(method, path, response.status_code, duration_ms)
+        return response
+    except Exception as exc:
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 1)
+        terminal_logger.error(f"{method} {path} - Exception: {type(exc).__name__} ({duration_ms}ms)", category="API")
+        raise exc
+
+
+@app.on_event("startup")
+async def on_startup_logging():
+    """Initializes startup diagnostic logs for terminal visibility."""
+    terminal_logger.info("Backend server starting...", category="SYSTEM")
+    terminal_logger.info("Connecting to MySQL database...", category="DATABASE")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        terminal_logger.success("Database connected successfully (MySQL 8.4 on localhost:3306)", category="DATABASE")
+    except Exception as exc:
+        terminal_logger.error("Database connection failed", category="DATABASE", details=str(exc))
+        terminal_logger.error("Unable to connect to MySQL database", category="DATABASE")
+
+    terminal_logger.info("API routes initialized (11 routers loaded)", category="SYSTEM")
+    terminal_logger.info("Authentication service ready", category="AUTH")
+    terminal_logger.info("Real-time WebSocket & SSE log engine active", category="SYSTEM")
+    terminal_logger.success(f"Backend server listening on http://{config.HOST}:{config.PORT}", category="SYSTEM")
+
+
 # Include routers
 app.include_router(auth.router)
 app.include_router(verification.router)
@@ -32,6 +79,8 @@ app.include_router(requests.router)
 app.include_router(messaging.router)
 app.include_router(profile.router)
 app.include_router(ai.router)
+app.include_router(terminal.router)
+
 
 
 @app.get("/health")

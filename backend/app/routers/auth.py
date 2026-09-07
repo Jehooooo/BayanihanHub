@@ -16,6 +16,7 @@ from app.models.verification import (
 from app.models.moderation import UserSuspension
 from app.schemas.auth import RegisterRequestDto, LoginRequestDto, AuthResponseDto
 from app.services.biometric_engine import mask_id_number
+from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & Registration"])
 
@@ -197,6 +198,9 @@ def register(dto: RegisterRequestDto, db: Session = Depends(get_db)):
             "isSuspended": False,
         }
 
+        terminal_logger.crud("CREATE", "User", details=f"New neighbor registered: {clean_email} ({dto.full_name})")
+        terminal_logger.integration("Backend", "Verification Service", "Created identity verification record", status="SUCCESS")
+
         return AuthResponseDto(
             success=True,
             message="Account registration submitted successfully. Your account is PENDING administrator review and approval.",
@@ -359,6 +363,9 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
     # Update last active timestamp
     user.last_active_at = datetime.now(timezone.utc)
     db.commit()
+
+    terminal_logger.integration("Backend", "Authentication Service", f"Credentials verified for {user.email}", status="SUCCESS")
+    terminal_logger.success(f"User '{full_name}' authenticated successfully ({primary_role.upper()})", category="AUTH")
 
     return AuthResponseDto(
         success=True,

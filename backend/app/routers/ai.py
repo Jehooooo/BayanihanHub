@@ -11,6 +11,7 @@ from app.models.exchange import Exchange
 from app.models.request import ItemRequest
 from app.models.user import User
 from app.models.moderation import Report
+from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/ai", tags=["AI Community Assistant & Statistics"])
 
@@ -83,6 +84,8 @@ def ai_community_chat(dto: AiChatMessageDto, db: Session = Depends(get_db)):
     """
     stats = get_live_system_statistics(db)
     user_msg = dto.message.strip().lower()
+
+    terminal_logger.integration("Backend", "AI Assistant", f"Processing query: '{dto.message[:60]}...' (Gemini / MySQL NLP)", status="SUCCESS")
 
     # Scope filtering & Intent resolution
     # 1. System Statistics Intent

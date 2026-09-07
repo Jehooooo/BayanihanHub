@@ -20,6 +20,7 @@ from app.models.item import (
     SavedItem,
 )
 from app.services.notifications import create_notification
+from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/items", tags=["Items & Postings"])
 
@@ -265,6 +266,8 @@ def list_items(
     current_user_num = parse_numeric_id(user_id)
     results = [format_item(item, db, current_user_num) for item in items]
 
+    terminal_logger.crud("FETCH", "Items", count=len(results), details=f"{len(results)} items retrieved (total in DB: {total})")
+
     return {
         "success": True,
         "total": total,
@@ -442,6 +445,9 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(new_item)
+
+    terminal_logger.crud("CREATE", "Item", details=f"Item #{new_item.item_id} '{new_item.title}' posted ({new_item.quantity} qty)")
+    terminal_logger.integration("Backend", "Database", f"Persisted item #{new_item.item_id} to MySQL", status="SUCCESS")
 
     return {
         "success": True,
