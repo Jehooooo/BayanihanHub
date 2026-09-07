@@ -14,7 +14,11 @@ import Avatar from '@/components/ui/Avatar';
 import NotificationDetailModal from '@/features/notifications/components/NotificationDetailModal';
 import type { Notification } from '@/types';
 
-export default function Header() {
+interface HeaderProps {
+  fullWidth?: boolean;
+}
+
+export default function Header({ fullWidth = false }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
   const navigate = useNavigate();
@@ -42,7 +46,10 @@ export default function Header() {
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
     >
-      <div className="page-container">
+      <div
+        className={fullWidth ? undefined : 'page-container'}
+        style={fullWidth ? { padding: '0 1.5rem', width: '100%' } : undefined}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', gap: '1rem' }}>
           {/* Brand Logo */}
           <Link

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  PlusCircle,
   HandHeart,
   ArrowLeftRight,
   TrendingUp,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import ItemCard from '@/features/items/components/ItemCard';
 import ScrollReveal from '@/components/common/ScrollReveal';
@@ -44,7 +42,7 @@ export default function DashboardPage() {
         {/* Welcome Hero Banner */}
         <ScrollReveal direction="down" duration={550}>
           <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(to bottom right, var(--color-primary-700), var(--color-primary-600), var(--color-primary-800))', borderRadius: 'var(--radius-xl)', padding: '1.75rem 2rem', color: '#fff', boxShadow: 'var(--shadow-elevated)' }}>
-            <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-100)', width: 'fit-content' }}>
                   <Sparkles style={{ width: '0.875rem', height: '0.875rem' }} /> Community Exchange & Donation
@@ -55,29 +53,6 @@ export default function DashboardPage() {
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', maxWidth: '36rem', lineHeight: '1.6' }}>
                   See what essential items your neighbors are sharing today, or post a request to get support from your barangay.
                 </p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                <Link to="/post" style={{ textDecoration: 'none' }}>
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    leftIcon={<PlusCircle style={{ width: '1.05rem', height: '1.05rem', color: 'var(--color-primary-700)' }} />}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      color: 'var(--color-primary-800)',
-                      padding: '0.625rem 1.25rem',
-                      borderRadius: '9999px',
-                      fontWeight: 700,
-                      fontSize: '0.8125rem',
-                      gap: '0.5rem',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-                      border: 'none',
-                    }}
-                  >
-                    Post Item
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>

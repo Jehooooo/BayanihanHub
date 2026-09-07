@@ -35,7 +35,7 @@ export default function Sidebar() {
         style={{
           display: 'none',
           flexDirection: 'column',
-          width: '14rem',
+          width: '16rem',
           flexShrink: 0,
           position: 'sticky',
           top: '4rem',
@@ -46,40 +46,31 @@ export default function Sidebar() {
         }}
         className="lg:!flex"
       >
-        <nav style={{ flex: 1, padding: '0.75rem' }}>
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', listStyle: 'none', margin: 0, padding: 0 }}>
+        <nav style={{ flex: 1, padding: '1.25rem 1rem', overflowY: 'auto' }}>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', margin: 0, padding: 0 }}>
             {navItems.map((item) => {
               const isActive = location.pathname.startsWith(item.to);
               return (
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.625rem 0.75rem',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.8125rem',
-                      fontWeight: isActive ? 700 : 600,
-                      textDecoration: 'none',
-                      transition: 'all 150ms',
-                      backgroundColor: isActive ? 'var(--color-primary-50)' : 'transparent',
-                      color: isActive ? 'var(--color-primary-700)' : 'var(--color-neutral-600)',
-                    }}
+                    className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
                   >
-                    <item.icon style={{ width: '1.125rem', height: '1.125rem', flexShrink: 0 }} />
+                    <item.icon />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                     {item.label === 'Notifications' && unreadCount > 0 && (
-                      <span style={{
-                        marginLeft: 'auto',
-                        padding: '0.125rem 0.375rem',
-                        backgroundColor: 'var(--color-danger)',
-                        color: '#fff',
-                        fontSize: '0.625rem',
-                        fontWeight: 800,
-                        borderRadius: '9999px',
-                      }}>
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          padding: '0.15rem 0.5rem',
+                          backgroundColor: 'var(--color-danger)',
+                          color: '#fff',
+                          fontSize: '0.6875rem',
+                          fontWeight: 800,
+                          borderRadius: '9999px',
+                          lineHeight: 1.2,
+                        }}
+                      >
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -92,11 +83,11 @@ export default function Sidebar() {
 
         {/* Sidebar Footer */}
         <div style={{
-          padding: '0.75rem',
+          padding: '1rem',
           borderTop: '1px solid var(--color-neutral-100)',
           backgroundColor: 'rgba(248,250,249,0.5)',
         }}>
-          <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', textAlign: 'center', fontWeight: 500 }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', textAlign: 'center', fontWeight: 500, margin: 0 }}>
             © 2026 Bayanihan Hub
           </p>
         </div>

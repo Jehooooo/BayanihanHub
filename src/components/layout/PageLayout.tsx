@@ -11,11 +11,13 @@ interface PageLayoutProps {
 export default function PageLayout({ children, showSidebar = true }: PageLayoutProps) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-neutral-50)' }}>
-      <Header />
-      <div style={{ flex: 1, display: 'flex', maxWidth: '80rem', width: '100%', margin: '0 auto' }}>
+      <Header fullWidth={showSidebar} />
+      <div style={{ flex: 1, display: 'flex', width: '100%', minWidth: 0 }}>
         {showSidebar && <Sidebar />}
-        <main style={{ flex: 1, padding: '1.5rem', minWidth: 0, paddingBottom: showSidebar ? '5rem' : '1.5rem' }}>
-          {children}
+        <main style={{ flex: 1, padding: '1.75rem 2rem', minWidth: 0, paddingBottom: showSidebar ? '5rem' : '2rem' }}>
+          <div style={{ maxWidth: '82rem', width: '100%' }}>
+            {children}
+          </div>
         </main>
       </div>
       {!showSidebar && <Footer />}
