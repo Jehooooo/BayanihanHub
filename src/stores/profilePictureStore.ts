@@ -9,7 +9,6 @@ import { mockUsers, mockNotifications, getUserById, generateId } from '../data/m
 import { useAuthStore } from './authStore';
 import { useNotificationStore } from './notificationStore';
 
-// Initial seed submissions so Admin validation can be demonstrated immediately
 const initialSubmissions: ProfilePictureSubmission[] = [
   {
     id: 'sub-1',
@@ -41,9 +40,10 @@ const initialSubmissions: ProfilePictureSubmission[] = [
 
 interface ProfilePictureState {
   submissions: ProfilePictureSubmission[];
-  submitProfilePicture: (userId: string, imageUrl: string) => ProfilePictureSubmission;
-  approveSubmission: (submissionId: string, reviewedBy?: string) => void;
-  rejectSubmission: (submissionId: string, rejectionReason: string, reviewedBy?: string) => void;
+  fetchSubmissions: () => Promise<void>;
+  submitProfilePicture: (userId: string, imageUrl: string) => Promise<ProfilePictureSubmission>;
+  approveSubmission: (submissionId: string, reviewedBy?: string) => Promise<void>;
+  rejectSubmission: (submissionId: string, rejectionReason: string, reviewedBy?: string) => Promise<void>;
   getSubmissionByUserId: (userId: string) => ProfilePictureSubmission | undefined;
   getPendingCount: () => number;
 }
@@ -53,11 +53,36 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
     (set, get) => ({
       submissions: initialSubmissions,
 
-      submitProfilePicture: (userId: string, imageUrl: string) => {
+      fetchSubmissions: async () => {
+        try {
+          const res = await fetch('/api/admin/avatars');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.submissions && Array.isArray(data.submissions)) {
+              set({ submissions: data.submissions });
+              return;
+            }
+          }
+        } catch {
+          // Fallback
+        }
+      },
+
+      submitProfilePicture: async (userId: string, imageUrl: string) => {
         const user = getUserById(userId) || useAuthStore.getState().user || undefined;
         const now = new Date().toISOString();
 
-        // Check if there is an existing pending submission for this user
+        // Backend sync
+        try {
+          await fetch('/api/users/profile/avatar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, imageUrl }),
+          });
+        } catch {
+          // Fallback
+        }
+
         const existingIdx = get().submissions.findIndex(
           (s) => s.userId === userId && s.status === 'pending'
         );
@@ -85,7 +110,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
           set({ submissions: [submission, ...get().submissions] });
         }
 
-        // Update user state
+        // Update auth user state
         const authUser = useAuthStore.getState().user;
         if (authUser && authUser.id === userId) {
           useAuthStore.getState().updateProfile({
@@ -98,8 +123,17 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
         return submission;
       },
 
-      approveSubmission: (submissionId: string, reviewedBy = 'Admin User') => {
+      approveSubmission: async (submissionId: string, reviewedBy = 'Admin User') => {
         const now = new Date().toISOString();
+
+        try {
+          await fetch(`/api/admin/avatars/${encodeURIComponent(submissionId)}/approve`, {
+            method: 'POST',
+          });
+        } catch {
+          // Fallback
+        }
+
         const next = get().submissions.map((sub) => {
           if (sub.id === submissionId) {
             const updated = {
@@ -110,7 +144,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               rejectionReason: undefined,
             };
 
-            // Update user's official avatar in mockUsers and authStore
             const targetUser = mockUsers.find((u) => u.id === sub.userId);
             if (targetUser) {
               targetUser.avatar = sub.imageUrl;
@@ -129,7 +162,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               });
             }
 
-            // Create notification for the user
             const notif: Notification = {
               id: `notif-${generateId()}`,
               userId: sub.userId,
@@ -151,8 +183,19 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
         set({ submissions: next });
       },
 
-      rejectSubmission: (submissionId: string, rejectionReason: string, reviewedBy = 'Admin User') => {
+      rejectSubmission: async (submissionId: string, rejectionReason: string, reviewedBy = 'Admin User') => {
         const now = new Date().toISOString();
+
+        try {
+          await fetch(`/api/admin/avatars/${encodeURIComponent(submissionId)}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: rejectionReason }),
+          });
+        } catch {
+          // Fallback
+        }
+
         const next = get().submissions.map((sub) => {
           if (sub.id === submissionId) {
             const updated = {
@@ -163,7 +206,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               reviewedBy,
             };
 
-            // Update in mockUsers and authStore
             const targetUser = mockUsers.find((u) => u.id === sub.userId);
             if (targetUser) {
               targetUser.pendingAvatar = undefined;
@@ -180,7 +222,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               });
             }
 
-            // Create notification for the user
             const notif: Notification = {
               id: `notif-${generateId()}`,
               userId: sub.userId,

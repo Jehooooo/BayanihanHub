@@ -26,6 +26,7 @@ import ManageReportsPage from '@/features/admin/pages/ManageReportsPage';
 import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
 import { useAuthStore } from '@/stores/authStore';
+import AiChatbotModal from '@/components/AiChatbotModal';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -64,6 +65,7 @@ export default function App() {
   return (
     <Router>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <AiChatbotModal />
       <Routes>
         {/* Public Routes (redirect to dashboard if already authenticated) */}
         <Route

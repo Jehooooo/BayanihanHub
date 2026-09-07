@@ -12,11 +12,11 @@ interface ChatState {
   messages: Message[];
   isLoading: boolean;
   isTyping: boolean;
-  fetchChats: (userId: string) => void;
-  setActiveChat: (chatId: string) => void;
-  sendMessage: (chatId: string, senderId: string, content: string, type?: 'text' | 'image') => void;
-  markMessagesAsRead: (chatId: string, userId: string) => void;
-  createChat: (participantIds: string[]) => Chat;
+  fetchChats: (userId: string) => Promise<void>;
+  setActiveChat: (chatId: string) => Promise<void>;
+  sendMessage: (chatId: string, senderId: string, content: string, type?: 'text' | 'image') => Promise<void>;
+  markMessagesAsRead: (chatId: string, userId: string) => Promise<void>;
+  createChat: (participantIds: string[]) => Promise<Chat>;
   getOtherParticipant: (chat: Chat, currentUserId: string) => User | undefined;
 }
 
@@ -27,36 +27,85 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isTyping: false,
 
-  fetchChats: (userId: string) => {
+  fetchChats: async (userId: string) => {
     set({ isLoading: true });
 
-    setTimeout(() => {
-      const userChats = mockChats
-        .filter((c) => c.participants.includes(userId))
-        .map((chat) => {
-          const chatMessages = mockMessages.filter((m) => m.chatId === chat.id);
-          const lastMessage = chatMessages.length > 0
-            ? chatMessages.sort(
-                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-              )[0]
-            : undefined;
+    try {
+      const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const apiChats: Chat[] = data.chats || data.conversations || [];
+        const apiChatIds = new Set(apiChats.map((c) => c.id));
 
-          return {
-            ...chat,
-            lastMessage,
-            participantUsers: chat.participants
-              .map((pid) => getUserById(pid))
-              .filter(Boolean) as User[],
-          };
-        })
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        const userMockChats = mockChats
+          .filter((c) => c.participants.includes(userId) && !apiChatIds.has(c.id))
+          .map((chat) => {
+            const chatMessages = mockMessages.filter((m) => m.chatId === chat.id);
+            const lastMessage = chatMessages.length > 0
+              ? chatMessages.sort(
+                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )[0]
+              : undefined;
 
-      set({ chats: userChats, isLoading: false });
-    }, 300);
+            return {
+              ...chat,
+              lastMessage,
+              participantUsers: chat.participants
+                .map((pid) => getUserById(pid))
+                .filter(Boolean) as User[],
+            };
+          });
+
+        const combined = [...apiChats, ...userMockChats].sort(
+          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+
+        set({ chats: combined, isLoading: false });
+        return;
+      }
+    } catch {
+      // Fallback to mock data
+    }
+
+    const userChats = mockChats
+      .filter((c) => c.participants.includes(userId))
+      .map((chat) => {
+        const chatMessages = mockMessages.filter((m) => m.chatId === chat.id);
+        const lastMessage = chatMessages.length > 0
+          ? chatMessages.sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )[0]
+          : undefined;
+
+        return {
+          ...chat,
+          lastMessage,
+          participantUsers: chat.participants
+            .map((pid) => getUserById(pid))
+            .filter(Boolean) as User[],
+        };
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+    set({ chats: userChats, isLoading: false });
   },
 
-  setActiveChat: (chatId: string) => {
+  setActiveChat: async (chatId: string) => {
     const chat = get().chats.find((c) => c.id === chatId) ?? null;
+
+    try {
+      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.messages && Array.isArray(data.messages)) {
+          set({ activeChat: chat, messages: data.messages });
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
     const chatMessages = mockMessages
       .filter((m) => m.chatId === chatId)
       .map((msg) => ({
@@ -68,7 +117,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ activeChat: chat, messages: chatMessages });
   },
 
-  sendMessage: (chatId: string, senderId: string, content: string, type = 'text') => {
+  sendMessage: async (chatId: string, senderId: string, content: string, type = 'text') => {
     const newMessage: Message = {
       id: generateId(),
       chatId,
@@ -80,8 +129,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: new Date().toISOString(),
     };
 
-    mockMessages.push(newMessage);
-
+    // Optimistic UI update
     const { messages, chats } = get();
     set({
       messages: [...messages, newMessage],
@@ -92,14 +140,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ),
     });
 
-    // Simulate "typing" and auto-reply after a delay for demo
+    try {
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId,
+          content,
+          type,
+        }),
+      });
+    } catch {
+      // Fallback
+    }
+
+    mockMessages.push(newMessage);
+
+    // Simulate "typing" indicator feedback
     set({ isTyping: true });
     setTimeout(() => {
       set({ isTyping: false });
-    }, 2000);
+    }, 1500);
   },
 
-  markMessagesAsRead: (chatId: string, userId: string) => {
+  markMessagesAsRead: async (chatId: string, userId: string) => {
     const { messages, chats } = get();
     const updatedMessages = messages.map((m) =>
       m.chatId === chatId && m.senderId !== userId ? { ...m, isRead: true } : m
@@ -108,14 +172,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
       c.id === chatId ? { ...c, unreadCount: 0 } : c
     );
     set({ messages: updatedMessages, chats: updatedChats });
+
+    try {
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(userId)}`, {
+        method: 'PATCH',
+      });
+    } catch {
+      // Fallback
+    }
   },
 
-  createChat: (participantIds: string[]) => {
-    // Check if chat already exists
+  createChat: async (participantIds: string[]) => {
     const existingChat = get().chats.find((c) =>
       participantIds.every((pid) => c.participants.includes(pid))
     );
     if (existingChat) return existingChat;
+
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversation) {
+          set({ chats: [data.conversation, ...get().chats] });
+          return data.conversation;
+        }
+      }
+    } catch {
+      // Fallback
+    }
 
     const newChat: Chat = {
       id: generateId(),

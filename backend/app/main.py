@@ -2,13 +2,13 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.routers import verification, auth, admin, notifications
+from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai
 from app.db import get_db
 import app.config as config
 
 app = FastAPI(
-    title="Bayanihan Hub Identity Verification API",
-    description="Python FastAPI backend powering identity verification, Philippine ID validation, and biometric facial checks for Bayanihan Hub.",
+    title="Bayanihan Hub Community Platform API",
+    description="Python FastAPI backend powering identity verification, items, barter exchanges, community requests, direct messaging, and AI assistant for Bayanihan Hub.",
     version="1.0.0",
 )
 
@@ -26,6 +26,12 @@ app.include_router(auth.router)
 app.include_router(verification.router)
 app.include_router(admin.router)
 app.include_router(notifications.router)
+app.include_router(items.router)
+app.include_router(exchanges.router)
+app.include_router(requests.router)
+app.include_router(messaging.router)
+app.include_router(profile.router)
+app.include_router(ai.router)
 
 
 @app.get("/health")
