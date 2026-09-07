@@ -12,6 +12,7 @@ import Textarea from '@/components/ui/Textarea';
 import Card from '@/components/ui/Card';
 import { categories } from '@/data/categories';
 import { itemsService } from '@/services/items.service';
+import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
 import type { ItemCondition, ItemType } from '@/types';
 import toast from 'react-hot-toast';
@@ -274,7 +275,7 @@ export default function PostItemPage() {
     if (!donationForm.title || !donationForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
-      await itemsService.createItem({
+      const createdItem = await itemsService.createItem({
         title: donationForm.title, category: donationForm.category,
         condition: donationForm.condition, type: 'donation', quantity: 1,
         description: donationForm.description,
@@ -285,7 +286,7 @@ export default function PostItemPage() {
         availability: donationForm.availability,
       });
       toast.success('Donation posted!');
-      navigate('/browse');
+      navigate(`/items/${createdItem.id}`);
     } catch { toast.error('Failed to post donation.'); }
     finally { setIsLoading(false); }
   };
@@ -295,18 +296,41 @@ export default function PostItemPage() {
     if (!requestForm.title || !requestForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
-      await itemsService.createItem({
+      const createdItem = await itemsService.createItem({
         title: requestForm.title, category: requestForm.category,
         condition: requestForm.preferredCondition, type: 'request', quantity: 1,
         description: `[${requestForm.urgency === 'urgent' ? 'URGENT' : 'NORMAL'}] ${requestForm.description}`,
-        images: ['/placeholder-appliance.jpg'],
+        images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
         status: 'available', ownerId: user?.id ?? 'user-1',
         location: locationPayload,
         pickupOptions: ['Meet up'],
         availability: 'Flexible',
       });
+
+      // Also register in community requests
+      try {
+        await requestsService.createRequest({
+          title: requestForm.title,
+          description: requestForm.description,
+          category: requestForm.category,
+          urgency: requestForm.urgency === 'urgent' ? 'high' : 'medium',
+          status: 'active',
+          userId: user?.id ?? 'user-1',
+          location: {
+            address: locationPayload.address,
+            barangay: locationPayload.barangay,
+            municipality: locationPayload.municipality,
+            province: locationPayload.province,
+          },
+          neededBefore: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+          images: images.length > 0 ? images : [],
+        });
+      } catch {
+        // non-blocking
+      }
+
       toast.success('Request posted!');
-      navigate('/browse');
+      navigate(`/items/${createdItem.id}`);
     } catch { toast.error('Failed to post request.'); }
     finally { setIsLoading(false); }
   };
@@ -316,7 +340,7 @@ export default function PostItemPage() {
     if (!exchangeForm.offerTitle || !exchangeForm.offerDescription || !exchangeForm.wantItem) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
-      await itemsService.createItem({
+      const createdItem = await itemsService.createItem({
         title: exchangeForm.offerTitle, category: exchangeForm.offerCategory,
         condition: exchangeForm.offerCondition, type: 'exchange', quantity: 1,
         description: `${exchangeForm.offerDescription}\n\nLooking for: ${exchangeForm.wantItem}`,
@@ -327,7 +351,7 @@ export default function PostItemPage() {
         availability: 'Flexible',
       });
       toast.success('Exchange listing posted!');
-      navigate('/exchanges');
+      navigate(`/items/${createdItem.id}`);
     } catch { toast.error('Failed to post exchange.'); }
     finally { setIsLoading(false); }
   };

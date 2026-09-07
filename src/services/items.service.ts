@@ -1,10 +1,59 @@
 import type { Item, SearchFilters } from '../types';
 import { mockItems, generateId, getUserById } from '../data/mockData';
 
-let itemsStore: Item[] = [...mockItems];
+const PERSISTED_ITEMS_KEY = 'bayanihan_persisted_items';
+
+function getLocalPersistedItems(): Item[] {
+  try {
+    const raw = localStorage.getItem(PERSISTED_ITEMS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function saveLocalPersistedItem(item: Item): void {
+  try {
+    const current = getLocalPersistedItems();
+    const filtered = current.filter(
+      (i) =>
+        i.id !== item.id &&
+        String(i.id).replace('item-', '') !== String(item.id).replace('item-', '')
+    );
+    filtered.unshift(item);
+    localStorage.setItem(PERSISTED_ITEMS_KEY, JSON.stringify(filtered.slice(0, 100)));
+  } catch {
+    // ignore
+  }
+}
+
+function normalizeId(id: string | number): string {
+  return String(id).trim();
+}
+
+function matchesId(item: Item, targetId: string): boolean {
+  const normTarget = normalizeId(targetId);
+  const normItemId = normalizeId(item.id);
+  if (normItemId === normTarget) return true;
+  if (normItemId === `item-${normTarget}` || `item-${normItemId}` === normTarget) return true;
+  const bareItem = normItemId.replace('item-', '');
+  const bareTarget = normTarget.replace('item-', '');
+  if (bareItem && bareTarget && bareItem === bareTarget) return true;
+  if ((item as any).itemId && String((item as any).itemId) === bareTarget) return true;
+  return false;
+}
+
+// Initial in-memory store initialized with mockItems + any previously persisted local items
+let itemsStore: Item[] = [...getLocalPersistedItems(), ...mockItems];
 
 export const itemsService = {
   async getItems(filters?: SearchFilters): Promise<Item[]> {
+    const localPersisted = getLocalPersistedItems();
+
     try {
       const params = new URLSearchParams();
       if (filters?.query) params.append('query', filters.query);
@@ -18,14 +67,31 @@ export const itemsService = {
       if (res.ok) {
         const data = await res.json();
         if (data.items && Array.isArray(data.items)) {
-          // Merge API items with local mock items (avoiding duplicates by id/title)
           const apiItems: Item[] = data.items;
-          const apiIds = new Set(apiItems.map((i) => i.id));
-          const complementaryMocks = itemsStore.filter((m) => !apiIds.has(m.id));
+          const apiIds = new Set(apiItems.map((i) => normalizeId(i.id)));
+          const apiBareIds = new Set(apiItems.map((i) => normalizeId(i.id).replace('item-', '')));
 
-          let combined = [...apiItems, ...complementaryMocks];
+          // Merge API items with local/mock items not yet in API
+          const complementaryMocks = [...localPersisted, ...itemsStore].filter((m) => {
+            const mId = normalizeId(m.id);
+            const mBare = mId.replace('item-', '');
+            return !apiIds.has(mId) && !apiBareIds.has(mBare);
+          });
 
-          // Apply client filters on complementary mocks if needed
+          // Deduplicate complementary
+          const seen = new Set<string>();
+          const uniqueComplementary: Item[] = [];
+          for (const c of complementaryMocks) {
+            const bare = normalizeId(c.id).replace('item-', '');
+            if (!seen.has(bare)) {
+              seen.add(bare);
+              uniqueComplementary.push(c);
+            }
+          }
+
+          let combined = [...apiItems, ...uniqueComplementary];
+
+          // Apply client filters if needed
           if (filters?.query) {
             const q = filters.query.toLowerCase();
             combined = combined.filter(
@@ -53,7 +119,14 @@ export const itemsService = {
     }
 
     await new Promise((r) => setTimeout(r, 100));
-    let result = [...itemsStore];
+    let result = [...localPersisted, ...itemsStore];
+
+    // Deduplicate
+    const seenMap = new Map<string, Item>();
+    for (const it of result) {
+      if (!seenMap.has(it.id)) seenMap.set(it.id, it);
+    }
+    result = Array.from(seenMap.values());
 
     if (filters?.query) {
       const q = filters.query.toLowerCase();
@@ -99,21 +172,72 @@ export const itemsService = {
   },
 
   async getItemById(id: string): Promise<Item | null> {
+    if (!id) return null;
+
+    // 1. Try API with given id
     try {
       const res = await fetch(`/api/items/${encodeURIComponent(id)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.item) {
+          saveLocalPersistedItem(data.item);
           return data.item;
         }
       }
     } catch {
-      // Fallback
+      // ignore
     }
 
-    const item = itemsStore.find((i) => i.id === id);
-    if (!item) return null;
-    return { ...item, owner: item.owner || getUserById(item.ownerId) };
+    // 2. If id was numeric or item-prefixed, try alternate format via API
+    const bare = normalizeId(id).replace('item-', '');
+    if (bare && bare !== id) {
+      try {
+        const altRes = await fetch(`/api/items/${encodeURIComponent(bare)}`);
+        if (altRes.ok) {
+          const altData = await altRes.json();
+          if (altData.item) {
+            saveLocalPersistedItem(altData.item);
+            return altData.item;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    } else if (bare && !id.startsWith('item-')) {
+      try {
+        const altRes = await fetch(`/api/items/item-${encodeURIComponent(bare)}`);
+        if (altRes.ok) {
+          const altData = await altRes.json();
+          if (altData.item) {
+            saveLocalPersistedItem(altData.item);
+            return altData.item;
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 3. Fallback to local persisted items
+    const localPersisted = getLocalPersistedItems();
+    const persistedMatch = localPersisted.find((i) => matchesId(i, id));
+    if (persistedMatch) {
+      return {
+        ...persistedMatch,
+        owner: persistedMatch.owner || getUserById(persistedMatch.ownerId),
+      };
+    }
+
+    // 4. Fallback to in-memory itemsStore & mockItems
+    const inMemMatch = itemsStore.find((i) => matchesId(i, id)) || mockItems.find((i) => matchesId(i, id));
+    if (inMemMatch) {
+      return {
+        ...inMemMatch,
+        owner: inMemMatch.owner || getUserById(inMemMatch.ownerId),
+      };
+    }
+
+    return null;
   },
 
   async createItem(data: Omit<Item, 'id' | 'views' | 'favorites' | 'createdAt' | 'updatedAt'>): Promise<Item> {
@@ -140,11 +264,12 @@ export const itemsService = {
         const resData = await res.json();
         if (resData.item) {
           itemsStore.unshift(resData.item);
+          saveLocalPersistedItem(resData.item);
           return resData.item;
         }
       }
     } catch {
-      // Fallback
+      // Fallback to local creation
     }
 
     const newItem: Item = {
@@ -156,6 +281,7 @@ export const itemsService = {
       updatedAt: new Date().toISOString(),
     };
     itemsStore.unshift(newItem);
+    saveLocalPersistedItem(newItem);
     return newItem;
   },
 
@@ -172,10 +298,11 @@ export const itemsService = {
       // Fallback
     }
 
-    const item = itemsStore.find((i) => i.id === itemId);
+    const item = itemsStore.find((i) => matchesId(i, itemId));
     if (item) {
       item.isFavorited = !item.isFavorited;
       item.favorites += item.isFavorited ? 1 : -1;
+      saveLocalPersistedItem(item);
       return item.isFavorited;
     }
     return false;
@@ -187,14 +314,18 @@ export const itemsService = {
         method: 'DELETE',
       });
       if (res.ok) {
-        itemsStore = itemsStore.filter((i) => i.id !== id);
+        itemsStore = itemsStore.filter((i) => !matchesId(i, id));
+        const currentPersisted = getLocalPersistedItems().filter((i) => !matchesId(i, id));
+        localStorage.setItem(PERSISTED_ITEMS_KEY, JSON.stringify(currentPersisted));
         return true;
       }
     } catch {
       // Fallback
     }
 
-    itemsStore = itemsStore.filter((i) => i.id !== id);
+    itemsStore = itemsStore.filter((i) => !matchesId(i, id));
+    const currentPersisted = getLocalPersistedItems().filter((i) => !matchesId(i, id));
+    localStorage.setItem(PERSISTED_ITEMS_KEY, JSON.stringify(currentPersisted));
     return true;
   },
 };

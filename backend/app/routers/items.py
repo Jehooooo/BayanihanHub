@@ -30,6 +30,19 @@ from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/items", tags=["Items & Postings"])
 
+CATEGORY_IMAGES = {
+    "clothing": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80",
+    "electronics": "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&auto=format&fit=crop&q=80",
+    "furniture": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80",
+    "books": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80",
+    "food": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
+    "appliances": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600&auto=format&fit=crop&q=80",
+    "toys": "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=600&auto=format&fit=crop&q=80",
+    "medical": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80",
+    "school-supplies": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80",
+    "other": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80",
+}
+
 
 def parse_numeric_id(val: Any) -> Optional[int]:
     if val is None:
@@ -64,6 +77,10 @@ class LocationDto(BaseModel):
     municipality: Optional[str] = "City of San Fernando"
     province: Optional[str] = "La Union"
     postalCode: Optional[str] = None
+    lat: Optional[float] = 16.6159
+    lng: Optional[float] = 120.3209
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class RequestDonationDto(BaseModel):
@@ -375,95 +392,109 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
     """
     Create a new item posting in MySQL.
     """
-    # 1. Resolve Owner ID
-    owner = resolve_valid_user(dto.ownerId, db, fallback_index=0)
-    if not owner:
-        raise HTTPException(status_code=400, detail="Valid user account required to post item.")
-    owner_id = owner.user_id
+    import traceback
+    try:
+        # 1. Resolve Owner ID
+        owner = resolve_valid_user(dto.ownerId, db, fallback_index=0)
+        if not owner:
+            raise HTTPException(status_code=400, detail="Valid user account required to post item.")
+        owner_id = owner.user_id
 
-    # 2. Resolve Category ID
-    cat_str = str(dto.category).strip()
-    cat_num = parse_numeric_id(cat_str)
-    cat = None
-    if cat_num:
-        cat = db.query(ItemCategory).filter(ItemCategory.category_id == cat_num).first()
-    if not cat:
-        cat = db.query(ItemCategory).filter(
-            or_(ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{cat_str}%"))
-        ).first()
-    cat_id = cat.category_id if cat else 10  # 10 is 'other'
+        # 2. Resolve Category ID
+        cat_str = str(dto.category).strip()
+        cat_num = parse_numeric_id(cat_str)
+        cat = None
+        if cat_num:
+            cat = db.query(ItemCategory).filter(ItemCategory.category_id == cat_num).first()
+        if not cat:
+            cat = db.query(ItemCategory).filter(
+                or_(ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{cat_str}%"))
+            ).first()
+        cat_id = cat.category_id if cat else 10  # 10 is 'other'
 
-    # 3. Resolve Condition ID
-    cond_str = str(dto.condition).strip()
-    cond_num = parse_numeric_id(cond_str)
-    cond = None
-    if cond_num:
-        cond = db.query(ItemCondition).filter(ItemCondition.condition_id == cond_num).first()
-    if not cond:
-        cond = db.query(ItemCondition).filter(ItemCondition.condition_name.ilike(f"%{cond_str}%")).first()
-    cond_id = cond.condition_id if cond else 3  # Good Condition
+        # 3. Resolve Condition ID
+        cond_str = str(dto.condition).strip()
+        cond_num = parse_numeric_id(cond_str)
+        cond = None
+        if cond_num:
+            cond = db.query(ItemCondition).filter(ItemCondition.condition_id == cond_num).first()
+        if not cond:
+            cond = db.query(ItemCondition).filter(ItemCondition.condition_name.ilike(f"%{cond_str}%")).first()
+        cond_id = cond.condition_id if cond else 3  # Good Condition
 
-    # 4. Resolve Item Type ID
-    type_str = (dto.type or "donation").lower().strip()
-    itype = db.query(ItemType).filter(ItemType.type_name == type_str).first()
-    type_id = itype.item_type_id if itype else 1
+        # 4. Resolve Item Type ID
+        type_str = (dto.type or "donation").lower().strip()
+        itype = db.query(ItemType).filter(ItemType.type_name == type_str).first()
+        type_id = itype.item_type_id if itype else 1
 
-    # 5. Create Item Location
-    loc_dto = dto.location or LocationDto()
-    location = ItemLocation(
-        address_line=loc_dto.address or "Barangay Area",
-        barangay=loc_dto.barangay or "San Fernando",
-        municipality=loc_dto.municipality or "City of San Fernando",
-        province=loc_dto.province or "La Union",
-        postal_code=loc_dto.postalCode,
-        latitude=loc_dto.lat or 16.6159,
-        longitude=loc_dto.lng or 120.3209,
-    )
-    db.add(location)
-    db.flush()
+        # 5. Create Item Location
+        loc_dto = dto.location or LocationDto()
+        location = ItemLocation(
+            address_line=loc_dto.address or "Barangay Area",
+            barangay=loc_dto.barangay or "San Fernando",
+            municipality=loc_dto.municipality or "City of San Fernando",
+            province=loc_dto.province or "La Union",
+            postal_code=loc_dto.postalCode,
+            latitude=loc_dto.lat or 16.6159,
+            longitude=loc_dto.lng or 120.3209,
+        )
+        db.add(location)
+        db.flush()
 
-    # 6. Create Item Record
-    new_item = Item(
-        owner_id=owner_id,
-        category_id=cat_id,
-        condition_id=cond_id,
-        item_type_id=type_id,
-        item_status_id=1,  # available
-        location_id=location.location_id,
-        title=dto.title.strip(),
-        description=dto.description.strip(),
-        quantity=dto.quantity or 1,
-        availability=dto.availability or "Anytime",
-        views_count=0,
-    )
-    db.add(new_item)
-    db.flush()
+        # 6. Create Item Record
+        new_item = Item(
+            owner_id=owner_id,
+            category_id=cat_id,
+            condition_id=cond_id,
+            item_type_id=type_id,
+            item_status_id=1,  # available
+            location_id=location.location_id,
+            title=dto.title.strip(),
+            description=dto.description.strip(),
+            quantity=dto.quantity or 1,
+            availability=dto.availability or "Anytime",
+            views_count=0,
+        )
+        db.add(new_item)
+        db.flush()
 
-    # 7. Add Images
-    images_to_add = dto.images or []
-    if not images_to_add:
-        images_to_add = ["https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80"]
+        # 7. Add Images
+        category_slug = cat.slug.lower() if (cat and hasattr(cat, "slug") and cat.slug) else cat_str.lower()
+        default_img = CATEGORY_IMAGES.get(category_slug, CATEGORY_IMAGES.get("other", "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80"))
+        images_to_add = dto.images or []
+        if not images_to_add:
+            images_to_add = [default_img]
 
-    for idx, img_url in enumerate(images_to_add):
-        if img_url and str(img_url).strip():
-            db.add(ItemImage(item_id=new_item.item_id, image_url=str(img_url).strip(), display_order=idx))
+        for idx, img_url in enumerate(images_to_add):
+            clean_url = str(img_url or "").strip()
+            if clean_url:
+                # If it's a transient browser blob URL or too long for varchar(500), safely replace with high-res category image
+                if clean_url.startswith("blob:") or len(clean_url) > 490:
+                    clean_url = default_img
+                db.add(ItemImage(item_id=new_item.item_id, image_url=clean_url[:500], display_order=idx))
 
-    # 8. Add Pickup Options
-    for po in (dto.pickupOptions or ["Meet up"]):
-        if po and str(po).strip():
-            db.add(ItemPickupOption(item_id=new_item.item_id, option_name=str(po).strip()))
+        # 8. Add Pickup Options
+        for po in (dto.pickupOptions or ["Meet up"]):
+            clean_po = str(po or "").strip()
+            if clean_po:
+                db.add(ItemPickupOption(item_id=new_item.item_id, option_name=clean_po[:50]))
 
-    db.commit()
-    db.refresh(new_item)
+        db.commit()
+        db.refresh(new_item)
 
-    terminal_logger.crud("CREATE", "Item", details=f"Item #{new_item.item_id} '{new_item.title}' posted ({new_item.quantity} qty)")
-    terminal_logger.integration("Backend", "Database", f"Persisted item #{new_item.item_id} to MySQL", status="SUCCESS")
+        terminal_logger.crud("CREATE", "Item", details=f"Item #{new_item.item_id} '{new_item.title}' posted ({new_item.quantity} qty)")
+        terminal_logger.integration("Backend", "Database", f"Persisted item #{new_item.item_id} to MySQL", status="SUCCESS")
 
-    return {
-        "success": True,
-        "message": "Item posted successfully.",
-        "item": format_item(new_item, db, owner_id),
-    }
+        return {
+            "success": True,
+            "message": "Item posted successfully.",
+            "item": format_item(new_item, db, owner_id),
+        }
+    except Exception as ex:
+        db.rollback()
+        err_detail = traceback.format_exc()
+        print("[ERROR IN CREATE_ITEM]:\n", err_detail)
+        raise HTTPException(status_code=500, detail=f"Database error: {str(ex)} | TRACE: {err_detail}")
 
 
 @router.put("/{item_id}")

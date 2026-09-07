@@ -1,10 +1,59 @@
 import type { Exchange, ExchangeStatus } from '../types';
 import { mockExchanges, generateId, getItemById, getUserById } from '../data/mockData';
+import { itemsService } from './items.service';
 
-let exchangeStore: Exchange[] = [...mockExchanges];
+const PERSISTED_EXCHANGES_KEY = 'bayanihan_persisted_exchanges';
+
+function getLocalPersistedExchanges(): Exchange[] {
+  try {
+    const raw = localStorage.getItem(PERSISTED_EXCHANGES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function saveLocalPersistedExchange(exc: Exchange): void {
+  try {
+    const current = getLocalPersistedExchanges();
+    const filtered = current.filter(
+      (e) =>
+        e.id !== exc.id &&
+        String(e.id).replace('exc-', '') !== String(exc.id).replace('exc-', '')
+    );
+    filtered.unshift(exc);
+    localStorage.setItem(PERSISTED_EXCHANGES_KEY, JSON.stringify(filtered.slice(0, 100)));
+  } catch {
+    // ignore
+  }
+}
+
+function normalizeId(id: string | number): string {
+  return String(id).trim();
+}
+
+function matchesId(exc: Exchange, targetId: string): boolean {
+  const normTarget = normalizeId(targetId);
+  const normExcId = normalizeId(exc.id);
+  if (normExcId === normTarget) return true;
+  if (normExcId === `exc-${normTarget}` || `exc-${normExcId}` === normTarget) return true;
+  const bareExc = normExcId.replace('exc-', '');
+  const bareTarget = normTarget.replace('exc-', '');
+  if (bareExc && bareTarget && bareExc === bareTarget) return true;
+  if ((exc as any).exchangeId && String((exc as any).exchangeId) === bareTarget) return true;
+  return false;
+}
+
+let exchangeStore: Exchange[] = [...getLocalPersistedExchanges(), ...mockExchanges];
 
 export const exchangeService = {
   async getExchanges(userId?: string): Promise<Exchange[]> {
+    const localPersisted = getLocalPersistedExchanges();
+
     try {
       const url = userId ? `/api/exchanges?userId=${encodeURIComponent(userId)}` : '/api/exchanges';
       const res = await fetch(url);
@@ -12,19 +61,36 @@ export const exchangeService = {
         const data = await res.json();
         if (data.exchanges && Array.isArray(data.exchanges)) {
           const apiExchanges: Exchange[] = data.exchanges;
-          const apiIds = new Set(apiExchanges.map((e) => e.id));
-          const localMocks = exchangeStore.filter((m) => !apiIds.has(m.id));
+          const apiIds = new Set(apiExchanges.map((e) => normalizeId(e.id)));
+          const apiBareIds = new Set(apiExchanges.map((e) => normalizeId(e.id).replace('exc-', '')));
 
-          let filteredMocks = localMocks;
+          const localMocks = [...localPersisted, ...exchangeStore].filter((m) => {
+            const mId = normalizeId(m.id);
+            const mBare = mId.replace('exc-', '');
+            return !apiIds.has(mId) && !apiBareIds.has(mBare);
+          });
+
+          // Deduplicate
+          const seen = new Set<string>();
+          const uniqueLocal: Exchange[] = [];
+          for (const item of localMocks) {
+            const bare = normalizeId(item.id).replace('exc-', '');
+            if (!seen.has(bare)) {
+              seen.add(bare);
+              uniqueLocal.push(item);
+            }
+          }
+
+          let filteredMocks = uniqueLocal;
           if (userId) {
             filteredMocks = filteredMocks.filter((e) => e.offererId === userId || e.receiverId === userId);
           }
           const mappedMocks = filteredMocks.map((exc) => ({
             ...exc,
-            offeredItem: getItemById(exc.offeredItemId),
-            requestedItem: getItemById(exc.requestedItemId),
-            offerer: getUserById(exc.offererId),
-            receiver: getUserById(exc.receiverId),
+            offeredItem: exc.offeredItem || getItemById(exc.offeredItemId),
+            requestedItem: exc.requestedItem || getItemById(exc.requestedItemId),
+            offerer: exc.offerer || getUserById(exc.offererId),
+            receiver: exc.receiver || getUserById(exc.receiverId),
           }));
 
           return [...apiExchanges, ...mappedMocks];
@@ -35,16 +101,23 @@ export const exchangeService = {
     }
 
     await new Promise((r) => setTimeout(r, 150));
-    let list = [...exchangeStore];
+    let list = [...localPersisted, ...exchangeStore];
+
+    const seenMap = new Map<string, Exchange>();
+    for (const e of list) {
+      if (!seenMap.has(e.id)) seenMap.set(e.id, e);
+    }
+    list = Array.from(seenMap.values());
+
     if (userId) {
       list = list.filter((e) => e.offererId === userId || e.receiverId === userId);
     }
     return list.map((exc) => ({
       ...exc,
-      offeredItem: getItemById(exc.offeredItemId),
-      requestedItem: getItemById(exc.requestedItemId),
-      offerer: getUserById(exc.offererId),
-      receiver: getUserById(exc.receiverId),
+      offeredItem: exc.offeredItem || getItemById(exc.offeredItemId),
+      requestedItem: exc.requestedItem || getItemById(exc.requestedItemId),
+      offerer: exc.offerer || getUserById(exc.offererId),
+      receiver: exc.receiver || getUserById(exc.receiverId),
     }));
   },
 
@@ -65,6 +138,7 @@ export const exchangeService = {
         const resData = await res.json();
         if (resData.exchange) {
           exchangeStore.unshift(resData.exchange);
+          saveLocalPersistedExchange(resData.exchange);
           return resData.exchange;
         }
       }
@@ -80,6 +154,7 @@ export const exchangeService = {
       updatedAt: new Date().toISOString(),
     };
     exchangeStore.unshift(newExc);
+    saveLocalPersistedExchange(newExc);
     return newExc;
   },
 
@@ -107,6 +182,7 @@ export const exchangeService = {
         if (res.ok) {
           const resData = await res.json();
           if (resData.exchange) {
+            saveLocalPersistedExchange(resData.exchange);
             return resData.exchange;
           }
         }
@@ -115,7 +191,7 @@ export const exchangeService = {
       // Fallback
     }
 
-    const exc = exchangeStore.find((e) => e.id === id);
+    const exc = exchangeStore.find((e) => matchesId(e, id));
     if (!exc) return null;
 
     exc.status = status;
@@ -124,6 +200,7 @@ export const exchangeService = {
     if (extra?.meetingLocation) exc.meetingLocation = extra.meetingLocation;
     if (status === 'completed') exc.completedAt = new Date().toISOString();
 
+    saveLocalPersistedExchange(exc);
     return exc;
   },
 };
