@@ -10,6 +10,7 @@ from app.db import get_db
 from app.models.user import User, Profile
 from app.models.item import ItemCategory, ItemLocation
 from app.models.request import ItemRequest, RequestStatus, RequestUrgency, RequestImage
+from app.models.messaging import Conversation, ConversationParticipant, Message, MessageType
 from app.services.notifications import create_notification
 from app.services.terminal_logger import terminal_logger
 
@@ -48,12 +49,18 @@ class CreateRequestDto(BaseModel):
     category: Optional[str] = "other"
     urgency: Optional[str] = "medium"  # low, medium, high, critical
     neededBefore: Optional[str] = None
-    userId: Optional[Any] = None
-    barangay: Optional[str] = "San Fernando"
-    municipality: Optional[str] = "City of San Fernando"
+    userId: Optional[Any] = "user-1"
+    barangay: Optional[str] = "Poblacion"
+    municipality: Optional[str] = "San Fernando"
     province: Optional[str] = "La Union"
-    address: Optional[str] = "Barangay Area"
+    address: Optional[str] = None
     images: Optional[List[str]] = []
+
+
+class FulfillRequestDto(BaseModel):
+    helperId: Optional[Any] = None
+    message: Optional[str] = None
+    evidenceUrl: Optional[str] = None
 
 
 def format_request(req: ItemRequest, db: Session) -> dict:
@@ -240,9 +247,15 @@ def create_request(dto: CreateRequestDto, db: Session = Depends(get_db)):
 
 
 @router.post("/{request_id}/fulfill")
-def fulfill_request(request_id: str, helper_id: Optional[str] = Query(None, alias="helperId"), db: Session = Depends(get_db)):
+def fulfill_request(
+    request_id: str,
+    helper_id: Optional[str] = Query(None, alias="helperId"),
+    dto: Optional[FulfillRequestDto] = Body(None),
+    db: Session = Depends(get_db),
+):
     """
     Offer assistance / mark request as in-progress or completed.
+    Stores fulfillment message, pictures/evidence, and conversation thread in database.
     """
     num_id = parse_numeric_id(request_id)
     req = db.query(ItemRequest).filter(ItemRequest.request_id == num_id).first()
@@ -251,14 +264,63 @@ def fulfill_request(request_id: str, helper_id: Optional[str] = Query(None, alia
 
     req.request_status_id = 3  # completed
 
-    # Notify requester
-    helper_user = resolve_valid_user(helper_id, db, fallback_index=1)
+    actual_helper_id = (dto.helperId if dto and dto.helperId else helper_id)
+    helper_user = resolve_valid_user(actual_helper_id, db, fallback_index=1)
     num_helper = helper_user.user_id if helper_user else None
     helper_name = (
         f"{helper_user.profile.first_name} {helper_user.profile.last_name}".strip()
         if (helper_user and helper_user.profile)
         else "A neighbor"
     )
+
+    # If message or evidence was provided, record it in direct messaging conversation
+    if dto and dto.message and num_helper and num_helper != req.user_id:
+        # Find or create 1-to-1 conversation
+        conv = (
+            db.query(Conversation)
+            .join(ConversationParticipant, ConversationParticipant.conversation_id == Conversation.conversation_id)
+            .filter(ConversationParticipant.user_id.in_([num_helper, req.user_id]))
+            .group_by(Conversation.conversation_id)
+            .having(
+                Conversation.conversation_id.in_(
+                    db.query(ConversationParticipant.conversation_id)
+                    .filter(ConversationParticipant.user_id == num_helper)
+                    .intersect(
+                        db.query(ConversationParticipant.conversation_id)
+                        .filter(ConversationParticipant.user_id == req.user_id)
+                    )
+                )
+            )
+            .first()
+        )
+        if not conv:
+            conv = Conversation(title=f"Assistance for {req.title}")
+            db.add(conv)
+            db.flush()
+            db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=num_helper))
+            db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=req.user_id))
+
+        # Add text message
+        db.add(Message(
+            conversation_id=conv.conversation_id,
+            sender_id=num_helper,
+            message_type_id=1,
+            content=f"🤝 Community Assistance for \"{req.title}\":\n\n{dto.message.strip()}",
+        ))
+
+        # Add evidence picture message if provided
+        if dto.evidenceUrl:
+            img_type = db.query(MessageType).filter(MessageType.type_name == "image").first()
+            img_type_id = img_type.message_type_id if img_type else 2
+            db.add(Message(
+                conversation_id=conv.conversation_id,
+                sender_id=num_helper,
+                message_type_id=img_type_id,
+                content="[Supporting Evidence Attached]",
+                file_url=dto.evidenceUrl,
+            ))
+
+        conv.updated_at = datetime.now()
 
     create_notification(
         db=db,
@@ -268,6 +330,11 @@ def fulfill_request(request_id: str, helper_id: Optional[str] = Query(None, alia
         message=f"{helper_name} offered support and your request \"{req.title}\" has been fulfilled!",
         link="/requests",
         related_user_id=num_helper,
+    )
+
+    terminal_logger.log(
+        f"Community request #{num_id} ('{req.title}') fulfilled by user #{num_helper} ({helper_name}) with supporting evidence stored in database",
+        level="SUCCESS"
     )
 
     db.commit()

@@ -31,7 +31,7 @@ export default function ItemDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
-  const { createChat } = useChatStore();
+  const { createChat, sendMessage } = useChatStore();
   const { saveItem, unsaveItem, isSaved } = useSavedItemsStore();
 
   const [item, setItem] = useState<Item | null>(null);
@@ -107,6 +107,7 @@ export default function ItemDetailsPage() {
       toast.error('Please select an item to offer.');
       return;
     }
+    const offItem = userItems.find((i) => i.id === selectedUserItem);
     await exchangeService.createExchange({
       offeredItemId: selectedUserItem,
       requestedItemId: item.id,
@@ -114,8 +115,44 @@ export default function ItemDetailsPage() {
       receiverId: item.ownerId,
       message: offerMessage || 'Hi, I would like to offer an exchange for your item!',
     });
+
+    // Flow 2: PROPOSE EXCHANGE BUTTON -> SEND TO USERS INBOX -> STORE IN DATABASE -> END
+    try {
+      const chat = await createChat([user!.id, item.ownerId]);
+      const proposalText = `🔄 Exchange Proposal for "${item.title}":\n\nI am offering "${offItem?.title || 'an item'}" in exchange.\n\nNote: ${offerMessage || 'Hi, I would like to offer an exchange for your item!'}`;
+      await sendMessage(chat.id, user!.id, proposalText, 'text');
+    } catch {
+      // Continue
+    }
+
     setExchangeModalOpen(false);
-    toast.success('Exchange offer submitted!');
+    toast.success(
+      (t) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <span style={{ fontWeight: 700 }}>Exchange proposal sent to owner's inbox!</span>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              navigate('/messages');
+            }}
+            style={{
+              alignSelf: 'flex-start',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: '#16a34a',
+              background: 'none',
+              border: 'none',
+              padding: '0.2rem 0',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Go to Inbox →
+          </button>
+        </div>
+      ),
+      { duration: 5000 }
+    );
   };
 
   return (
@@ -284,6 +321,7 @@ export default function ItemDetailsPage() {
                   </div>
                   <Link
                     to={`/profile/${item.owner.id}`}
+                    state={{ returnTo: `/items/${item.id}` }}
                     style={{
                       fontSize: '0.75rem',
                       fontWeight: 700,

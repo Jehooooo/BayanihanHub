@@ -15,6 +15,7 @@ import { categories } from '@/data/categories';
 import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
 import type { ItemRequest, RequestUrgency } from '@/types';
+import FulfillRequestModal from '../components/FulfillRequestModal';
 import toast from 'react-hot-toast';
 
 export default function RequestsPage() {
@@ -24,6 +25,7 @@ export default function RequestsPage() {
   const [requests, setRequests] = useState<ItemRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedRequestForFulfill, setSelectedRequestForFulfill] = useState<ItemRequest | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -179,7 +181,7 @@ export default function RequestsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toast.success('Response sent to request owner!')}
+                      onClick={() => setSelectedRequestForFulfill(req)}
                       leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
                       style={{
                         padding: '0.45rem 1rem',
@@ -264,6 +266,14 @@ export default function RequestsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Fulfill Request Modal */}
+      <FulfillRequestModal
+        isOpen={!!selectedRequestForFulfill}
+        onClose={() => setSelectedRequestForFulfill(null)}
+        request={selectedRequestForFulfill}
+        onSuccess={loadRequests}
+      />
     </PageLayout>
   );
 }

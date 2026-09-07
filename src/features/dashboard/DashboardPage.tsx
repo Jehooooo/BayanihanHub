@@ -15,6 +15,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ItemCard from '@/features/items/components/ItemCard';
 import ScrollReveal from '@/components/common/ScrollReveal';
+import FulfillRequestModal from '@/features/requests/components/FulfillRequestModal';
 import { itemsService } from '@/services/items.service';
 import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
@@ -25,6 +26,7 @@ export default function DashboardPage() {
 
   const [recentItems, setRecentItems] = useState<Item[]>([]);
   const [activeRequests, setActiveRequests] = useState<ItemRequest[]>([]);
+  const [selectedRequestForFulfill, setSelectedRequestForFulfill] = useState<ItemRequest | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -169,51 +171,50 @@ export default function DashboardPage() {
                     <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {req.location.barangay}, {req.location.municipality}
                     </span>
-                    <Link to="/requests" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.45rem',
-                          height: '2.125rem',
-                          padding: '0 0.875rem',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          whiteSpace: 'nowrap',
-                          borderRadius: '9999px',
-                          backgroundColor: '#f0fdf4',
-                          color: '#15803d',
-                          border: '1.5px solid #86efac',
-                          cursor: 'pointer',
-                          boxShadow: '0 1px 3px rgba(22, 163, 74, 0.1)',
-                          transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                          flexShrink: 0,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#16a34a';
-                          e.currentTarget.style.color = '#ffffff';
-                          e.currentTarget.style.borderColor = '#16a34a';
-                          e.currentTarget.style.transform = 'translateY(-1.5px)';
-                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.28)';
-                          const icon = e.currentTarget.querySelector('svg');
-                          if (icon) icon.style.color = '#ffffff';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f0fdf4';
-                          e.currentTarget.style.color = '#15803d';
-                          e.currentTarget.style.borderColor = '#86efac';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(22, 163, 74, 0.1)';
-                          const icon = e.currentTarget.querySelector('svg');
-                          if (icon) icon.style.color = '#16a34a';
-                        }}
-                      >
-                        <HandHeart style={{ width: '0.875rem', height: '0.875rem', color: '#16a34a', transition: 'color 200ms', flexShrink: 0 }} />
-                        <span style={{ whiteSpace: 'nowrap' }}>Fulfill Request</span>
-                      </button>
-                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRequestForFulfill(req)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        height: '2.125rem',
+                        padding: '0 0.875rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        borderRadius: '9999px',
+                        backgroundColor: '#f0fdf4',
+                        color: '#15803d',
+                        border: '1.5px solid #86efac',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(22, 163, 74, 0.1)',
+                        transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#16a34a';
+                        e.currentTarget.style.color = '#ffffff';
+                        e.currentTarget.style.borderColor = '#16a34a';
+                        e.currentTarget.style.transform = 'translateY(-1.5px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.28)';
+                        const icon = e.currentTarget.querySelector('svg');
+                        if (icon) icon.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f0fdf4';
+                        e.currentTarget.style.color = '#15803d';
+                        e.currentTarget.style.borderColor = '#86efac';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(22, 163, 74, 0.1)';
+                        const icon = e.currentTarget.querySelector('svg');
+                        if (icon) icon.style.color = '#16a34a';
+                      }}
+                    >
+                      <HandHeart style={{ width: '0.875rem', height: '0.875rem', color: '#16a34a', transition: 'color 200ms', flexShrink: 0 }} />
+                      <span style={{ whiteSpace: 'nowrap' }}>Fulfill Request</span>
+                    </button>
                   </div>
                 </Card>
               </ScrollReveal>
@@ -221,6 +222,17 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <FulfillRequestModal
+        isOpen={!!selectedRequestForFulfill}
+        onClose={() => setSelectedRequestForFulfill(null)}
+        request={selectedRequestForFulfill}
+        onSuccess={() => {
+          requestsService.getRequests('active').then((reqs) => {
+            setActiveRequests(reqs.slice(0, 3));
+          });
+        }}
+      />
     </PageLayout>
   );
 }

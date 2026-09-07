@@ -1,5 +1,18 @@
-import { useState } from 'react';
-import { ShieldCheck, MapPin, Camera, Clock, AlertTriangle, Star, Award, Repeat, Trophy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import {
+  ShieldCheck,
+  MapPin,
+  Camera,
+  Clock,
+  AlertTriangle,
+  Star,
+  Award,
+  Repeat,
+  Trophy,
+  ArrowLeft,
+  Package,
+} from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
@@ -9,7 +22,9 @@ import Tabs from '@/components/ui/Tabs';
 import ItemCard from '@/features/items/components/ItemCard';
 import ProfilePictureUploadModal from '../components/ProfilePictureUploadModal';
 import { useAuthStore } from '@/stores/authStore';
-import { mockItems } from '@/data/mockData';
+import { mockItems, mockUsers, getUserById } from '@/data/mockData';
+import { itemsService } from '@/services/items.service';
+import type { User, Item } from '@/types';
 
 function getBadgeIcon(nameOrIcon?: string) {
   switch (nameOrIcon?.toLowerCase()) {
@@ -31,15 +46,108 @@ function getBadgeIcon(nameOrIcon?: string) {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user: currentUser } = useAuthStore();
+
+  const isOwnProfile = !id || id === currentUser?.id;
+  const [profileUser, setProfileUser] = useState<User | null>(isOwnProfile ? currentUser : null);
+  const [userItems, setUserItems] = useState<Item[]>([]);
   const [activeTab, setActiveTab] = useState('posted');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(!isOwnProfile);
 
-  const myItems = mockItems.filter((i) => i.ownerId === user?.id || i.ownerId === 'user-1');
+  // Fetch or resolve target profile
+  useEffect(() => {
+    if (isOwnProfile) {
+      setProfileUser(currentUser);
+      const mine = mockItems.filter((i) => i.ownerId === currentUser?.id || i.ownerId === 'user-1');
+      setUserItems(mine);
+      setIsLoading(false);
+      return;
+    }
+
+    if (id) {
+      setIsLoading(true);
+      // Attempt to fetch from backend
+      fetch(`/api/users/profile/${encodeURIComponent(id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.profile) {
+            setProfileUser(data.profile);
+          } else {
+            // Fallback to mockData
+            const mock = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id));
+            setProfileUser(mock || null);
+          }
+        })
+        .catch(() => {
+          const mock = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id));
+          setProfileUser(mock || null);
+        })
+        .finally(() => {
+          // Fetch items posted by this target user
+          itemsService.getItems().then((all) => {
+            const posted = all.filter((i) => i.ownerId === id || (i.owner && i.owner.id === id));
+            setUserItems(posted.length > 0 ? posted : mockItems.filter((i) => i.ownerId === id));
+            setIsLoading(false);
+          });
+        });
+    }
+  }, [id, isOwnProfile, currentUser]);
+
+  const displayedUser = profileUser || currentUser;
 
   return (
     <PageLayout>
       <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Navigation Back Button — returns to Item Details (Flow 3 Branch A) or previous view */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (location.state?.returnTo) {
+                navigate(location.state.returnTo);
+              } else {
+                navigate(-1);
+              }
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: 'var(--color-neutral-600)',
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--color-neutral-200)',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.5rem 0.875rem',
+              cursor: 'pointer',
+              transition: 'all 150ms',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)';
+              e.currentTarget.style.color = 'var(--color-primary-700)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff';
+              e.currentTarget.style.color = 'var(--color-neutral-600)';
+            }}
+          >
+            <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+            <span>{location.state?.returnTo ? 'Back to Item Details' : 'Back'}</span>
+          </button>
+
+          {!isOwnProfile && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontWeight: 600 }}>
+              Viewing Public Neighbor Profile
+            </span>
+          )}
+        </div>
+
         {/* Profile Banner & User Info Card */}
         <Card padding="none" style={{ position: 'relative', overflow: 'hidden', border: '1px solid var(--color-neutral-200)' }}>
           <div style={{ height: '7rem', background: 'linear-gradient(to right, var(--color-primary-700), var(--color-primary-600), var(--color-primary-800))' }} />
@@ -49,54 +157,56 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
                 <div style={{ position: 'relative', width: '6rem', height: '6rem', flexShrink: 0 }}>
                   <Avatar
-                    src={user?.avatar}
-                    name={user?.fullName ?? 'User'}
+                    src={displayedUser?.avatar}
+                    name={displayedUser?.fullName ?? 'User'}
                     size="xl"
                     style={{ width: '100%', height: '100%', border: '4px solid #ffffff', boxShadow: 'var(--shadow-elevated)' }}
                   />
-                  <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      right: 0,
-                      width: '2rem',
-                      height: '2rem',
-                      padding: 0,
-                      borderRadius: '9999px',
-                      backgroundColor: 'var(--color-primary-600)',
-                      color: '#fff',
-                      border: '2px solid #ffffff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.18)',
-                      zIndex: 2,
-                    }}
-                    title="Change Profile Picture"
-                  >
-                    <Camera style={{ width: '0.9375rem', height: '0.9375rem' }} />
-                  </button>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => setIsUploadModalOpen(true)}
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        width: '2rem',
+                        height: '2rem',
+                        padding: 0,
+                        borderRadius: '9999px',
+                        backgroundColor: 'var(--color-primary-600)',
+                        color: '#fff',
+                        border: '2px solid #ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.18)',
+                        zIndex: 2,
+                      }}
+                      title="Change Profile Picture"
+                    >
+                      <Camera style={{ width: '0.9375rem', height: '0.9375rem' }} />
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ paddingBottom: '0.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>
-                      {user?.fullName || 'Maria Santos'}
+                      {displayedUser?.fullName || 'Resident Profile'}
                     </h1>
-                    {user?.isVerified && (
+                    {displayedUser?.isVerified && (
                       <span title="Verified Resident" style={{ display: 'inline-flex' }}>
                         <ShieldCheck style={{ width: '1.125rem', height: '1.125rem', color: 'var(--color-primary-600)' }} />
                       </span>
                     )}
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-500)', margin: '0.125rem 0 0 0' }}>
-                    @{user?.username || 'mariasantos'}
+                    @{displayedUser?.username || 'neighbor'}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: '0.25rem 0 0 0' }}>
                     <MapPin style={{ width: '0.75rem', height: '0.75rem' }} />
-                    {user?.barangay || 'San Isidro'}, {user?.municipality || 'Quezon City'}
+                    {displayedUser?.barangay || 'San Isidro'}, {displayedUser?.municipality || 'Quezon City'}
                   </p>
                 </div>
               </div>
@@ -106,21 +216,21 @@ export default function ProfilePage() {
                 <div>
                   <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
                     <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: '#f59e0b', color: '#f59e0b' }} />
-                    {user?.rating || 4.8}
+                    {displayedUser?.rating || 4.9}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Rating</span>
                 </div>
                 <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
                 <div>
                   <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {user?.totalExchanges || 18}
+                    {displayedUser?.totalExchanges || 18}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Exchanges</span>
                 </div>
                 <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
                 <div>
                   <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {user?.totalDonations || 12}
+                    {displayedUser?.totalDonations || 12}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Donations</span>
                 </div>
@@ -130,15 +240,15 @@ export default function ProfilePage() {
             {/* Earned Badges Row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.5rem' }}>Badges:</span>
-              {(user?.badges && user.badges.length > 0
-                ? user.badges
+              {(displayedUser?.badges && displayedUser.badges.length > 0
+                ? displayedUser.badges
                 : [
                     { id: 'b1', name: 'Trusted Donor', icon: 'award', description: 'Completed 10+ donations' },
                     { id: 'b2', name: 'Community Star', icon: 'star', description: 'Rated 4.5+ average' },
                   ]
               ).map((b) => (
                 <Badge
-                  key={b.id}
+                  key={typeof b === 'string' ? b : b.id}
                   variant="primary"
                   size="md"
                   style={{
@@ -151,14 +261,14 @@ export default function ProfilePage() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {getBadgeIcon(b.icon || b.name)}
-                  <span>{b.name}</span>
+                  {getBadgeIcon(typeof b === 'string' ? b : (b.icon || b.name))}
+                  <span>{typeof b === 'string' ? b : b.name}</span>
                 </Badge>
               ))}
             </div>
 
-            {/* Profile Photo Status Info Banner */}
-            {user?.avatarStatus === 'pending' && (
+            {/* Profile Photo Status Info Banner (Self Only) */}
+            {isOwnProfile && currentUser?.avatarStatus === 'pending' && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', border: '1px solid #fde68a', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: '#92400e' }}>
                   <Clock style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
@@ -170,15 +280,15 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {user?.avatarStatus === 'rejected' && (
+            {isOwnProfile && currentUser?.avatarStatus === 'rejected' && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fef2f2', border: '1px solid #fecaca', gap: '1rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: '#991b1b' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
                     <AlertTriangle style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
                     <span>Your photo submission was declined by an administrator.</span>
                   </div>
-                  {user.avatarRejectionReason && (
-                    <span style={{ fontSize: '0.75rem', color: '#b91c1c' }}>Reason: "{user.avatarRejectionReason}"</span>
+                  {currentUser.avatarRejectionReason && (
+                    <span style={{ fontSize: '0.75rem', color: '#b91c1c' }}>Reason: "{currentUser.avatarRejectionReason}"</span>
                   )}
                 </div>
                 <Button variant="danger" size="sm" onClick={() => setIsUploadModalOpen(true)}>
@@ -192,8 +302,8 @@ export default function ProfilePage() {
         {/* Navigation Tabs */}
         <Tabs
           tabs={[
-            { id: 'posted', label: 'My Listed Items', count: myItems.length },
-            { id: 'favorites', label: 'Saved Items' },
+            { id: 'posted', label: isOwnProfile ? 'My Listed Items' : 'Posted Items', count: userItems.length },
+            ...(isOwnProfile ? [{ id: 'favorites', label: 'Saved Items' }] : []),
             { id: 'reviews', label: 'Reviews & Ratings' },
           ]}
           activeTab={activeTab}
@@ -202,15 +312,24 @@ export default function ProfilePage() {
 
         {/* Tab Views */}
         {activeTab === 'posted' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
-            {myItems.map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
+          <div>
+            {userItems.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+                {userItems.map((item) => (
+                  <ItemCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
+                <Package style={{ width: '2rem', height: '2rem', margin: '0 auto 0.5rem auto', color: 'var(--color-neutral-300)' }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No listed items available yet.</p>
+              </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'favorites' && (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)' }}>
+        {activeTab === 'favorites' && isOwnProfile && (
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
             <p>Saved items will appear here.</p>
           </div>
         )}
@@ -230,19 +349,20 @@ export default function ProfilePage() {
                 </div>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
-                Very friendly and punctual! The textbooks were in excellent condition.
+                Very friendly and punctual! The items were in excellent condition. Great neighbor!
               </p>
               <span style={{ fontSize: '0.625rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'block', paddingTop: '0.25rem' }}>June 15, 2026</span>
             </Card>
           </div>
         )}
 
-        <ProfilePictureUploadModal
-          isOpen={isUploadModalOpen}
-          onClose={() => setIsUploadModalOpen(false)}
-        />
+        {isOwnProfile && (
+          <ProfilePictureUploadModal
+            isOpen={isUploadModalOpen}
+            onClose={() => setIsUploadModalOpen(false)}
+          />
+        )}
       </div>
     </PageLayout>
   );
 }
-
