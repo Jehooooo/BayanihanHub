@@ -382,6 +382,7 @@ export interface SearchFilters {
   sortBy?: 'newest' | 'oldest' | 'nearest' | 'popular';
   type?: ItemType;
   status?: ItemStatus;
+  ownerId?: string;
 }
 
 export interface AuthCredentials {

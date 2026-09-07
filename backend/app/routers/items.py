@@ -1,7 +1,10 @@
 from datetime import datetime
 import re
+import os
+import uuid
+import base64
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc
@@ -387,6 +390,39 @@ def get_item(item_id: str, user_id: Optional[str] = Query(None, alias="userId"),
     return {"success": True, "item": format_item(item, db, current_user_num)}
 
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+PUBLIC_UPLOADS_ITEMS_DIR = os.path.join(PROJECT_ROOT, "public", "uploads", "items")
+os.makedirs(PUBLIC_UPLOADS_ITEMS_DIR, exist_ok=True)
+
+
+@router.post("/upload-image")
+async def upload_item_image(file: UploadFile = File(...)):
+    """
+    Accept an uploaded item image, save it permanently to public/uploads/items,
+    and return the static web URL so it can be used as the thumbnail.
+    """
+    try:
+        ext = "jpg"
+        if file.filename and "." in file.filename:
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            if ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
+                ext = "jpg"
+
+        filename = f"item_{uuid.uuid4().hex[:12]}.{ext}"
+        file_path = os.path.join(PUBLIC_UPLOADS_ITEMS_DIR, filename)
+
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
+        web_url = f"/uploads/items/{filename}"
+        terminal_logger.crud("UPLOAD", "ItemImage", details=f"Saved item thumbnail photo {filename} ({len(contents)} bytes)")
+        return {"success": True, "url": web_url, "filename": filename}
+    except Exception as ex:
+        terminal_logger.error(f"Item image upload failed: {str(ex)}", category="UPLOAD")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(ex)}")
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
     """
@@ -458,7 +494,7 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
         db.add(new_item)
         db.flush()
 
-        # 7. Add Images
+        # 7. Add Images (First picture is thumbnail / display_order = 0)
         category_slug = cat.slug.lower() if (cat and hasattr(cat, "slug") and cat.slug) else cat_str.lower()
         default_img = CATEGORY_IMAGES.get(category_slug, CATEGORY_IMAGES.get("other", "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80"))
         images_to_add = dto.images or []
@@ -468,9 +504,24 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
         for idx, img_url in enumerate(images_to_add):
             clean_url = str(img_url or "").strip()
             if clean_url:
-                # If it's a transient browser blob URL or too long for varchar(500), safely replace with high-res category image
-                if clean_url.startswith("blob:") or len(clean_url) > 490:
+                # If it's a data URL, decode and write to disk in public/uploads/items/
+                if clean_url.startswith("data:image/"):
+                    try:
+                        header, base64_data = clean_url.split(",", 1)
+                        mime_ext = header.split(";")[0].split("/")[1].lower()
+                        if mime_ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
+                            mime_ext = "png"
+                        img_filename = f"item_{uuid.uuid4().hex[:12]}.{mime_ext}"
+                        img_path = os.path.join(PUBLIC_UPLOADS_ITEMS_DIR, img_filename)
+                        with open(img_path, "wb") as f_img:
+                            f_img.write(base64.b64decode(base64_data))
+                        clean_url = f"/uploads/items/{img_filename}"
+                    except Exception:
+                        clean_url = default_img
+                # If it's an invalid or temporary blob URL or not starting with / or http, fallback to default_img
+                elif clean_url.startswith("blob:") or len(clean_url) > 490 or not (clean_url.startswith("http") or clean_url.startswith("/")):
                     clean_url = default_img
+
                 db.add(ItemImage(item_id=new_item.item_id, image_url=clean_url[:500], display_order=idx))
 
         # 8. Add Pickup Options

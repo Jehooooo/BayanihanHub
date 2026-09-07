@@ -62,6 +62,7 @@ export const itemsService = {
       if (filters?.type) params.append('type', filters.type);
       if (filters?.status) params.append('status', filters.status);
       if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+      if (filters?.ownerId) params.append('ownerId', filters.ownerId);
 
       const res = await fetch(`/api/items?${params.toString()}`);
       if (res.ok) {
@@ -110,6 +111,13 @@ export const itemsService = {
           if (filters?.status) {
             combined = combined.filter((i) => i.status === filters.status);
           }
+          if (filters?.ownerId) {
+            const normOwner = normalizeId(filters.ownerId).replace('user-', '');
+            combined = combined.filter((i) => {
+              const itemOwner = normalizeId(i.ownerId || (i.owner && i.owner.id) || '').replace('user-', '');
+              return itemOwner === normOwner || i.ownerId === filters.ownerId;
+            });
+          }
 
           return combined;
         }
@@ -145,6 +153,14 @@ export const itemsService = {
 
     if (filters?.type && (filters.type as string) !== 'all') {
       result = result.filter((i) => i.type === filters.type);
+    }
+
+    if (filters?.ownerId) {
+      const normOwner = normalizeId(filters.ownerId).replace('user-', '');
+      result = result.filter((i) => {
+        const itemOwner = normalizeId(i.ownerId || (i.owner && i.owner.id) || '').replace('user-', '');
+        return itemOwner === normOwner || i.ownerId === filters.ownerId;
+      });
     }
 
     if (filters?.status) {
@@ -238,6 +254,31 @@ export const itemsService = {
     }
 
     return null;
+  },
+
+  async uploadImage(file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/items/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) return data.url;
+      }
+    } catch {
+      // ignore and fallback to data URL
+    }
+
+    // Fallback: read file as Base64 data URL
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   },
 
   async createItem(data: Omit<Item, 'id' | 'views' | 'favorites' | 'createdAt' | 'updatedAt'>): Promise<Item> {

@@ -22,6 +22,7 @@ import Tabs from '@/components/ui/Tabs';
 import ItemCard from '@/features/items/components/ItemCard';
 import ProfilePictureUploadModal from '../components/ProfilePictureUploadModal';
 import { useAuthStore } from '@/stores/authStore';
+import { useSavedItemsStore } from '@/stores/savedItemsStore';
 import { mockItems, mockUsers, getUserById } from '@/data/mockData';
 import { itemsService } from '@/services/items.service';
 import type { User, Item } from '@/types';
@@ -45,59 +46,123 @@ function getBadgeIcon(nameOrIcon?: string) {
   }
 }
 
+function matchesUser(item: Item, targetUserId?: string | number): boolean {
+  if (!targetUserId) return false;
+  const targetStr = String(targetUserId).trim().toLowerCase();
+  const targetBare = targetStr.replace('user-', '');
+
+  const ownerStr = String(item.ownerId ?? '').trim().toLowerCase();
+  const ownerBare = ownerStr.replace('user-', '');
+
+  const ownerObjStr = String(item.owner?.id ?? '').trim().toLowerCase();
+  const ownerObjBare = ownerObjStr.replace('user-', '');
+
+  if (ownerStr === targetStr || ownerObjStr === targetStr) return true;
+  if (targetBare && (ownerBare === targetBare || ownerObjBare === targetBare)) return true;
+
+  return false;
+}
+
 export default function ProfilePage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user: currentUser } = useAuthStore();
+  const { savedIds } = useSavedItemsStore();
 
   const isOwnProfile = !id || id === currentUser?.id;
   const [profileUser, setProfileUser] = useState<User | null>(isOwnProfile ? currentUser : null);
   const [userItems, setUserItems] = useState<Item[]>([]);
+  const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [activeTab, setActiveTab] = useState('posted');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(!isOwnProfile);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch or resolve target profile
+  // Fetch target profile and listed items from backend and local store
   useEffect(() => {
-    if (isOwnProfile) {
-      setProfileUser(currentUser);
-      const mine = mockItems.filter((i) => i.ownerId === currentUser?.id || i.ownerId === 'user-1');
-      setUserItems(mine);
-      setIsLoading(false);
-      return;
-    }
+    let isMounted = true;
 
-    if (id) {
+    const loadProfileData = async () => {
       setIsLoading(true);
-      // Attempt to fetch from backend
-      fetch(`/api/users/profile/${encodeURIComponent(id)}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.profile) {
-            setProfileUser(data.profile);
-          } else {
-            // Fallback to mockData
-            const mock = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id));
-            setProfileUser(mock || null);
+
+      let targetUser = currentUser;
+
+      if (!isOwnProfile && id) {
+        try {
+          const res = await fetch(`/api/users/profile/${encodeURIComponent(id)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.profile) {
+              targetUser = data.profile;
+            }
           }
-        })
-        .catch(() => {
-          const mock = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id));
-          setProfileUser(mock || null);
-        })
-        .finally(() => {
-          // Fetch items posted by this target user
-          itemsService.getItems().then((all) => {
-            const posted = all.filter((i) => i.ownerId === id || (i.owner && i.owner.id === id));
-            setUserItems(posted.length > 0 ? posted : mockItems.filter((i) => i.ownerId === id));
-            setIsLoading(false);
+        } catch {
+          // ignore
+        }
+
+        if (!targetUser) {
+          targetUser = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id)) || null;
+        }
+      }
+
+      if (isMounted) {
+        setProfileUser(targetUser);
+      }
+
+      try {
+        const allItems = await itemsService.getItems();
+        if (isMounted) {
+          const targetId = String(targetUser?.id ?? (isOwnProfile ? (currentUser?.id ?? 'user-1') : (id ?? ''))).trim();
+          const targetBare = targetId.replace('user-', '');
+
+          const matched = allItems.filter((item) => {
+            if (matchesUser(item, targetId)) return true;
+            if (isOwnProfile) {
+              // Current user in local session or demo user
+              if (targetBare === '1' && (matchesUser(item, 'user-1') || matchesUser(item, '1'))) return true;
+              if (currentUser?.id && matchesUser(item, currentUser.id)) return true;
+              if (currentUser?.email && item.owner?.email === currentUser.email) return true;
+            }
+            return false;
           });
-        });
-    }
-  }, [id, isOwnProfile, currentUser]);
+
+          setUserItems(matched);
+
+          // Also match saved items for this user
+          const matchedSaved = allItems.filter((item) => {
+            const normId = String(item.id).trim();
+            const bareId = normId.replace('item-', '');
+            return (
+              savedIds.includes(normId) ||
+              savedIds.includes(`item-${bareId}`) ||
+              savedIds.includes(bareId) ||
+              Boolean(item.isFavorited)
+            );
+          });
+          setSavedItems(matchedSaved);
+        }
+      } catch {
+        if (isMounted) {
+          const fallback = mockItems.filter((i) => i.ownerId === currentUser?.id || i.ownerId === 'user-1');
+          setUserItems(fallback);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadProfileData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isOwnProfile, currentUser, savedIds]);
 
   const displayedUser = profileUser || currentUser;
+  const donationsCount = userItems.filter((i) => i.type === 'donation').length;
+  const exchangesCount = userItems.filter((i) => i.type === 'exchange').length;
 
   return (
     <PageLayout>
@@ -223,14 +288,14 @@ export default function ProfilePage() {
                 <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
                 <div>
                   <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {displayedUser?.totalExchanges || 18}
+                    {Math.max(displayedUser?.totalExchanges || 0, exchangesCount)}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Exchanges</span>
                 </div>
                 <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
                 <div>
                   <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {displayedUser?.totalDonations || 12}
+                    {Math.max(displayedUser?.totalDonations || 0, donationsCount)}
                   </span>
                   <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Donations</span>
                 </div>
@@ -303,7 +368,7 @@ export default function ProfilePage() {
         <Tabs
           tabs={[
             { id: 'posted', label: isOwnProfile ? 'My Listed Items' : 'Posted Items', count: userItems.length },
-            ...(isOwnProfile ? [{ id: 'favorites', label: 'Saved Items' }] : []),
+            ...(isOwnProfile ? [{ id: 'favorites', label: 'Saved Items', count: savedItems.length }] : []),
             { id: 'reviews', label: 'Reviews & Ratings' },
           ]}
           activeTab={activeTab}
@@ -329,8 +394,19 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'favorites' && isOwnProfile && (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
-            <p>Saved items will appear here.</p>
+          <div>
+            {savedItems.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+                {savedItems.map((item) => (
+                  <ItemCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-neutral-400)', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
+                <Package style={{ width: '2rem', height: '2rem', margin: '0 auto 0.5rem auto', color: 'var(--color-neutral-300)' }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No saved items yet.</p>
+              </div>
+            )}
           </div>
         )}
 

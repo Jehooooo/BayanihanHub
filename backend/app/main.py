@@ -81,6 +81,14 @@ app.include_router(profile.router)
 app.include_router(ai.router)
 app.include_router(terminal.router)
 
+import os
+from fastapi.staticfiles import StaticFiles
+
+PUBLIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "public"))
+UPLOADS_DIR = os.path.join(PUBLIC_DIR, "uploads")
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
 
 
 @app.get("/health")

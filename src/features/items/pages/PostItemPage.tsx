@@ -60,6 +60,19 @@ const CONDITION_OPTIONS = [
   { value: 'Poor', label: 'Poor' },
 ];
 
+export const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
+  clothing: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80',
+  electronics: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&auto=format&fit=crop&q=80',
+  furniture: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop&q=80',
+  books: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+  food: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
+  appliances: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600&auto=format&fit=crop&q=80',
+  toys: 'https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=600&auto=format&fit=crop&q=80',
+  medical: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
+  'school-supplies': 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80',
+  other: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80',
+};
+
 // ─── Location Card (shared) ──────────────────────────────────────────────────
 function LocationCard({
   locationDetails,
@@ -120,36 +133,140 @@ function LocationCard({
   );
 }
 
-// ─── Photo Upload Card (shared by Donation & Exchange) ──────────────────────
+// ─── Photo Upload Card (shared by Donation, Request & Exchange) ──────────────
 function PhotoUploadCard({
   images,
   onAdd,
   onRemove,
+  onSetThumbnail,
+  isUploading = false,
 }: {
   images: string[];
   onAdd: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: (idx: number) => void;
+  onSetThumbnail: (idx: number) => void;
+  isUploading?: boolean;
 }) {
   return (
     <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.5rem' }}>
-      <div>
-        <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Item Photos</h3>
-        <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.125rem 0 0 0' }}>Attach up to 5 clear photos of your item.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div>
+          <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Item Photos & Thumbnail</h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.125rem 0 0 0' }}>
+            The <strong>first photo (★ Thumbnail)</strong> will be the cover thumbnail on Browse, Feed, and Search.
+          </p>
+        </div>
+        {images.length > 0 && (
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#16a34a', backgroundColor: '#dcfce7', padding: '0.2rem 0.6rem', borderRadius: '9999px' }}>
+            {images.length}/5 photos attached
+          </span>
+        )}
       </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', paddingTop: '0.25rem' }}>
         {images.map((img, idx) => (
-          <div key={idx} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-neutral-200)' }}>
-            <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <button type="button" onClick={() => onRemove(idx)} style={{ position: 'absolute', top: '0.25rem', right: '0.25rem', padding: '0.25rem', backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>
+          <div
+            key={idx}
+            style={{
+              position: 'relative',
+              aspectRatio: '1/1',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              border: idx === 0 ? '2.5px solid #16a34a' : '1px solid var(--color-neutral-200)',
+              boxShadow: idx === 0 ? '0 2px 10px rgba(22, 163, 74, 0.3)' : 'none',
+            }}
+          >
+            <img src={img} alt={`Item photo ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+            {/* Thumbnail Badge on First Photo */}
+            {idx === 0 ? (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '0.3rem',
+                  left: '0.3rem',
+                  padding: '0.15rem 0.45rem',
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  fontSize: '0.625rem',
+                  fontWeight: 800,
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                }}
+              >
+                ★ Thumbnail
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSetThumbnail(idx)}
+                title="Make this photo the main thumbnail"
+                style={{
+                  position: 'absolute',
+                  bottom: '0.3rem',
+                  left: '0.3rem',
+                  right: '0.3rem',
+                  padding: '0.25rem 0.3rem',
+                  backgroundColor: 'rgba(0,0,0,0.75)',
+                  color: '#ffffff',
+                  fontSize: '0.58rem',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                Set as Thumbnail
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onRemove(idx)}
+              title="Remove photo"
+              style={{
+                position: 'absolute',
+                top: '0.3rem',
+                right: '0.3rem',
+                padding: '0.25rem',
+                backgroundColor: 'rgba(0,0,0,0.65)',
+                color: '#fff',
+                borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
               <X style={{ width: '0.875rem', height: '0.875rem' }} />
             </button>
           </div>
         ))}
+
         {images.length < 5 && (
-          <label style={{ aspectRatio: '1/1', borderRadius: 'var(--radius-md)', border: '2px dashed var(--color-neutral-300)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: '0.5rem', textAlign: 'center' }}>
+          <label
+            style={{
+              aspectRatio: '1/1',
+              borderRadius: 'var(--radius-md)',
+              border: '2px dashed var(--color-neutral-300)',
+              backgroundColor: isUploading ? 'var(--color-neutral-100)' : 'var(--color-neutral-50)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isUploading ? 'not-allowed' : 'pointer',
+              padding: '0.5rem',
+              textAlign: 'center',
+              transition: 'all 150ms',
+            }}
+          >
             <Upload style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-neutral-400)', marginBottom: '0.25rem' }} />
-            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--color-neutral-600)' }}>Add Photo</span>
-            <input type="file" accept="image/*" multiple onChange={onAdd} style={{ display: 'none' }} />
+            <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--color-neutral-600)' }}>
+              {isUploading ? 'Uploading...' : images.length === 0 ? 'Upload Thumbnail' : 'Add Photo'}
+            </span>
+            <input type="file" accept="image/*" multiple disabled={isUploading} onChange={onAdd} style={{ display: 'none' }} />
           </label>
         )}
       </div>
@@ -241,12 +358,43 @@ export default function PostItemPage() {
     offerDescription: '', wantItem: '', wantCategory: 'clothing', meetupOptions: 'Meet up',
   });
 
-  const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newUrls = Array.from(e.target.files).map((file) => URL.createObjectURL(file));
-      setImages((prev) => [...prev, ...newUrls].slice(0, 5));
-      toast.success('Photos attached');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAddImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const selectedFiles = Array.from(e.target.files);
+    setIsUploading(true);
+    const toastId = toast.loading('Uploading item photos...');
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of selectedFiles) {
+        if (images.length + uploadedUrls.length >= 5) break;
+        const url = await itemsService.uploadImage(file);
+        uploadedUrls.push(url);
+      }
+      setImages((prev) => [...prev, ...uploadedUrls].slice(0, 5));
+      toast.success(
+        images.length === 0
+          ? 'First photo set as main thumbnail! You can add up to 5 photos.'
+          : 'Photos uploaded successfully!',
+        { id: toastId }
+      );
+    } catch {
+      toast.error('Failed to upload some photos.', { id: toastId });
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
+  };
+
+  const handleSetThumbnail = (idx: number) => {
+    if (idx === 0) return;
+    setImages((prev) => {
+      const target = prev[idx];
+      const remaining = prev.filter((_, i) => i !== idx);
+      return [target, ...remaining];
+    });
+    toast.success('Updated cover thumbnail!');
   };
 
   const handleOpenLocationPicker = () => {
@@ -275,11 +423,12 @@ export default function PostItemPage() {
     if (!donationForm.title || !donationForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
+      const fallbackImg = CATEGORY_DEFAULT_IMAGES[donationForm.category] || CATEGORY_DEFAULT_IMAGES.other;
       const createdItem = await itemsService.createItem({
         title: donationForm.title, category: donationForm.category,
         condition: donationForm.condition, type: 'donation', quantity: 1,
         description: donationForm.description,
-        images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
+        images: images.length > 0 ? images : [fallbackImg],
         status: 'available', ownerId: user?.id ?? 'user-1',
         location: locationPayload,
         pickupOptions: donationForm.pickupOptions.split(',').map((s) => s.trim()),
@@ -296,11 +445,12 @@ export default function PostItemPage() {
     if (!requestForm.title || !requestForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
+      const fallbackImg = CATEGORY_DEFAULT_IMAGES[requestForm.category] || CATEGORY_DEFAULT_IMAGES.other;
       const createdItem = await itemsService.createItem({
         title: requestForm.title, category: requestForm.category,
         condition: requestForm.preferredCondition, type: 'request', quantity: 1,
         description: `[${requestForm.urgency === 'urgent' ? 'URGENT' : 'NORMAL'}] ${requestForm.description}`,
-        images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
+        images: images.length > 0 ? images : [fallbackImg],
         status: 'available', ownerId: user?.id ?? 'user-1',
         location: locationPayload,
         pickupOptions: ['Meet up'],
@@ -340,11 +490,12 @@ export default function PostItemPage() {
     if (!exchangeForm.offerTitle || !exchangeForm.offerDescription || !exchangeForm.wantItem) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
+      const fallbackImg = CATEGORY_DEFAULT_IMAGES[exchangeForm.offerCategory] || CATEGORY_DEFAULT_IMAGES.other;
       const createdItem = await itemsService.createItem({
         title: exchangeForm.offerTitle, category: exchangeForm.offerCategory,
         condition: exchangeForm.offerCondition, type: 'exchange', quantity: 1,
         description: `${exchangeForm.offerDescription}\n\nLooking for: ${exchangeForm.wantItem}`,
-        images: images.length > 0 ? images : ['/placeholder-appliance.jpg'],
+        images: images.length > 0 ? images : [fallbackImg],
         status: 'available', ownerId: user?.id ?? 'user-1',
         location: locationPayload,
         pickupOptions: exchangeForm.meetupOptions.split(',').map((s) => s.trim()),
@@ -427,7 +578,13 @@ export default function PostItemPage() {
         ══════════════════════════════════════════════════════════ */}
         {selectedType === 'donation' && (
           <form onSubmit={handleDonationSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <PhotoUploadCard images={images} onAdd={handleAddImages} onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))} />
+            <PhotoUploadCard
+              images={images}
+              onAdd={handleAddImages}
+              onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+              onSetThumbnail={handleSetThumbnail}
+              isUploading={isUploading}
+            />
 
             <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
               <div style={{ borderBottom: '1px solid var(--color-neutral-100)', paddingBottom: '0.5rem' }}>
@@ -457,6 +614,14 @@ export default function PostItemPage() {
         ══════════════════════════════════════════════════════════ */}
         {selectedType === 'request' && (
           <form onSubmit={handleRequestSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <PhotoUploadCard
+              images={images}
+              onAdd={handleAddImages}
+              onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+              onSetThumbnail={handleSetThumbnail}
+              isUploading={isUploading}
+            />
+
             <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
               <div style={{ borderBottom: '1px solid var(--color-neutral-100)', paddingBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2563eb', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -517,7 +682,13 @@ export default function PostItemPage() {
         ══════════════════════════════════════════════════════════ */}
         {selectedType === 'exchange' && (
           <form onSubmit={handleExchangeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <PhotoUploadCard images={images} onAdd={handleAddImages} onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))} />
+            <PhotoUploadCard
+              images={images}
+              onAdd={handleAddImages}
+              onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+              onSetThumbnail={handleSetThumbnail}
+              isUploading={isUploading}
+            />
 
             {/* What you're offering */}
             <Card style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
