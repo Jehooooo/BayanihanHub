@@ -333,8 +333,8 @@ def fulfill_request(
     )
 
     terminal_logger.log(
+        "SUCCESS",
         f"Community request #{num_id} ('{req.title}') fulfilled by user #{num_helper} ({helper_name}) with supporting evidence stored in database",
-        level="SUCCESS"
     )
 
     db.commit()

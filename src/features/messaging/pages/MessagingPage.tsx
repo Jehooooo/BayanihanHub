@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import ConversationList from '../components/ConversationList';
 import ChatWindow from '../components/ChatWindow';
@@ -6,6 +7,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function MessagingPage() {
+  const location = useLocation();
   const { user } = useAuthStore();
   const {
     chats,
@@ -20,15 +22,29 @@ export default function MessagingPage() {
 
   const currentUserId = user?.id ?? 'user-1';
 
-  useEffect(() => {
-    fetchChats(currentUserId);
-  }, [currentUserId, fetchChats]);
+  // Read target chat from navigation state or URL query parameter
+  const searchParams = new URLSearchParams(location.search);
+  const targetChatId =
+    (location.state as { activeChatId?: string })?.activeChatId ||
+    searchParams.get('chatId');
 
   useEffect(() => {
-    if (chats.length > 0 && !activeChat) {
+    fetchChats(currentUserId).then(() => {
+      if (targetChatId) {
+        setActiveChat(targetChatId);
+      }
+    });
+  }, [currentUserId, fetchChats, targetChatId, setActiveChat]);
+
+  useEffect(() => {
+    if (targetChatId) {
+      if (activeChat?.id !== targetChatId && chats.some((c) => c.id === targetChatId)) {
+        setActiveChat(targetChatId);
+      }
+    } else if (chats.length > 0 && !activeChat) {
       setActiveChat(chats[0].id);
     }
-  }, [chats, activeChat, setActiveChat]);
+  }, [chats, activeChat, targetChatId, setActiveChat]);
 
   const partner = activeChat
     ? getOtherParticipant(activeChat, currentUserId)

@@ -31,7 +31,7 @@ export default function ItemDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
-  const { createChat, sendMessage } = useChatStore();
+  const { createChat, sendMessage, fetchChats, setActiveChat } = useChatStore();
   const { saveItem, unsaveItem, isSaved } = useSavedItemsStore();
 
   const [item, setItem] = useState<Item | null>(null);
@@ -40,6 +40,7 @@ export default function ItemDetailsPage() {
   const [offerMessage, setOfferMessage] = useState('');
   const [selectedUserItem, setSelectedUserItem] = useState('');
   const [userItems, setUserItems] = useState<Item[]>([]);
+  const [isRequestingDonation, setIsRequestingDonation] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -90,15 +91,55 @@ export default function ItemDetailsPage() {
 
   const isOwner = user?.id === item.ownerId;
 
-  const handleMessageOwner = () => {
-    if (!isAuthenticated) {
-      toast.error('Please log in to send a message.');
+  const handleRequestDonation = async () => {
+    if (!isAuthenticated || !user) {
+      toast.error('Please log in to request this donation item.');
       navigate('/login');
       return;
     }
-    if (item.owner) {
-      createChat([user!.id, item.owner.id]);
-      navigate('/messages');
+
+    if (isOwner) {
+      toast.error('You cannot request your own donation item.');
+      return;
+    }
+
+    if (isRequestingDonation) return;
+    setIsRequestingDonation(true);
+
+    try {
+      // 1. Call backend endpoint to retrieve owner, find/reuse conversation, and send automated message
+      const res = await fetch(`/api/items/${encodeURIComponent(item.id)}/request-donation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const chatId = data.conversationId;
+        await fetchChats(user.id);
+        await setActiveChat(chatId);
+        navigate('/messages', { state: { activeChatId: chatId } });
+        return;
+      } else {
+        const errData = await res.json().catch(() => null);
+        const errMsg = errData?.detail || 'Unable to start the conversation. Please try again.';
+        toast.error(errMsg);
+      }
+    } catch {
+      // Client-side fallback if network error
+      try {
+        const chat = await createChat([user.id, item.ownerId]);
+        const autoMessage = `Hi! I'm interested in requesting the donation item you posted: "${item.title}".`;
+        await sendMessage(chat.id, user.id, autoMessage, 'text');
+        await setActiveChat(chat.id);
+        navigate('/messages', { state: { activeChatId: chat.id } });
+        return;
+      } catch {
+        toast.error('Unable to start the conversation. Please try again.');
+      }
+    } finally {
+      setIsRequestingDonation(false);
     }
   };
 
@@ -370,30 +411,14 @@ export default function ItemDetailsPage() {
                       variant="primary"
                       size="lg"
                       fullWidth
+                      disabled={isRequestingDonation}
                       style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
-                      onClick={() => {
-                        if (!isAuthenticated) {
-                          navigate('/login');
-                        } else {
-                          navigate(`/request/${item.id}`);
-                        }
-                      }}
+                      onClick={handleRequestDonation}
                       leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
                     >
-                      Request Donation
+                      {isRequestingDonation ? 'Opening conversation...' : 'Request Donation'}
                     </Button>
                   )}
-
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    fullWidth
-                    style={{ fontWeight: 700, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
-                    onClick={handleMessageOwner}
-                    leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
-                  >
-                    Message Owner
-                  </Button>
                 </div>
               )}
 

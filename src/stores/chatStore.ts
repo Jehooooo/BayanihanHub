@@ -60,7 +60,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
 
-        set({ chats: combined, isLoading: false });
+        const currentActive = get().activeChat;
+        const updatedActive = currentActive ? combined.find(c => c.id === currentActive.id) || currentActive : null;
+
+        set({ chats: combined, activeChat: updatedActive, isLoading: false });
         return;
       }
     } catch {
@@ -87,17 +90,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
       })
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-    set({ chats: userChats, isLoading: false });
+    const currentActive = get().activeChat;
+    const updatedActive = currentActive ? userChats.find(c => c.id === currentActive.id) || currentActive : null;
+
+    set({ chats: userChats, activeChat: updatedActive, isLoading: false });
   },
 
   setActiveChat: async (chatId: string) => {
-    const chat = get().chats.find((c) => c.id === chatId) ?? null;
+    let chat = get().chats.find((c) => c.id === chatId) ?? null;
+    if (!chat) {
+      const mockC = mockChats.find((c) => c.id === chatId);
+      if (mockC) chat = mockC;
+    }
 
     try {
       const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`);
       if (res.ok) {
         const data = await res.json();
         if (data.messages && Array.isArray(data.messages)) {
+          if (!chat) {
+            chat = get().chats.find((c) => c.id === chatId) ?? null;
+          }
           set({ activeChat: chat, messages: data.messages });
           return;
         }

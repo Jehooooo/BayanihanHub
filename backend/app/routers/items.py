@@ -19,6 +19,12 @@ from app.models.item import (
     ItemPickupOption,
     SavedItem,
 )
+from app.models.messaging import (
+    Conversation,
+    ConversationParticipant,
+    Message,
+    MessageType,
+)
 from app.services.notifications import create_notification
 from app.services.terminal_logger import terminal_logger
 
@@ -58,6 +64,10 @@ class LocationDto(BaseModel):
     municipality: Optional[str] = "City of San Fernando"
     province: Optional[str] = "La Union"
     postalCode: Optional[str] = None
+
+
+class RequestDonationDto(BaseModel):
+    userId: Optional[Any] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
 
@@ -551,3 +561,126 @@ def toggle_save_item(item_id: str, user_id: str = Query(..., alias="userId"), db
 
         db.commit()
         return {"success": True, "isSaved": True, "message": "Item saved to bookmarks."}
+
+
+@router.post("/{item_id}/request-donation")
+def request_donation(
+    item_id: str,
+    dto: Optional[RequestDonationDto] = Body(None),
+    user_id: Optional[str] = Query(None, alias="userId"),
+    db: Session = Depends(get_db),
+):
+    """
+    Directly request a donation item by opening or reusing a conversation
+    with the actual item poster and sending an automatic donation request message.
+    """
+    num_item = parse_numeric_id(item_id)
+    if not num_item:
+        raise HTTPException(status_code=404, detail="This donation item is no longer available.")
+
+    item = (
+        db.query(Item)
+        .filter(Item.item_id == num_item)
+        .options(joinedload(Item.owner).joinedload(User.profile))
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="This donation item is no longer available.")
+
+    owner = item.owner
+    if not owner:
+        raise HTTPException(status_code=404, detail="This donation is currently unavailable.")
+
+    # Identify currently authenticated / requesting user
+    req_uid = dto.userId if (dto and dto.userId) else user_id
+    current_user = resolve_valid_user(req_uid, db, fallback_index=0)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Please log in to request a donation.")
+
+    # Prevent user from messaging themselves
+    if current_user.user_id == owner.user_id:
+        raise HTTPException(status_code=400, detail="You cannot request your own donation item.")
+
+    try:
+        # Check if conversation already exists between current user and owner
+        u1, u2 = current_user.user_id, owner.user_id
+        existing = (
+            db.query(Conversation)
+            .join(ConversationParticipant, ConversationParticipant.conversation_id == Conversation.conversation_id)
+            .filter(ConversationParticipant.user_id.in_([u1, u2]))
+            .group_by(Conversation.conversation_id)
+            .having(
+                Conversation.conversation_id.in_(
+                    db.query(ConversationParticipant.conversation_id)
+                    .filter(ConversationParticipant.user_id == u1)
+                    .intersect(
+                        db.query(ConversationParticipant.conversation_id)
+                        .filter(ConversationParticipant.user_id == u2)
+                    )
+                )
+            )
+            .first()
+        )
+
+        if existing:
+            conv = existing
+        else:
+            conv = Conversation(title=f"Inquiry: {item.title}")
+            db.add(conv)
+            db.flush()
+            db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=u1))
+            db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=u2))
+
+        # Dynamic automatic donation-request message
+        auto_message = f'Hi! I\'m interested in requesting the donation item you posted: "{item.title}".'
+        new_msg = Message(
+            conversation_id=conv.conversation_id,
+            sender_id=u1,
+            message_type_id=1,  # text
+            content=auto_message,
+        )
+        db.add(new_msg)
+        conv.updated_at = datetime.now()
+
+        # Notify poster
+        sender_prof = current_user.profile
+        sender_name = (
+            f"{sender_prof.first_name} {sender_prof.last_name}".strip()
+            if sender_prof
+            else (current_user.email.split("@")[0])
+        )
+        create_notification(
+            db=db,
+            user_id=owner.user_id,
+            type_code="item_request",
+            title="New Donation Request",
+            message=f'{sender_name} requested your donation item "{item.title}".',
+            link="/messages",
+            related_user_id=u1,
+            related_item_id=item.item_id,
+        )
+
+        terminal_logger.log(
+            "SUCCESS",
+            f"User #{u1} ({sender_name}) requested donation item #{item.item_id} ('{item.title}') from #{owner.user_id}. Conversation #{conv.conversation_id} active.",
+        )
+
+        db.commit()
+        db.refresh(conv)
+
+        return {
+            "success": True,
+            "conversationId": f"chat-{conv.conversation_id}",
+            "rawConversationId": conv.conversation_id,
+            "itemTitle": item.title,
+            "posterId": f"user-{owner.user_id}",
+            "posterName": f"{owner.profile.first_name} {owner.profile.last_name}".strip() if owner.profile else "Neighbor",
+            "message": auto_message,
+        }
+    except HTTPException:
+        raise
+    except Exception as ex:
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unable to start the conversation: {str(ex)}")
