@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import Avatar from '@/components/ui/Avatar';
+import ScrollReveal from '@/components/common/ScrollReveal';
 import { categories } from '@/data/categories';
 import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
@@ -46,7 +47,7 @@ export default function RequestsPage() {
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.description) {
-      toast.error('Please fill in title and description.');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -54,136 +55,147 @@ export default function RequestsPage() {
       title: formData.title,
       description: formData.description,
       category: formData.category,
-      urgency: formData.urgency,
+      urgency: formData.urgency as any,
       status: 'active',
-      userId: user?.id ?? 'user-1',
+      userId: user?.id || 'user-1',
       location: {
-        address: user?.address ?? '',
-        barangay: user?.barangay ?? 'Poblacion',
-        municipality: user?.municipality ?? 'San Fernando',
-        province: user?.province ?? 'La Union',
+        address: user?.address || 'Community Center',
+        barangay: user?.barangay || 'San Fernando',
+        municipality: user?.municipality || 'City of San Fernando',
+        province: user?.province || 'La Union',
       },
       neededBefore: formData.neededBefore,
       images: [],
     });
 
-    setCreateModalOpen(false);
     toast.success('Request posted successfully!');
+    setCreateModalOpen(false);
+    setFormData({
+      title: '',
+      description: '',
+      category: 'school-supplies',
+      urgency: 'medium',
+      neededBefore: '2026-08-20',
+    });
     loadRequests();
   };
 
   return (
     <PageLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Header Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Community Requests</h1>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>
-              Item requests posted by local neighbors in need of support.
-            </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4.5rem' }}>
+        <ScrollReveal direction="down" duration={500}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Community Assistance Requests</h1>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem' }}>
+                Support neighbors in need of essential items or submit a community request.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<Plus style={{ width: '1.125rem', height: '1.125rem' }} />}
+              onClick={() => setCreateModalOpen(true)}
+              style={{
+                borderRadius: '9999px',
+                padding: '0.625rem 1.25rem',
+                gap: '0.5rem',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+              }}
+            >
+              Post a Request
+            </Button>
           </div>
+        </ScrollReveal>
 
-          <Button
-            variant="primary"
-            size="md"
-            className="shadow-button shrink-0"
-            onClick={() => setCreateModalOpen(true)}
-            leftIcon={<Plus style={{ width: '1.125rem', height: '1.125rem' }} />}
-            style={{
-              padding: '0.625rem 1.35rem',
-              gap: '0.5rem',
-              fontWeight: 700,
-              fontSize: '0.875rem',
-              borderRadius: 'var(--radius-md)',
-            }}
-          >
-            New Request
-          </Button>
-        </div>
+        {/* Tab Filters */}
+        <ScrollReveal direction="up" delay={50}>
+          <Tabs
+            tabs={[
+              { id: 'active', label: 'Active Requests' },
+              { id: 'in_progress', label: 'In Progress' },
+              { id: 'completed', label: 'Fulfilled' },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+        </ScrollReveal>
 
-        {/* Status Filter Tabs */}
-        <Tabs
-          tabs={[
-            { id: 'active', label: 'Active Requests' },
-            { id: 'in_progress', label: 'In Progress' },
-            { id: 'completed', label: 'Completed' },
-          ]}
-          activeTab={activeTab}
-          onChange={setActiveTab}
-        />
-
-        {/* Requests Cards List */}
+        {/* Requests List */}
         {isLoading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-            <div style={{ height: '10rem', backgroundColor: 'var(--color-neutral-200)', borderRadius: 'var(--radius-lg)' }} />
-            <div style={{ height: '10rem', backgroundColor: 'var(--color-neutral-200)', borderRadius: 'var(--radius-lg)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ height: '8rem', backgroundColor: 'var(--color-neutral-100)', borderRadius: 'var(--radius-lg)' }} className="skeleton" />
+            <div style={{ height: '8rem', backgroundColor: 'var(--color-neutral-100)', borderRadius: 'var(--radius-lg)' }} className="skeleton" />
           </div>
         ) : requests.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
-            <HandHeart style={{ width: '3rem', height: '3rem', color: 'var(--color-neutral-300)', margin: '0 auto 0.75rem auto' }} />
+          <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '1px dashed var(--color-neutral-300)', borderRadius: 'var(--radius-lg)', backgroundColor: '#fff' }}>
+            <HandHeart style={{ width: '2.5rem', height: '2.5rem', color: 'var(--color-neutral-400)', margin: '0 auto 0.75rem auto' }} />
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-800)', margin: 0 }}>No requests in this category</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem' }}>Post a new request to get help from generous neighbors.</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
-            {requests.map((req) => (
-              <Card key={req.id} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', border: '1px solid var(--color-neutral-200)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Badge
-                      variant={
-                        req.urgency === 'critical'
-                          ? 'danger'
-                          : req.urgency === 'high'
-                          ? 'warning'
-                          : 'primary'
-                      }
-                      size="sm"
-                      style={{ padding: '0.35rem 0.75rem', letterSpacing: '0.02em' }}
-                    >
-                      Urgency: {req.urgency.toUpperCase()}
-                    </Badge>
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <Clock style={{ width: '0.875rem', height: '0.875rem' }} /> Needed before {req.neededBefore}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>{req.title}</h3>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-600)', marginTop: '0.25rem', lineHeight: '1.6', margin: '0.25rem 0 0 0' }}>{req.description}</p>
-                  </div>
-                </div>
-
-                <div style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {req.user && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Avatar src={req.user.avatar} name={req.user.fullName} size="xs" />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-700)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
-                        {req.user.fullName}
+            {requests.map((req, idx) => (
+              <ScrollReveal key={req.id} delay={idx * 70} direction="up">
+                <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', border: '1px solid var(--color-neutral-200)', height: '100%' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Badge
+                        variant={
+                          req.urgency === 'critical'
+                            ? 'danger'
+                            : req.urgency === 'high'
+                            ? 'warning'
+                            : 'primary'
+                        }
+                        size="sm"
+                        style={{ padding: '0.35rem 0.75rem', letterSpacing: '0.02em' }}
+                      >
+                        Urgency: {req.urgency.toUpperCase()}
+                      </Badge>
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Clock style={{ width: '0.875rem', height: '0.875rem' }} /> Needed before {req.neededBefore}
                       </span>
                     </div>
-                  )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toast.success('Response sent to request owner!')}
-                    leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
-                    style={{
-                      padding: '0.45rem 1rem',
-                      gap: '0.5rem',
-                      fontSize: '0.8125rem',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-md)',
-                      borderColor: 'var(--color-neutral-300)',
-                      backgroundColor: '#ffffff',
-                    }}
-                  >
-                    Fulfill Request
-                  </Button>
-                </div>
-              </Card>
+                    <div>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>{req.title}</h3>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-600)', marginTop: '0.25rem', lineHeight: '1.6', margin: '0.25rem 0 0 0' }}>{req.description}</p>
+                    </div>
+                  </div>
+
+                  <div style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {req.user && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Avatar src={req.user.avatar} name={req.user.fullName} size="xs" />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-700)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>
+                          {req.user.fullName}
+                        </span>
+                      </div>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toast.success('Response sent to request owner!')}
+                      leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
+                      style={{
+                        padding: '0.45rem 1rem',
+                        gap: '0.5rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        borderRadius: 'var(--radius-md)',
+                        borderColor: 'var(--color-neutral-300)',
+                        backgroundColor: '#ffffff',
+                      }}
+                    >
+                      Fulfill Request
+                    </Button>
+                  </div>
+                </Card>
+              </ScrollReveal>
             ))}
           </div>
         )}

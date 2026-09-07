@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import FilterBar from '../components/FilterBar';
 import ItemCard from '../components/ItemCard';
+import ScrollReveal from '@/components/common/ScrollReveal';
 import { itemsService } from '@/services/items.service';
 import type { Item, SearchFilters } from '@/types';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -67,20 +68,24 @@ export default function BrowsePage() {
 
   return (
     <PageLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Browse Available Items</h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>
-            Discover community donations and items available for fair exchange.
-          </p>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4.5rem' }}>
+        <ScrollReveal direction="down" duration={500}>
+          <div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Browse Available Items</h1>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>
+              Discover community donations and items available for fair exchange.
+            </p>
+          </div>
+        </ScrollReveal>
 
         {/* Filter Controls */}
-        <FilterBar
-          filters={filters}
-          onFilterChange={setFilters}
-          onReset={handleResetFilters}
-        />
+        <ScrollReveal direction="up" delay={80}>
+          <FilterBar
+            filters={filters}
+            onFilterChange={setFilters}
+            onReset={handleResetFilters}
+          />
+        </ScrollReveal>
 
         {/* Item Grid */}
         {isLoading ? (
@@ -101,12 +106,13 @@ export default function BrowsePage() {
           />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
-            {items.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                onFavoriteToggle={handleFavoriteToggle}
-              />
+            {items.map((item, idx) => (
+              <ScrollReveal key={item.id} delay={idx * 60} direction="up">
+                <ItemCard
+                  item={item}
+                  onFavoriteToggle={handleFavoriteToggle}
+                />
+              </ScrollReveal>
             ))}
           </div>
         )}

@@ -27,6 +27,7 @@ import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
 import { useAuthStore } from '@/stores/authStore';
 import AiChatbotModal from '@/components/AiChatbotModal';
+import ScrollToTopButton from '@/components/common/ScrollToTopButton';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -66,6 +67,7 @@ export default function App() {
     <Router>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <AiChatbotModal />
+      <ScrollToTopButton />
       <Routes>
         {/* Public Routes (redirect to dashboard if already authenticated) */}
         <Route
