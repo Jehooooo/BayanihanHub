@@ -91,23 +91,6 @@ export default function ChatWindow({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem', margin: 0 }}>{effectivePartner.fullName}</h3>
-              {messages.length > 0 && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '0.05rem 0.4rem',
-                    borderRadius: '9999px',
-                    backgroundColor: 'var(--color-primary-100)',
-                    color: 'var(--color-primary-700)',
-                    fontSize: '0.6875rem',
-                    fontWeight: 800,
-                  }}
-                  title={`${messages.length} messages in conversation`}
-                >
-                  {messages.length >= 9 ? '9+' : messages.length}
-                </span>
-              )}
             </div>
             <span style={{ fontSize: '0.625rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <span style={{ width: '0.375rem', height: '0.375rem', borderRadius: '9999px', backgroundColor: '#22c55e', display: 'inline-block' }} /> Active Now

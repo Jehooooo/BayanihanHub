@@ -89,9 +89,35 @@ export default function ConversationList({
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {partner?.fullName || 'User'}
-                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', minWidth: 0, flex: 1 }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {partner?.fullName || 'User'}
+                    </h4>
+                    {badge !== null && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '1.25rem',
+                          height: '1.25rem',
+                          padding: '0 0.35rem',
+                          borderRadius: '9999px',
+                          backgroundColor: 'var(--color-primary-600)',
+                          color: '#fff',
+                          fontSize: '0.6875rem',
+                          fontWeight: 800,
+                          lineHeight: 1,
+                          flexShrink: 0,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        }}
+                        title={`${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`}
+                        data-testid={`unread-badge-${chat.id}`}
+                      >
+                        {badge}
+                      </span>
+                    )}
+                  </div>
                   {timeDisplay && (
                     <span style={{ fontSize: '0.625rem', color: 'var(--color-neutral-400)', flexShrink: 0 }}>
                       {timeDisplay}
@@ -103,30 +129,6 @@ export default function ConversationList({
                   <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                     {chat.lastMessage?.content || 'No messages yet'}
                   </p>
-                  {badge !== null && (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '1.25rem',
-                        height: '1.25rem',
-                        padding: '0 0.35rem',
-                        borderRadius: '9999px',
-                        backgroundColor: 'var(--color-primary-600)',
-                        color: '#fff',
-                        fontSize: '0.6875rem',
-                        fontWeight: 800,
-                        lineHeight: 1,
-                        flexShrink: 0,
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                      }}
-                      title={`${unreadCount} unread message${unreadCount === 1 ? '' : 's'}`}
-                      data-testid={`unread-badge-${chat.id}`}
-                    >
-                      {badge}
-                    </span>
-                  )}
                 </div>
               </div>
             </button>

@@ -68,7 +68,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`);
+      const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`);
       if (res.ok) {
         const data = await res.json();
         const apiChats: Chat[] = data.chats || data.conversations || [];
@@ -167,7 +167,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().markMessagesAsRead(chatId, effectiveUserId);
 
     try {
-      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`);
+      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(effectiveUserId)}&user_id=${encodeURIComponent(effectiveUserId)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.messages && Array.isArray(data.messages)) {
@@ -294,7 +294,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (mockC) mockC.unreadCount = 0;
 
     try {
-      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(effectiveUserId)}`, {
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(effectiveUserId)}&user_id=${encodeURIComponent(effectiveUserId)}`, {
         method: 'PATCH',
       });
     } catch {
