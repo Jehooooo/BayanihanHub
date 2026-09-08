@@ -108,6 +108,8 @@ def format_conversation(conv: Conversation, current_user_id: int) -> dict:
     elif curr_part:
         unread_count = sum(1 for m in conv.messages if m.sender_id != current_user_id)
 
+    message_count = len(conv.messages) if conv.messages else 0
+
     return {
         "id": f"chat-{conv.conversation_id}",
         "conversationId": conv.conversation_id,
@@ -124,6 +126,8 @@ def format_conversation(conv: Conversation, current_user_id: int) -> dict:
         "otherParticipant": participant_dict,
         "lastMessage": last_msg_dict,
         "unreadCount": unread_count,
+        "messageCount": message_count,
+        "totalMessages": message_count,
         "createdAt": conv.created_at.isoformat(),
         "updatedAt": conv.updated_at.isoformat(),
     }
@@ -183,23 +187,19 @@ def get_or_create_conversation(dto: StartConversationDto, db: Session = Depends(
     # Check if a 1-to-1 conversation already exists
     if len(p_ids) == 2:
         u1, u2 = p_ids[0], p_ids[1]
-        existing = (
-            db.query(Conversation)
-            .join(ConversationParticipant, ConversationParticipant.conversation_id == Conversation.conversation_id)
-            .filter(ConversationParticipant.user_id.in_([u1, u2]))
-            .group_by(Conversation.conversation_id)
-            .having(Conversation.conversation_id.in_(
-                db.query(ConversationParticipant.conversation_id)
-                .filter(ConversationParticipant.user_id == u1)
-                .intersect(
-                    db.query(ConversationParticipant.conversation_id)
-                    .filter(ConversationParticipant.user_id == u2)
-                )
-            ))
+        conv_ids_u1 = db.query(ConversationParticipant.conversation_id).filter(ConversationParticipant.user_id == u1)
+        existing_part = (
+            db.query(ConversationParticipant.conversation_id)
+            .filter(
+                ConversationParticipant.user_id == u2,
+                ConversationParticipant.conversation_id.in_(conv_ids_u1)
+            )
             .first()
         )
-        if existing:
-            return {"success": True, "conversation": format_conversation(existing, u1)}
+        if existing_part:
+            existing = db.query(Conversation).filter(Conversation.conversation_id == existing_part[0]).first()
+            if existing:
+                return {"success": True, "conversation": format_conversation(existing, u1)}
 
     # Create new conversation
     new_conv = Conversation(title=dto.title)

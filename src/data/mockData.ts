@@ -611,6 +611,13 @@ export const mockChats: Chat[] = [
     createdAt: '2026-08-03T08:00:00Z',
     updatedAt: '2026-08-05T14:00:00Z',
   },
+  {
+    id: 'chat-3',
+    participants: ['user-1', 'user-4'],
+    unreadCount: 11,
+    createdAt: '2026-08-02T10:00:00Z',
+    updatedAt: '2026-08-06T11:00:00Z',
+  },
 ];
 
 // --- Messages ---

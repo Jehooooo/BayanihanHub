@@ -111,33 +111,43 @@ export default function ItemDetailsPage() {
       const res = await fetch(`/api/items/${encodeURIComponent(item.id)}/request-donation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({
+          userId: user.id,
+          posterId: item.ownerId,
+          posterName: item.owner?.fullName || (item as any).posterName,
+          itemTitle: item.title,
+        }),
       });
 
       if (res.ok) {
         const data = await res.json();
         const chatId = data.conversationId;
+        if (data.conversation) {
+          useChatStore.getState().addChat(data.conversation);
+        }
         await fetchChats(user.id);
         await setActiveChat(chatId);
-        navigate('/messages', { state: { activeChatId: chatId } });
+        navigate(`/messages?chatId=${encodeURIComponent(chatId)}`, {
+          state: { activeChatId: chatId, initialChat: data.conversation },
+        });
         return;
-      } else {
-        const errData = await res.json().catch(() => null);
-        const errMsg = errData?.detail || 'Unable to start the conversation. Please try again.';
-        toast.error(errMsg);
       }
     } catch {
-      // Client-side fallback if network error
-      try {
-        const chat = await createChat([user.id, item.ownerId]);
-        const autoMessage = `Hi! I'm interested in requesting the donation item you posted: "${item.title}".`;
-        await sendMessage(chat.id, user.id, autoMessage, 'text');
-        await setActiveChat(chat.id);
-        navigate('/messages', { state: { activeChatId: chat.id } });
-        return;
-      } catch {
-        toast.error('Unable to start the conversation. Please try again.');
-      }
+      // Fallback to client-side creation
+    }
+
+    // Client-side fallback if backend returns error or offline
+    try {
+      const chat = await createChat([user.id, item.ownerId]);
+      const autoMessage = `Hi! I'm interested in requesting the donation item you posted: "${item.title}".`;
+      await sendMessage(chat.id, user.id, autoMessage, 'text');
+      await setActiveChat(chat.id);
+      navigate(`/messages?chatId=${encodeURIComponent(chat.id)}`, {
+        state: { activeChatId: chat.id, initialChat: chat },
+      });
+      return;
+    } catch {
+      toast.error('Unable to start the conversation. Please try again.');
     } finally {
       setIsRequestingDonation(false);
     }

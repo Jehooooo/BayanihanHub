@@ -10,6 +10,7 @@ interface ChatWindowProps {
   partner?: User;
   isTyping?: boolean;
   onSendMessage: (content: string) => void;
+  onBack?: () => void;
 }
 
 export default function ChatWindow({
@@ -19,6 +20,7 @@ export default function ChatWindow({
   partner,
   isTyping = false,
   onSendMessage,
+  onBack,
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +28,7 @@ export default function ChatWindow({
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  if (!chat || !partner) {
+  if (!chat) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--color-neutral-50)', color: 'var(--color-neutral-400)', padding: '2rem' }}>
         <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Select a conversation to start chatting</p>
@@ -34,14 +36,77 @@ export default function ChatWindow({
     );
   }
 
+  const effectivePartner: User = partner || (chat as any).otherParticipant || {
+    id: chat.participants.find((p) => p !== currentUserId) || 'user-unknown',
+    fullName: (chat as any).title || 'Neighbor',
+    email: 'neighbor@example.com',
+    avatar: '',
+    role: 'user',
+    isVerified: true,
+    account_status: 'APPROVED',
+    facial_verification_status: 'PASSED',
+    id_verification_status: 'VERIFIED',
+    verificationStatus: 'APPROVED',
+    isTrusted: true,
+    isSuspended: false,
+    rating: 5.0,
+    totalRatings: 1,
+    totalExchanges: 0,
+    totalDonations: 1,
+    badges: [],
+    joinedAt: new Date().toISOString(),
+    lastActive: new Date().toISOString(),
+  };
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--color-neutral-50)', minWidth: 0, overflow: 'hidden' }}>
       {/* Chat Header */}
       <div style={{ padding: '0.875rem 1.25rem', backgroundColor: '#fff', borderBottom: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Avatar src={partner.avatar} name={partner.fullName} size="sm" showStatus isOnline />
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="md:!hidden"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                marginRight: '0.125rem',
+                display: 'flex',
+                alignItems: 'center',
+                color: 'var(--color-neutral-600)',
+              }}
+              aria-label="Back to conversations"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <Avatar src={effectivePartner.avatar} name={effectivePartner.fullName} size="sm" showStatus isOnline />
           <div>
-            <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem', margin: 0 }}>{partner.fullName}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem', margin: 0 }}>{effectivePartner.fullName}</h3>
+              {messages.length > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '0.05rem 0.4rem',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--color-primary-100)',
+                    color: 'var(--color-primary-700)',
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                  }}
+                  title={`${messages.length} messages in conversation`}
+                >
+                  {messages.length >= 9 ? '9+' : messages.length}
+                </span>
+              )}
+            </div>
             <span style={{ fontSize: '0.625rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <span style={{ width: '0.375rem', height: '0.375rem', borderRadius: '9999px', backgroundColor: '#22c55e', display: 'inline-block' }} /> Active Now
             </span>
@@ -105,7 +170,7 @@ export default function ChatWindow({
 
         {isTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontStyle: 'italic', padding: '0.25rem 0' }}>
-            <span>{partner.fullName} is typing...</span>
+            <span>{effectivePartner.fullName} is typing...</span>
           </div>
         )}
 

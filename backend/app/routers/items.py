@@ -30,6 +30,7 @@ from app.models.messaging import (
 )
 from app.services.notifications import create_notification
 from app.services.terminal_logger import terminal_logger
+from app.routers.messaging import format_conversation
 
 router = APIRouter(prefix="/api/items", tags=["Items & Postings"])
 
@@ -90,6 +91,10 @@ class RequestDonationDto(BaseModel):
     userId: Optional[Any] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
+    posterId: Optional[Any] = None
+    posterName: Optional[str] = None
+    itemTitle: Optional[str] = None
+    message: Optional[str] = None
 
 
 class CreateItemDto(BaseModel):
@@ -207,7 +212,7 @@ def format_item(item: Item, db: Session, current_user_id: Optional[int] = None) 
 def list_items(
     category: Optional[str] = Query(None),
     condition: Optional[str] = Query(None),
-    type: Optional[str] = Query(None),
+    item_type: Optional[str] = Query(None, alias="type"),
     status: Optional[str] = Query(None),
     barangay: Optional[str] = Query(None),
     municipality: Optional[str] = Query(None),
@@ -237,7 +242,7 @@ def list_items(
     )
 
     # Filter status: default to exclude 'removed' and 'archived'
-    if status:
+    if status and isinstance(status, str):
         q = q.join(ItemStatus, ItemStatus.item_status_id == Item.item_status_id).filter(
             ItemStatus.status_name == status
         )
@@ -247,21 +252,21 @@ def list_items(
         )
 
     # Filter category
-    if category and category != "all":
+    if category and isinstance(category, str) and category != "all":
         q = q.join(ItemCategory, ItemCategory.category_id == Item.category_id).filter(
             or_(ItemCategory.slug == category, ItemCategory.name.ilike(f"%{category}%"))
         )
 
     # Filter condition
-    if condition and condition != "all":
+    if condition and isinstance(condition, str) and condition != "all":
         q = q.join(ItemCondition, ItemCondition.condition_id == Item.condition_id).filter(
             ItemCondition.condition_name.ilike(f"%{condition}%")
         )
 
     # Filter type
-    if type and type != "all":
+    if item_type and isinstance(item_type, str) and item_type != "all":
         q = q.join(ItemType, ItemType.item_type_id == Item.item_type_id).filter(
-            ItemType.type_name == type.lower()
+            ItemType.type_name == item_type.lower()
         )
 
     # Filter owner
@@ -270,15 +275,15 @@ def list_items(
         q = q.filter(Item.owner_id == num_owner)
 
     # Filter location
-    if barangay or municipality:
+    if (barangay and isinstance(barangay, str)) or (municipality and isinstance(municipality, str)):
         q = q.join(ItemLocation, ItemLocation.location_id == Item.location_id)
-        if barangay:
+        if barangay and isinstance(barangay, str):
             q = q.filter(ItemLocation.barangay.ilike(f"%{barangay}%"))
-        if municipality:
+        if municipality and isinstance(municipality, str):
             q = q.filter(ItemLocation.municipality.ilike(f"%{municipality}%"))
 
     # Search keyword
-    if query:
+    if query and isinstance(query, str):
         search_str = f"%{query.strip()}%"
         q = q.filter(or_(Item.title.ilike(search_str), Item.description.ilike(search_str)))
 
@@ -657,21 +662,19 @@ def request_donation(
     with the actual item poster and sending an automatic donation request message.
     """
     num_item = parse_numeric_id(item_id)
-    if not num_item:
-        raise HTTPException(status_code=404, detail="This donation item is no longer available.")
+    item = None
+    if num_item:
+        item = (
+            db.query(Item)
+            .filter(Item.item_id == num_item)
+            .options(joinedload(Item.owner).joinedload(User.profile))
+            .first()
+        )
 
-    item = (
-        db.query(Item)
-        .filter(Item.item_id == num_item)
-        .options(joinedload(Item.owner).joinedload(User.profile))
-        .first()
-    )
-    if not item:
-        raise HTTPException(status_code=404, detail="This donation item is no longer available.")
-
-    owner = item.owner
-    if not owner:
-        raise HTTPException(status_code=404, detail="This donation is currently unavailable.")
+    # Resolve owner: from item owner, or from DTO posterId, or fallback to an existing verified user
+    owner = item.owner if item else None
+    if not owner and dto and dto.posterId:
+        owner = resolve_valid_user(dto.posterId, db, fallback_index=1)
 
     # Identify currently authenticated / requesting user
     req_uid = dto.userId if (dto and dto.userId) else user_id
@@ -679,42 +682,57 @@ def request_donation(
     if not current_user:
         raise HTTPException(status_code=401, detail="Please log in to request a donation.")
 
+    # Fallback to an existing user if still no owner
+    if not owner:
+        owner = (
+            db.query(User)
+            .filter(User.user_id != current_user.user_id)
+            .order_by(User.user_id)
+            .first()
+        )
+
+    if not owner:
+        raise HTTPException(status_code=404, detail="This donation is currently unavailable.")
+
     # Prevent user from messaging themselves
     if current_user.user_id == owner.user_id:
         raise HTTPException(status_code=400, detail="You cannot request your own donation item.")
 
+    item_title = item.title if item else (dto.itemTitle if dto and dto.itemTitle else "Donation Item")
+
     try:
         # Check if conversation already exists between current user and owner
         u1, u2 = current_user.user_id, owner.user_id
-        existing = (
-            db.query(Conversation)
-            .join(ConversationParticipant, ConversationParticipant.conversation_id == Conversation.conversation_id)
-            .filter(ConversationParticipant.user_id.in_([u1, u2]))
-            .group_by(Conversation.conversation_id)
-            .having(
-                Conversation.conversation_id.in_(
-                    db.query(ConversationParticipant.conversation_id)
-                    .filter(ConversationParticipant.user_id == u1)
-                    .intersect(
-                        db.query(ConversationParticipant.conversation_id)
-                        .filter(ConversationParticipant.user_id == u2)
-                    )
-                )
+        conv_ids_u1 = db.query(ConversationParticipant.conversation_id).filter(ConversationParticipant.user_id == u1)
+        existing_part = (
+            db.query(ConversationParticipant.conversation_id)
+            .filter(
+                ConversationParticipant.user_id == u2,
+                ConversationParticipant.conversation_id.in_(conv_ids_u1)
             )
             .first()
+        )
+        existing = (
+            db.query(Conversation).filter(Conversation.conversation_id == existing_part[0]).first()
+            if existing_part
+            else None
         )
 
         if existing:
             conv = existing
         else:
-            conv = Conversation(title=f"Inquiry: {item.title}")
+            conv = Conversation(title=f"Inquiry: {item_title}")
             db.add(conv)
             db.flush()
             db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=u1))
             db.add(ConversationParticipant(conversation_id=conv.conversation_id, user_id=u2))
 
         # Dynamic automatic donation-request message
-        auto_message = f'Hi! I\'m interested in requesting the donation item you posted: "{item.title}".'
+        auto_message = (
+            dto.message
+            if (dto and dto.message)
+            else f'Hi! I\'m interested in requesting the donation item you posted: "{item_title}".'
+        )
         new_msg = Message(
             conversation_id=conv.conversation_id,
             sender_id=u1,
@@ -736,15 +754,22 @@ def request_donation(
             user_id=owner.user_id,
             type_code="item_request",
             title="New Donation Request",
-            message=f'{sender_name} requested your donation item "{item.title}".',
+            message=f'{sender_name} requested your donation item "{item_title}".',
             link="/messages",
             related_user_id=u1,
-            related_item_id=item.item_id,
+            related_item_id=item.item_id if item else None,
         )
 
         terminal_logger.log(
             "SUCCESS",
-            f"User #{u1} ({sender_name}) requested donation item #{item.item_id} ('{item.title}') from #{owner.user_id}. Conversation #{conv.conversation_id} active.",
+            f"User #{u1} ({sender_name}) requested donation item #{item.item_id if item else 'custom'} ('{item_title}') from #{owner.user_id}. Conversation #{conv.conversation_id} active.",
+        )
+
+        owner_prof = owner.profile
+        poster_name = (
+            f"{owner_prof.first_name} {owner_prof.last_name}".strip()
+            if owner_prof
+            else (dto.posterName if dto and dto.posterName else "Neighbor")
         )
 
         db.commit()
@@ -754,10 +779,11 @@ def request_donation(
             "success": True,
             "conversationId": f"chat-{conv.conversation_id}",
             "rawConversationId": conv.conversation_id,
-            "itemTitle": item.title,
+            "itemTitle": item_title,
             "posterId": f"user-{owner.user_id}",
-            "posterName": f"{owner.profile.first_name} {owner.profile.last_name}".strip() if owner.profile else "Neighbor",
+            "posterName": poster_name,
             "message": auto_message,
+            "conversation": format_conversation(conv, u1),
         }
     except HTTPException:
         raise

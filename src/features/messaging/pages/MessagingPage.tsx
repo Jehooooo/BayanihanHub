@@ -29,9 +29,19 @@ export default function MessagingPage() {
     searchParams.get('chatId');
 
   useEffect(() => {
+    const navState = location.state as { activeChatId?: string; initialChat?: any } | undefined;
+    if (navState?.initialChat) {
+      useChatStore.getState().addChat(navState.initialChat);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (targetChatId && activeChat?.id !== targetChatId) {
+      setActiveChat(targetChatId, currentUserId);
+    }
     fetchChats(currentUserId).then(() => {
       if (targetChatId) {
-        setActiveChat(targetChatId);
+        setActiveChat(targetChatId, currentUserId);
       }
     });
   }, [currentUserId, fetchChats, targetChatId, setActiveChat]);
@@ -39,12 +49,10 @@ export default function MessagingPage() {
   useEffect(() => {
     if (targetChatId) {
       if (activeChat?.id !== targetChatId && chats.some((c) => c.id === targetChatId)) {
-        setActiveChat(targetChatId);
+        setActiveChat(targetChatId, currentUserId);
       }
-    } else if (chats.length > 0 && !activeChat) {
-      setActiveChat(chats[0].id);
     }
-  }, [chats, activeChat, targetChatId, setActiveChat]);
+  }, [chats, activeChat, targetChatId, currentUserId, setActiveChat]);
 
   const partner = activeChat
     ? getOtherParticipant(activeChat, currentUserId)
@@ -52,18 +60,21 @@ export default function MessagingPage() {
 
   return (
     <PageLayout showSidebar={true}>
-      <div className="h-[calc(100vh-7rem)] bg-white rounded-[var(--radius-xl)] border border-neutral-200 shadow-card overflow-hidden flex">
-        <div className="w-full md:w-80 shrink-0 h-full border-r border-neutral-200">
+      <div
+        style={{ height: 'calc(100vh - 7.5rem)', maxHeight: 'calc(100vh - 7.5rem)' }}
+        className="bg-white rounded-[var(--radius-xl)] border border-neutral-200 shadow-card overflow-hidden flex"
+      >
+        <div className={`w-full md:w-80 shrink-0 h-full border-r border-neutral-200 ${activeChat ? 'hidden md:block' : 'block'}`}>
           <ConversationList
             chats={chats}
             activeChatId={activeChat?.id}
-            onSelectChat={setActiveChat}
+            onSelectChat={(chatId) => setActiveChat(chatId, currentUserId)}
             currentUserId={currentUserId}
             getOtherParticipant={getOtherParticipant}
           />
         </div>
 
-        <div className="hidden md:flex flex-1 h-full min-w-0">
+        <div className={`flex-1 h-full min-w-0 ${activeChat ? 'flex' : 'hidden md:flex'}`}>
           <ChatWindow
             chat={activeChat}
             messages={messages}
@@ -72,6 +83,9 @@ export default function MessagingPage() {
             isTyping={isTyping}
             onSendMessage={(text) => {
               if (activeChat) sendMessage(activeChat.id, currentUserId, text);
+            }}
+            onBack={() => {
+              useChatStore.setState({ activeChat: null });
             }}
           />
         </div>

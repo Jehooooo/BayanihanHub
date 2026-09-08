@@ -11,6 +11,7 @@ import {
   Bookmark,
 } from 'lucide-react';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useChatStore } from '@/stores/chatStore';
 
 const navItems = [
   { to: '/dashboard', icon: Home, label: 'Home' },
@@ -27,6 +28,8 @@ const navItems = [
 export default function Sidebar() {
   const location = useLocation();
   const { unreadCount } = useNotificationStore();
+  const { chats } = useChatStore();
+  const unreadMessagesCount = chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   return (
     <>
@@ -71,7 +74,23 @@ export default function Sidebar() {
                           lineHeight: 1.2,
                         }}
                       >
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                        {unreadCount >= 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                    {item.label === 'Messages' && unreadMessagesCount > 0 && (
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          padding: '0.15rem 0.5rem',
+                          backgroundColor: 'var(--color-primary-600)',
+                          color: '#fff',
+                          fontSize: '0.6875rem',
+                          fontWeight: 800,
+                          borderRadius: '9999px',
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {unreadMessagesCount >= 9 ? '9+' : unreadMessagesCount}
                       </span>
                     )}
                   </NavLink>

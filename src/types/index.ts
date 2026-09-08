@@ -250,6 +250,8 @@ export interface Chat {
   participantUsers?: User[];
   lastMessage?: Message;
   unreadCount: number;
+  messageCount?: number;
+  totalMessages?: number;
   createdAt: string;
   updatedAt: string;
 }

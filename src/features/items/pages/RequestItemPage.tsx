@@ -20,7 +20,7 @@ export default function RequestItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { createChat, sendMessage } = useChatStore();
+  const { createChat, sendMessage, setActiveChat } = useChatStore();
 
   const [item, setItem] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,18 +78,27 @@ export default function RequestItemPage() {
 
       // Flow 3 Branch B Outcome 2:
       // SUBMIT REQUEST -> GOES TO USERS MESSAGES WHO POSTED THE FOR DONATION ITEM -> STORE IN DATABASE -> END
+      let targetChatId: string | undefined;
       if (item?.ownerId) {
         try {
           const chat = await createChat([user?.id ?? 'user-1', item.ownerId]);
+          targetChatId = chat.id;
           const donationMsg = `🎁 Donation Request for "${item.title}":\n\n${formData.description}\n\nNeeded before: ${formData.neededBefore}`;
           await sendMessage(chat.id, user?.id ?? 'user-1', donationMsg, 'text');
+          await setActiveChat(chat.id);
         } catch {
           // Continue
         }
       }
 
       toast.success('Donation request submitted! Opening conversation with donor...');
-      navigate('/messages');
+      if (targetChatId) {
+        navigate(`/messages?chatId=${encodeURIComponent(targetChatId)}`, {
+          state: { activeChatId: targetChatId },
+        });
+      } else {
+        navigate('/messages');
+      }
     } catch {
       toast.error('Failed to submit request. Please try again.');
     } finally {
