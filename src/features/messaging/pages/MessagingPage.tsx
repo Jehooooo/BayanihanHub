@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import ConversationList from '../components/ConversationList';
 import ChatWindow from '../components/ChatWindow';
@@ -8,12 +8,15 @@ import { useAuthStore } from '@/stores/authStore';
 
 export default function MessagingPage() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { conversationId } = useParams<{ conversationId?: string }>();
   const { user } = useAuthStore();
   const {
     chats,
     activeChat,
     messages,
     isTyping,
+    isLoadingMessages,
     fetchChats,
     setActiveChat,
     sendMessage,
@@ -22,11 +25,14 @@ export default function MessagingPage() {
 
   const currentUserId = user?.id ?? 'user-1';
 
-  // Read target chat from navigation state or URL query parameter
+  // Read target chat from URL param, navigation state, query param, or localStorage
   const searchParams = new URLSearchParams(location.search);
   const targetChatId =
+    conversationId ||
     (location.state as { activeChatId?: string })?.activeChatId ||
-    searchParams.get('chatId');
+    searchParams.get('chatId') ||
+    localStorage.getItem('bayanihan_active_chat_id') ||
+    undefined;
 
   useEffect(() => {
     const navState = location.state as { activeChatId?: string; initialChat?: any } | undefined;
@@ -54,6 +60,26 @@ export default function MessagingPage() {
     }
   }, [chats, activeChat, targetChatId, currentUserId, setActiveChat]);
 
+  const handleSelectChat = (chatId: string) => {
+    try {
+      localStorage.setItem('bayanihan_active_chat_id', chatId);
+    } catch {
+      // Best-effort
+    }
+    navigate(`/messages/${encodeURIComponent(chatId)}`, { replace: true });
+    setActiveChat(chatId, currentUserId);
+  };
+
+  const handleBack = () => {
+    try {
+      localStorage.removeItem('bayanihan_active_chat_id');
+    } catch {
+      // Best-effort
+    }
+    navigate('/messages', { replace: true });
+    useChatStore.setState({ activeChat: null });
+  };
+
   const partner = activeChat
     ? getOtherParticipant(activeChat, currentUserId)
     : undefined;
@@ -68,7 +94,7 @@ export default function MessagingPage() {
           <ConversationList
             chats={chats}
             activeChatId={activeChat?.id}
-            onSelectChat={(chatId) => setActiveChat(chatId, currentUserId)}
+            onSelectChat={handleSelectChat}
             currentUserId={currentUserId}
             getOtherParticipant={getOtherParticipant}
           />
@@ -81,12 +107,11 @@ export default function MessagingPage() {
             currentUserId={currentUserId}
             partner={partner}
             isTyping={isTyping}
+            isLoading={isLoadingMessages}
             onSendMessage={(text) => {
               if (activeChat) sendMessage(activeChat.id, currentUserId, text);
             }}
-            onBack={() => {
-              useChatStore.setState({ activeChat: null });
-            }}
+            onBack={handleBack}
           />
         </div>
       </div>

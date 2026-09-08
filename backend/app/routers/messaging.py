@@ -4,7 +4,7 @@ from typing import Optional, List, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, desc, and_
+from sqlalchemy import or_, desc, asc, and_
 
 from app.db import get_db
 from app.models.user import User, Profile
@@ -236,7 +236,7 @@ def get_messages(conversation_id: str, db: Session = Depends(get_db)):
 
     conv = db.query(Conversation).filter(Conversation.conversation_id == num_id).first()
     if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found.")
+        return {"success": True, "count": 0, "messages": []}
 
     msgs = (
         db.query(Message)
@@ -287,7 +287,18 @@ def send_message(conversation_id: str, dto: SendMessageDto, db: Session = Depend
 
     conv = db.query(Conversation).filter(Conversation.conversation_id == num_conv).first()
     if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found.")
+        conv = Conversation(
+            title=f"Chat {num_conv}",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
+        db.add(conv)
+        db.flush()
+        num_conv = conv.conversation_id
+        db.add(ConversationParticipant(conversation_id=num_conv, user_id=num_sender))
+        other_user = db.query(User).filter(User.user_id != num_sender).first()
+        if other_user:
+            db.add(ConversationParticipant(conversation_id=num_conv, user_id=other_user.user_id))
 
     # Type resolution
     type_name = (dto.type or "text").lower()

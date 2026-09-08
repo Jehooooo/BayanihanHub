@@ -11,6 +11,7 @@ interface ChatState {
   activeChat: Chat | null;
   messages: Message[];
   isLoading: boolean;
+  isLoadingMessages: boolean;
   isTyping: boolean;
   fetchChats: (userId: string) => Promise<void>;
   setActiveChat: (chatId: string, userId?: string) => Promise<void>;
@@ -60,6 +61,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeChat: null,
   messages: [],
   isLoading: false,
+  isLoadingMessages: false,
   isTyping: false,
 
   fetchChats: async (userId: string) => {
@@ -155,7 +157,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({
         activeChat: { ...chat, unreadCount: 0 },
         chats: get().chats.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c)),
+        isLoadingMessages: true,
       });
+    } else {
+      set({ isLoadingMessages: true });
     }
 
     const effectiveUserId = userId || 'user-1';
@@ -177,6 +182,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             chats: get().chats.map((c) =>
               c.id === chatId ? { ...c, messageCount: count, totalMessages: count, unreadCount: 0 } : c
             ),
+            isLoadingMessages: false,
           });
           return;
         }
@@ -202,6 +208,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       chats: get().chats.map((c) =>
         c.id === chatId ? { ...c, messageCount: count, totalMessages: count, unreadCount: 0 } : c
       ),
+      isLoadingMessages: false,
     });
   },
 
@@ -235,7 +242,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     try {
-      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`, {
+      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,6 +251,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
           type,
         }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.message) {
+          set({
+            messages: get().messages.map((m) =>
+              m.id === newMessage.id ? { ...m, ...data.message } : m
+            ),
+          });
+        }
+      }
     } catch {
       // Fallback
     }

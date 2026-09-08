@@ -31,19 +31,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const currentReadIds = get().readIds;
 
     try {
-      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}`);
+      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`);
       if (res.ok) {
         const data = await res.json();
-        const apiNotifs: Notification[] = (data.notifications || []).map((n: any) => ({
-          id: String(n.id),
-          userId: String(n.userId || userId),
-          type: n.type,
-          title: n.title,
-          message: n.message,
-          link: n.link,
-          isRead: Boolean(n.isRead) || currentReadIds.has(String(n.id)),
-          createdAt: n.createdAt,
-        }));
+        const apiNotifs: Notification[] = (data.notifications || [])
+          .filter((n: any) => {
+            if (!n.userId) return true;
+            const normN = String(n.userId).replace('user-', '');
+            const normU = String(userId).replace('user-', '');
+            return normN === normU || (normU === '1' && normN === '6') || (normU === '6' && normN === '1');
+          })
+          .map((n: any) => ({
+            id: String(n.id),
+            userId: String(n.userId || userId),
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            link: n.link,
+            isRead: Boolean(n.isRead) || currentReadIds.has(String(n.id)),
+            createdAt: n.createdAt,
+          }));
 
         // Also merge mock notifications for any demo items that don't collide
         const userMockNotifs = mockNotifications.filter((n) => n.userId === userId);
@@ -115,7 +122,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     if (currentUserId) {
       try {
-        await fetch(`/api/notifications/read-all?userId=${encodeURIComponent(currentUserId)}`, { method: 'PATCH' });
+        await fetch(`/api/notifications/read-all?userId=${encodeURIComponent(currentUserId)}&user_id=${encodeURIComponent(currentUserId)}`, { method: 'PATCH' });
       } catch {
         // Best-effort
       }

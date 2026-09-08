@@ -11,6 +11,7 @@ interface ChatWindowProps {
   isTyping?: boolean;
   onSendMessage: (content: string) => void;
   onBack?: () => void;
+  isLoading?: boolean;
 }
 
 export default function ChatWindow({
@@ -21,6 +22,7 @@ export default function ChatWindow({
   isTyping = false,
   onSendMessage,
   onBack,
+  isLoading = false,
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -116,22 +118,41 @@ export default function ChatWindow({
 
       {/* Messages Scroll Area */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {messages.map((msg) => {
-          const isMe = msg.senderId === currentUserId;
-
-          return (
+        {isLoading ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--color-neutral-400)', minHeight: '12rem' }}>
             <div
-              key={msg.id}
               style={{
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: '0.625rem',
-                width: '100%',
-                justifyContent: isMe ? 'flex-end' : 'flex-start',
-                paddingLeft: isMe ? '3rem' : 0,
-                paddingRight: isMe ? 0 : '3rem',
+                width: '2rem',
+                height: '2rem',
+                border: '3px solid var(--color-neutral-200)',
+                borderTopColor: 'var(--color-primary-600)',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
               }}
-            >
+            />
+            <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Loading conversation...</span>
+          </div>
+        ) : messages.length === 0 ? (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-neutral-400)', padding: '2rem' }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>No messages yet. Send a message to start chatting!</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.senderId === currentUserId;
+
+            return (
+              <div
+                key={msg.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  gap: '0.625rem',
+                  width: '100%',
+                  justifyContent: isMe ? 'flex-end' : 'flex-start',
+                  paddingLeft: isMe ? '3rem' : 0,
+                  paddingRight: isMe ? 0 : '3rem',
+                }}
+              >
               {!isMe && partner && (
                 <Avatar src={partner.avatar} name={partner.fullName} size="xs" style={{ flexShrink: 0, marginBottom: '0.125rem' }} />
               )}
@@ -166,7 +187,7 @@ export default function ChatWindow({
               </div>
             </div>
           );
-        })}
+        }))}
 
         {isTyping && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontStyle: 'italic', padding: '0.25rem 0' }}>

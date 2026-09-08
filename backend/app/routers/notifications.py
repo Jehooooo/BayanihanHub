@@ -7,6 +7,7 @@ from sqlalchemy import desc
 
 from app.db import get_db
 from app.models.notification import Notification, NotificationType
+from app.models.user import User
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
@@ -20,16 +21,51 @@ def parse_numeric_id(val: any) -> Optional[int]:
     return int(matches[0]) if matches else None
 
 
+def resolve_notification_user_id(val: any, db: Session) -> Optional[int]:
+    num = parse_numeric_id(val)
+    if not num:
+        return None
+    # Check if user exists directly
+    u = db.query(User).filter(User.user_id == num).first()
+    if u:
+        return u.user_id
+    # Demo/mock mapping:
+    # 1 -> maria@example.com (user 6)
+    # 2 -> juan@example.com (user 7)
+    if num == 1:
+        maria = db.query(User).filter(User.email == "maria@example.com").first()
+        if maria:
+            return maria.user_id
+    elif num == 2:
+        juan = db.query(User).filter(User.email == "juan@example.com").first()
+        if juan:
+            return juan.user_id
+    return num
+
+
 @router.get("")
-def get_user_notifications(user_id: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def get_user_notifications(
+    user_id: Optional[str] = Query(None),
+    userId: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     """
-    Retrieve in-app notifications for a user, ordered by creation date.
+    Retrieve in-app notifications for a specific user, ordered by creation date.
+    Never returns other users' notifications.
     """
-    query = db.query(Notification).options(joinedload(Notification.notification_type))
-    
-    num_uid = parse_numeric_id(user_id)
-    if num_uid:
-        query = query.filter(Notification.user_id == num_uid)
+    raw_id = userId or user_id
+    if not raw_id:
+        return {"success": True, "count": 0, "unreadCount": 0, "notifications": []}
+
+    num_uid = resolve_notification_user_id(raw_id, db)
+    if not num_uid:
+        return {"success": True, "count": 0, "unreadCount": 0, "notifications": []}
+
+    query = (
+        db.query(Notification)
+        .options(joinedload(Notification.notification_type))
+        .filter(Notification.user_id == num_uid)
+    )
 
     notifs = query.order_by(desc(Notification.created_at)).limit(50).all()
 
@@ -69,11 +105,16 @@ def mark_notification_as_read(notification_id: str, db: Session = Depends(get_db
 
 
 @router.patch("/read-all")
-def mark_all_notifications_read(user_id: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def mark_all_notifications_read(
+    user_id: Optional[str] = Query(None),
+    userId: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     """
     Mark all notifications for a user as read.
     """
-    num_uid = parse_numeric_id(user_id)
+    raw_id = userId or user_id
+    num_uid = resolve_notification_user_id(raw_id, db)
     if not num_uid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing user_id parameter.")
 

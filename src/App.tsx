@@ -182,6 +182,14 @@ export default function App() {
           }
         />
         <Route
+          path="/messages/:conversationId"
+          element={
+            <ProtectedRoute>
+              <MessagingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/notifications"
           element={
             <ProtectedRoute>
