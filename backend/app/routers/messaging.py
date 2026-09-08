@@ -1,7 +1,10 @@
 from datetime import datetime
 import re
+import shutil
+import uuid
+from pathlib import Path
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc, and_
@@ -449,3 +452,45 @@ def mark_conversation_read(
         db.commit()
 
     return {"success": True, "message": "Messages marked as read."}
+
+
+# Allowed MIME types for image rendering vs generic file download
+IMAGE_MIMES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+
+# Resolve the project root → public/uploads/messages
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent  # project root
+UPLOAD_DIR = _BACKEND_DIR / "public" / "uploads" / "messages"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@router.post("/{conversation_id}/upload", status_code=status.HTTP_201_CREATED)
+async def upload_message_file(
+    conversation_id: str,
+    file: UploadFile = File(...),
+):
+    """
+    Upload an image or file attachment for a conversation message.
+    Returns a public URL and MIME type so the frontend can render images inline.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided.")
+
+    # Generate a unique filename preserving original extension
+    ext = Path(file.filename).suffix.lower() or ".bin"
+    unique_name = f"{uuid.uuid4().hex}{ext}"
+    dest = UPLOAD_DIR / unique_name
+
+    with dest.open("wb") as out:
+        shutil.copyfileobj(file.file, out)
+
+    public_url = f"/uploads/messages/{unique_name}"
+    mime = file.content_type or "application/octet-stream"
+    is_image = mime in IMAGE_MIMES
+
+    return {
+        "success": True,
+        "url": public_url,
+        "fileName": file.filename,
+        "mimeType": mime,
+        "isImage": is_image,
+    }

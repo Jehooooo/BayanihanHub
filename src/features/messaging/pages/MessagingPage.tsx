@@ -3,6 +3,7 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/layout/PageLayout';
 import ConversationList from '../components/ConversationList';
 import ChatWindow from '../components/ChatWindow';
+import type { SendMessagePayload } from '../components/MessageInput';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -21,6 +22,8 @@ export default function MessagingPage() {
     setActiveChat,
     sendMessage,
     getOtherParticipant,
+    startPolling,
+    stopPolling,
   } = useChatStore();
 
   const currentUserId = user?.id ?? 'user-1';
@@ -40,12 +43,13 @@ export default function MessagingPage() {
     }
   }, [location.state]);
 
-  // When on general /messages route with no explicit conversation, ensure activeChat is null
+  // When on general /messages route with no explicit conversation, ensure activeChat is null + stop polling
   useEffect(() => {
     if (!explicitChatId && activeChat) {
       useChatStore.setState({ activeChat: null, messages: [] });
+      stopPolling();
     }
-  }, [explicitChatId, activeChat]);
+  }, [explicitChatId, activeChat, stopPolling]);
 
   // Fetch conversations list on mount / user change
   useEffect(() => {
@@ -63,6 +67,18 @@ export default function MessagingPage() {
     }
   }, [explicitChatId, activeChat, currentUserId, setActiveChat]);
 
+  // Start / stop polling as the active chat changes
+  useEffect(() => {
+    if (activeChat) {
+      startPolling(activeChat.id, currentUserId);
+    } else {
+      stopPolling();
+    }
+    return () => {
+      stopPolling();
+    };
+  }, [activeChat?.id, currentUserId, startPolling, stopPolling]);
+
   const handleSelectChat = (chatId: string) => {
     navigate(`/messages/${encodeURIComponent(chatId)}`);
     setActiveChat(chatId, currentUserId);
@@ -71,6 +87,13 @@ export default function MessagingPage() {
   const handleBack = () => {
     navigate('/messages');
     useChatStore.setState({ activeChat: null, messages: [] });
+    stopPolling();
+  };
+
+  const handleSendMessage = (payload: SendMessagePayload) => {
+    if (activeChat) {
+      sendMessage(activeChat.id, currentUserId, payload.content, payload.type, payload.fileUrl, payload.fileName);
+    }
   };
 
   const partner = activeChat
@@ -79,33 +102,47 @@ export default function MessagingPage() {
 
   return (
     <PageLayout showSidebar={true}>
+      {/*
+        Negate the <main> padding (1.75rem top/bottom, 2rem left/right) so the
+        messaging panel can fill the entire available viewport height without
+        triggering page-level scroll.
+      */}
       <div
-        style={{ height: 'calc(100vh - 7.5rem)', maxHeight: 'calc(100vh - 7.5rem)' }}
-        className="bg-white rounded-[var(--radius-xl)] border border-neutral-200 shadow-card overflow-hidden flex"
+        style={{
+          margin: '-1.75rem -2rem',
+          height: 'calc(100vh - 4rem)', /* 4rem = header height */
+          display: 'flex',
+          overflow: 'hidden',
+        }}
       >
-        <div className={`w-full md:w-80 shrink-0 h-full border-r border-neutral-200 ${activeChat ? 'hidden md:block' : 'block'}`}>
-          <ConversationList
-            chats={chats}
-            activeChatId={activeChat?.id}
-            onSelectChat={handleSelectChat}
-            currentUserId={currentUserId}
-            getOtherParticipant={getOtherParticipant}
-          />
-        </div>
+        <div
+          className="bg-white rounded-none border-0 shadow-none overflow-hidden flex w-full h-full"
+          style={{ border: '1px solid var(--color-neutral-200)', borderRadius: 0 }}
+        >
+          {/* Conversation list panel */}
+          <div className={`w-full md:w-80 shrink-0 h-full border-r border-neutral-200 ${activeChat ? 'hidden md:block' : 'block'}`}>
+            <ConversationList
+              chats={chats}
+              activeChatId={activeChat?.id}
+              onSelectChat={handleSelectChat}
+              currentUserId={currentUserId}
+              getOtherParticipant={getOtherParticipant}
+            />
+          </div>
 
-        <div className={`flex-1 h-full min-w-0 ${activeChat ? 'flex' : 'hidden md:flex'}`}>
-          <ChatWindow
-            chat={activeChat}
-            messages={messages}
-            currentUserId={currentUserId}
-            partner={partner}
-            isTyping={isTyping}
-            isLoading={isLoadingMessages}
-            onSendMessage={(text) => {
-              if (activeChat) sendMessage(activeChat.id, currentUserId, text);
-            }}
-            onBack={handleBack}
-          />
+          {/* Chat window panel */}
+          <div className={`flex-1 h-full min-w-0 ${activeChat ? 'flex' : 'hidden md:flex'}`}>
+            <ChatWindow
+              chat={activeChat}
+              messages={messages}
+              currentUserId={currentUserId}
+              partner={partner}
+              isTyping={isTyping}
+              isLoading={isLoadingMessages}
+              onSendMessage={handleSendMessage}
+              onBack={handleBack}
+            />
+          </div>
         </div>
       </div>
     </PageLayout>

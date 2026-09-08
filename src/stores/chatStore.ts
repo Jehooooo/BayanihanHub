@@ -13,13 +13,23 @@ interface ChatState {
   isLoading: boolean;
   isLoadingMessages: boolean;
   isTyping: boolean;
+  _pollInterval: ReturnType<typeof setInterval> | null;
   fetchChats: (userId: string) => Promise<void>;
   setActiveChat: (chatId: string, userId?: string) => Promise<void>;
-  sendMessage: (chatId: string, senderId: string, content: string, type?: 'text' | 'image') => Promise<void>;
+  sendMessage: (
+    chatId: string,
+    senderId: string,
+    content: string,
+    type?: 'text' | 'image' | 'file',
+    fileUrl?: string,
+    fileName?: string,
+  ) => Promise<void>;
   markMessagesAsRead: (chatId: string, userId?: string) => Promise<void>;
   createChat: (participantIds: string[]) => Promise<Chat>;
   getOtherParticipant: (chat: Chat, currentUserId: string) => User | undefined;
   addChat: (chat: Chat) => void;
+  startPolling: (chatId: string, userId: string) => void;
+  stopPolling: () => void;
 }
 
 const createFallbackUser = (
@@ -63,6 +73,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isLoadingMessages: false,
   isTyping: false,
+  _pollInterval: null,
 
   fetchChats: async (userId: string) => {
     set({ isLoading: true });
@@ -212,7 +223,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  sendMessage: async (chatId: string, senderId: string, content: string, type = 'text') => {
+  sendMessage: async (
+    chatId: string,
+    senderId: string,
+    content: string,
+    type: 'text' | 'image' | 'file' = 'text',
+    fileUrl?: string,
+    fileName?: string,
+  ) => {
     const newMessage: Message = {
       id: generateId(),
       chatId,
@@ -220,6 +238,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       sender: getUserById(senderId),
       content,
       type,
+      fileUrl,
+      fileName,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
@@ -249,6 +269,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           senderId,
           content,
           type,
+          fileUrl,
+          fileName,
         }),
       });
       if (res.ok) {
@@ -272,6 +294,44 @@ export const useChatStore = create<ChatState>((set, get) => ({
     setTimeout(() => {
       set({ isTyping: false });
     }, 1500);
+  },
+
+  startPolling: (chatId: string, userId: string) => {
+    // Clear any existing interval before starting a new one
+    const existing = get()._pollInterval;
+    if (existing) clearInterval(existing);
+
+    const interval = setInterval(async () => {
+      // Only poll if this conversation is still active
+      if (get().activeChat?.id !== chatId) return;
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && Array.isArray(data.messages)) {
+            const current = get().messages;
+            // Only update if new messages arrived (avoids unnecessary re-renders)
+            if (data.messages.length !== current.length) {
+              set({ messages: data.messages });
+            }
+          }
+        }
+      } catch {
+        // Swallow — don't interrupt UX on network hiccup
+      }
+    }, 4000);
+
+    set({ _pollInterval: interval });
+  },
+
+  stopPolling: () => {
+    const interval = get()._pollInterval;
+    if (interval) {
+      clearInterval(interval);
+      set({ _pollInterval: null });
+    }
   },
 
   markMessagesAsRead: async (chatId: string, userId?: string) => {

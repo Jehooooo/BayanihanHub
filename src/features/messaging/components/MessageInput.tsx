@@ -1,9 +1,17 @@
 import { useState, useRef } from 'react';
-import { Send, Paperclip, Smile, X, Image as ImageIcon, FileText } from 'lucide-react';
+import { Send, Paperclip, Smile, X, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+export interface SendMessagePayload {
+  content: string;
+  type: 'text' | 'image' | 'file';
+  fileUrl?: string;
+  fileName?: string;
+}
+
 interface MessageInputProps {
-  onSendMessage: (content: string) => void;
+  chatId?: string;
+  onSendMessage: (payload: SendMessagePayload) => void;
 }
 
 const COMMON_EMOJIS = [
@@ -12,24 +20,46 @@ const COMMON_EMOJIS = [
   '🙌', '💡', '🔥', '💯', '🌸', '💬',
 ];
 
-export default function MessageInput({ onSendMessage }: MessageInputProps) {
+const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']);
+
+interface AttachmentState {
+  file: File;
+  name: string;
+  mimeType: string;
+  isImage: boolean;
+  /** local object URL for preview before upload */
+  previewUrl: string;
+  /** public URL returned from backend after upload */
+  uploadedUrl?: string;
+}
+
+export default function MessageInput({ chatId, onSendMessage }: MessageInputProps) {
   const [text, setText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [attachment, setAttachment] = useState<{ name: string; type: string } | null>(null);
+  const [attachment, setAttachment] = useState<AttachmentState | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed && !attachment) return;
 
-    let finalMessage = trimmed;
-    if (attachment) {
-      finalMessage = trimmed ? `${trimmed} 📎 [File: ${attachment.name}]` : `📎 [Attached: ${attachment.name}]`;
+    // If we have an attachment that hasn't been uploaded yet, upload first
+    if (attachment && !attachment.uploadedUrl) {
+      toast.error('File is still uploading — please wait a moment.');
+      return;
     }
 
-    onSendMessage(finalMessage);
+    const payload: SendMessagePayload = {
+      content: trimmed || (attachment ? `Sent ${attachment.isImage ? 'an image' : 'a file'}: ${attachment.name}` : ''),
+      type: attachment ? (attachment.isImage ? 'image' : 'file') : 'text',
+      fileUrl: attachment?.uploadedUrl,
+      fileName: attachment?.name,
+    };
+
+    onSendMessage(payload);
     setText('');
     setAttachment(null);
     setShowEmojiPicker(false);
@@ -39,23 +69,55 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setAttachment({
-        name: file.name,
-        type: file.type,
-      });
-      toast.success(`Attached: ${file.name}`);
-    }
-    // reset input so same file can be picked again if needed
+    if (!file) return;
+
+    const isImage = IMAGE_MIMES.has(file.type);
+    const previewUrl = URL.createObjectURL(file);
+
+    setAttachment({ file, name: file.name, mimeType: file.type, isImage, previewUrl });
     e.target.value = '';
+
+    // Upload immediately while user types their caption
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const convId = chatId || 'general';
+      const res = await fetch(`/api/conversations/${encodeURIComponent(convId)}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAttachment((prev) => prev ? { ...prev, uploadedUrl: data.url } : null);
+        toast.success(`${isImage ? 'Image' : 'File'} ready to send!`);
+      } else {
+        toast.error('Upload failed — try again.');
+        setAttachment(null);
+      }
+    } catch {
+      toast.error('Upload failed — check your connection.');
+      setAttachment(null);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleEmojiClick = (emoji: string) => {
     setText((prev) => prev + emoji);
     textInputRef.current?.focus();
   };
+
+  const handleRemoveAttachment = () => {
+    if (attachment?.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+    setAttachment(null);
+  };
+
+  const canSend = (text.trim() || attachment) && !isUploading && (!attachment || !!attachment.uploadedUrl);
 
   return (
     <div style={{ position: 'relative', width: '100%', backgroundColor: '#fff', borderTop: '1px solid var(--color-neutral-200)', flexShrink: 0 }}>
@@ -82,17 +144,41 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
             fontSize: '0.75rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary-800)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {attachment.type.startsWith('image/') ? (
-              <ImageIcon style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', overflow: 'hidden' }}>
+            {/* Thumbnail for images, icon for other files */}
+            {attachment.isImage ? (
+              <img
+                src={attachment.previewUrl}
+                alt="preview"
+                style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  objectFit: 'cover',
+                  borderRadius: '0.375rem',
+                  flexShrink: 0,
+                  border: '1px solid var(--color-primary-200)',
+                }}
+              />
             ) : (
-              <FileText style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
+              <FileText style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-primary-600)', flexShrink: 0 }} />
             )}
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{attachment.name}</span>
+            <div style={{ overflow: 'hidden' }}>
+              <span style={{ display: 'block', fontWeight: 600, color: 'var(--color-primary-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {attachment.name}
+              </span>
+              <span style={{ color: 'var(--color-primary-600)', fontSize: '0.6875rem' }}>
+                {isUploading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Loader2 style={{ width: '0.75rem', height: '0.75rem', animation: 'spin 1s linear infinite' }} />
+                    Uploading...
+                  </span>
+                ) : attachment.uploadedUrl ? '✓ Ready to send' : 'Waiting...'}
+              </span>
+            </div>
           </div>
           <button
             type="button"
-            onClick={() => setAttachment(null)}
+            onClick={handleRemoveAttachment}
             style={{
               background: 'none',
               border: 'none',
@@ -103,6 +189,7 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: '9999px',
+              flexShrink: 0,
             }}
             title="Remove attachment"
           >
@@ -186,25 +273,28 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
           width: '100%',
         }}
       >
-        {/* Clickable Paperclip Button */}
+        {/* Paperclip Button */}
         <button
           type="button"
           onClick={handleFileClick}
+          disabled={isUploading}
           style={{
             padding: '0.5rem',
             color: attachment ? 'var(--color-primary-600)' : 'var(--color-neutral-500)',
             backgroundColor: attachment ? 'var(--color-primary-50)' : 'transparent',
             border: 'none',
             borderRadius: '9999px',
-            cursor: 'pointer',
+            cursor: isUploading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 150ms',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--color-primary-600)';
-            e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+            if (!isUploading) {
+              e.currentTarget.style.color = 'var(--color-primary-600)';
+              e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+            }
           }}
           onMouseLeave={(e) => {
             if (!attachment) {
@@ -215,10 +305,14 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
           aria-label="Attach file"
           title="Attach file or photo"
         >
-          <Paperclip style={{ width: '1.25rem', height: '1.25rem' }} />
+          {isUploading ? (
+            <Loader2 style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1s linear infinite' }} />
+          ) : (
+            <Paperclip style={{ width: '1.25rem', height: '1.25rem' }} />
+          )}
         </button>
 
-        {/* Clickable Smiley Button */}
+        {/* Emoji Button */}
         <button
           type="button"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -244,8 +338,8 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
               e.currentTarget.style.backgroundColor = 'transparent';
             }
           }}
-          aria-label="Emoji and quick replies"
-          title="Add emoji or quick reply"
+          aria-label="Emoji picker"
+          title="Add emoji"
         >
           <Smile style={{ width: '1.25rem', height: '1.25rem' }} />
         </button>
@@ -255,7 +349,7 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
+          placeholder={attachment ? 'Add a caption (optional)...' : 'Type a message...'}
           style={{
             flex: 1,
             padding: '0.5rem 1rem',
@@ -279,15 +373,15 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
 
         <button
           type="submit"
-          disabled={!text.trim() && !attachment}
+          disabled={!canSend}
           style={{
             width: '2.375rem',
             height: '2.375rem',
             borderRadius: '9999px',
-            backgroundColor: (text.trim() || attachment) ? 'var(--color-primary-600)' : 'var(--color-neutral-300)',
+            backgroundColor: canSend ? 'var(--color-primary-600)' : 'var(--color-neutral-300)',
             color: '#fff',
             border: 'none',
-            cursor: (text.trim() || attachment) ? 'pointer' : 'default',
+            cursor: canSend ? 'pointer' : 'default',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -302,4 +396,3 @@ export default function MessageInput({ onSendMessage }: MessageInputProps) {
     </div>
   );
 }
-
