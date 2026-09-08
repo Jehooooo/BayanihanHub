@@ -57,6 +57,11 @@ export default function Sidebar() {
                 <li key={item.to}>
                   <NavLink
                     to={item.to}
+                    onClick={() => {
+                      if (item.to === '/messages') {
+                        useChatStore.setState({ activeChat: null, messages: [] });
+                      }
+                    }}
                     className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
                   >
                     <item.icon />

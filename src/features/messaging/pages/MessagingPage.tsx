@@ -25,13 +25,12 @@ export default function MessagingPage() {
 
   const currentUserId = user?.id ?? 'user-1';
 
-  // Read target chat from URL param, navigation state, query param, or localStorage
+  // Explicit target chat ONLY from intentional flows (route param /messages/:conversationId, query ?chatId, or nav state)
   const searchParams = new URLSearchParams(location.search);
-  const targetChatId =
+  const explicitChatId =
     conversationId ||
     (location.state as { activeChatId?: string })?.activeChatId ||
     searchParams.get('chatId') ||
-    localStorage.getItem('bayanihan_active_chat_id') ||
     undefined;
 
   useEffect(() => {
@@ -41,43 +40,37 @@ export default function MessagingPage() {
     }
   }, [location.state]);
 
+  // When on general /messages route with no explicit conversation, ensure activeChat is null
   useEffect(() => {
-    if (targetChatId && activeChat?.id !== targetChatId) {
-      setActiveChat(targetChatId, currentUserId);
+    if (!explicitChatId && activeChat) {
+      useChatStore.setState({ activeChat: null, messages: [] });
     }
+  }, [explicitChatId, activeChat]);
+
+  // Fetch conversations list on mount / user change
+  useEffect(() => {
     fetchChats(currentUserId).then(() => {
-      if (targetChatId) {
-        setActiveChat(targetChatId, currentUserId);
+      if (explicitChatId) {
+        setActiveChat(explicitChatId, currentUserId);
       }
     });
-  }, [currentUserId, fetchChats, targetChatId, setActiveChat]);
+  }, [currentUserId, fetchChats, explicitChatId, setActiveChat]);
 
+  // Open explicit conversation when navigating with an ID
   useEffect(() => {
-    if (targetChatId) {
-      if (activeChat?.id !== targetChatId && chats.some((c) => c.id === targetChatId)) {
-        setActiveChat(targetChatId, currentUserId);
-      }
+    if (explicitChatId && activeChat?.id !== explicitChatId) {
+      setActiveChat(explicitChatId, currentUserId);
     }
-  }, [chats, activeChat, targetChatId, currentUserId, setActiveChat]);
+  }, [explicitChatId, activeChat, currentUserId, setActiveChat]);
 
   const handleSelectChat = (chatId: string) => {
-    try {
-      localStorage.setItem('bayanihan_active_chat_id', chatId);
-    } catch {
-      // Best-effort
-    }
-    navigate(`/messages/${encodeURIComponent(chatId)}`, { replace: true });
+    navigate(`/messages/${encodeURIComponent(chatId)}`);
     setActiveChat(chatId, currentUserId);
   };
 
   const handleBack = () => {
-    try {
-      localStorage.removeItem('bayanihan_active_chat_id');
-    } catch {
-      // Best-effort
-    }
-    navigate('/messages', { replace: true });
-    useChatStore.setState({ activeChat: null });
+    navigate('/messages');
+    useChatStore.setState({ activeChat: null, messages: [] });
   };
 
   const partner = activeChat
