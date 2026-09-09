@@ -153,6 +153,7 @@ export default function RequestsPage() {
                             : 'primary'
                         }
                         size="sm"
+                        solid
                         style={{ padding: '0.35rem 0.75rem', letterSpacing: '0.02em' }}
                       >
                         Urgency: {req.urgency.toUpperCase()}

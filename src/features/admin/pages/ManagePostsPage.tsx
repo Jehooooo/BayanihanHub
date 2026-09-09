@@ -6,6 +6,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import Modal from '@/components/ui/Modal';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { Item } from '@/types';
 import {
@@ -48,7 +49,7 @@ export default function ManagePostsPage() {
       const data = await adminService.getPosts();
       setItems(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch posts');
+      toast.error(getErrorMessage(err, 'Failed to load posts. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +82,7 @@ export default function ManagePostsPage() {
       setSelectedItem(null);
       await fetchPosts();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to remove post');
+      toast.error(getErrorMessage(err, 'Failed to remove post. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

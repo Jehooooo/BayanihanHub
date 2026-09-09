@@ -6,6 +6,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import Modal from '@/components/ui/Modal';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { ItemRequest } from '@/types';
 import {
@@ -46,7 +47,7 @@ export default function ManageRequestsPage() {
       const data = await adminService.getRequests();
       setRequests(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch community requests');
+      toast.error(getErrorMessage(err, 'Failed to load community requests. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +80,7 @@ export default function ManageRequestsPage() {
       setSelectedRequest(null);
       await fetchRequests();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to remove request');
+      toast.error(getErrorMessage(err, 'Failed to remove request. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

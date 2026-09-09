@@ -6,6 +6,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import Modal from '@/components/ui/Modal';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { Report } from '@/types';
 import {
@@ -47,7 +48,7 @@ export default function ManageReportsPage() {
       const data = await adminService.getReports();
       setReports(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch moderation reports');
+      toast.error(getErrorMessage(err, 'Failed to load moderation reports. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +81,7 @@ export default function ManageReportsPage() {
       setSelectedReport(null);
       await fetchReports();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to resolve report');
+      toast.error(getErrorMessage(err, 'Failed to resolve report. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

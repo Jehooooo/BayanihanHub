@@ -201,6 +201,7 @@ export default function FulfillRequestModal({
               <Badge
                 variant={request.urgency === 'critical' ? 'danger' : request.urgency === 'high' ? 'warning' : 'default'}
                 size="sm"
+                solid
               >
                 {request.urgency} urgency
               </Badge>

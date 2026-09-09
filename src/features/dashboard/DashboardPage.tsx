@@ -156,7 +156,7 @@ export default function DashboardPage() {
                 <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Badge variant={req.urgency === 'critical' ? 'danger' : 'warning'} size="sm">
+                      <Badge variant={req.urgency === 'critical' ? 'danger' : 'warning'} size="sm" solid>
                         {req.urgency.toUpperCase()}
                       </Badge>
                       <span style={{ fontSize: '0.625rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>

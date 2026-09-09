@@ -7,6 +7,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import Modal from '@/components/ui/Modal';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { User } from '@/types';
 import {
@@ -68,7 +69,7 @@ export default function ManageUsersPage() {
       const data = await adminService.getUsers();
       setUsers(data);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to fetch registered users');
+      toast.error(getErrorMessage(err, 'Failed to load users. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +124,7 @@ export default function ManageUsersPage() {
       setSelectedUser(null);
       await fetchUsers();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to suspend user');
+      toast.error(getErrorMessage(err, 'Failed to suspend user. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -141,7 +142,7 @@ export default function ManageUsersPage() {
       setUnsuspendUserTarget(null);
       await fetchUsers();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to unsuspend user');
+      toast.error(getErrorMessage(err, 'Failed to lift suspension. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
