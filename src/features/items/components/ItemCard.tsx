@@ -119,23 +119,26 @@ export default function ItemCard({ item, onFavoriteToggle }: ItemCardProps) {
                 fontSize: '0.7rem',
                 fontWeight: 700,
                 borderRadius: '9999px',
-                backgroundColor: isDonation ? 'rgba(240, 253, 244, 0.95)' : 'rgba(239, 246, 255, 0.95)',
-                color: isDonation ? '#15803d' : '#1d4ed8',
-                border: isDonation ? '1px solid rgba(134, 239, 172, 0.85)' : '1px solid rgba(147, 197, 253, 0.85)',
+                /* Solid filled — same as Badge solid prop */
+                backgroundColor: isDonation ? '#16a34a' : '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                boxShadow: isDonation
+                  ? '0 2px 8px rgba(22,163,74,0.35)'
+                  : '0 2px 8px rgba(37,99,235,0.35)',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
-                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
                 lineHeight: 1,
               }}
             >
               {isDonation ? (
                 <>
-                  <Gift style={{ width: '0.75rem', height: '0.75rem', color: '#16a34a' }} />
+                  <Gift style={{ width: '0.75rem', height: '0.75rem', color: '#ffffff' }} />
                   <span>Donation</span>
                 </>
               ) : (
                 <>
-                  <ArrowLeftRight style={{ width: '0.75rem', height: '0.75rem', color: '#2563eb' }} />
+                  <ArrowLeftRight style={{ width: '0.75rem', height: '0.75rem', color: '#ffffff' }} />
                   <span>For Exchange</span>
                 </>
               )}

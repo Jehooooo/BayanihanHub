@@ -327,7 +327,7 @@ export default function ItemDetailsPage() {
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm">
+                  <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm" solid>
                     {item.type === 'donation' ? 'Donation' : 'For Exchange'}
                   </Badge>
                   <Badge variant="default" size="sm">{item.condition}</Badge>

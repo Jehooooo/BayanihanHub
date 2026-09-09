@@ -168,7 +168,7 @@ export default function SavedItemsPage() {
                     </div>
                   )}
                   <div style={{ position: 'absolute', top: '0.625rem', left: '0.625rem', display: 'flex', gap: '0.375rem' }}>
-                    <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm">
+                    <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm" solid>
                       {item.type === 'donation' ? 'Donation' : 'For Exchange'}
                     </Badge>
                     <Badge variant="default" size="sm">{item.condition}</Badge>
