@@ -50,8 +50,8 @@ const dotVariantClasses: Record<BadgeVariant, string> = {
 const solidDotClass = 'bg-white/70';
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'px-3.5 py-1 text-[11px] font-bold leading-tight tracking-wide',
-  md: 'px-4 py-1.5 text-xs font-bold leading-tight tracking-wide',
+  sm: 'px-4 py-1 text-[11px] font-bold leading-tight tracking-wide',
+  md: 'px-4.5 py-1.5 text-xs font-bold leading-tight tracking-wide',
 };
 
 export default function Badge({
@@ -71,6 +71,10 @@ export default function Badge({
       style={{
         borderRadius: '9999px',
         whiteSpace: 'nowrap',
+        paddingLeft: size === 'md' ? '1rem' : '0.875rem',
+        paddingRight: size === 'md' ? '1rem' : '0.875rem',
+        paddingTop: size === 'md' ? '0.35rem' : '0.25rem',
+        paddingBottom: size === 'md' ? '0.35rem' : '0.25rem',
         ...style,
       }}
       className={`

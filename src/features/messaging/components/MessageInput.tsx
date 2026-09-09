@@ -1,17 +1,27 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile, X, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useChatStore } from '@/stores/chatStore';
+import { useAuthStore } from '@/stores/authStore';
+
+import type { Message } from '@/types';
 
 export interface SendMessagePayload {
   content: string;
   type: 'text' | 'image' | 'file';
   fileUrl?: string;
   fileName?: string;
+  replyToMessageId?: string;
 }
 
 interface MessageInputProps {
   chatId?: string;
   onSendMessage: (payload: SendMessagePayload) => void;
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
+  editingMessage?: Message | null;
+  onCancelEdit?: () => void;
+  onSaveEdit?: (newContent: string) => void;
 }
 
 const COMMON_EMOJIS = [
@@ -33,7 +43,15 @@ interface AttachmentState {
   uploadedUrl?: string;
 }
 
-export default function MessageInput({ chatId, onSendMessage }: MessageInputProps) {
+export default function MessageInput({
+  chatId,
+  onSendMessage,
+  replyingTo,
+  onCancelReply,
+  editingMessage,
+  onCancelEdit,
+  onSaveEdit,
+}: MessageInputProps) {
   const [text, setText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachment, setAttachment] = useState<AttachmentState | null>(null);
@@ -41,10 +59,84 @@ export default function MessageInput({ chatId, onSendMessage }: MessageInputProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
 
+  const { user } = useAuthStore();
+  const sendTypingStatus = useChatStore((state) => state.sendTypingStatus);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingActiveRef = useRef<boolean>(false);
+
+  // When switching into edit mode, populate the text box and focus
+  useEffect(() => {
+    if (editingMessage) {
+      setText(editingMessage.content || '');
+      textInputRef.current?.focus();
+    }
+  }, [editingMessage]);
+
+  // When switching into reply mode, focus text input
+  useEffect(() => {
+    if (replyingTo) {
+      textInputRef.current?.focus();
+    }
+  }, [replyingTo]);
+
+  // Stop typing on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (isTypingActiveRef.current && chatId && user?.id) {
+        sendTypingStatus(chatId, user.id, false);
+      }
+    };
+  }, [chatId, user?.id, sendTypingStatus]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setText(val);
+
+    if (chatId && user?.id && !editingMessage) {
+      if (!isTypingActiveRef.current && val.trim().length > 0) {
+        isTypingActiveRef.current = true;
+        sendTypingStatus(chatId, user.id, true);
+      }
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingActiveRef.current = false;
+        if (chatId && user?.id) {
+          sendTypingStatus(chatId, user.id, false);
+        }
+      }, 2000);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed && !attachment) return;
+
+    // If editing existing message
+    if (editingMessage) {
+      if (trimmed && onSaveEdit) {
+        onSaveEdit(trimmed);
+      }
+      onCancelEdit?.();
+      setText('');
+      return;
+    }
+
+    // Immediately cancel typing on submit
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (isTypingActiveRef.current && chatId && user?.id) {
+      isTypingActiveRef.current = false;
+      sendTypingStatus(chatId, user.id, false);
+    }
 
     // If we have an attachment that hasn't been uploaded yet, upload first
     if (attachment && !attachment.uploadedUrl) {
@@ -57,9 +149,11 @@ export default function MessageInput({ chatId, onSendMessage }: MessageInputProp
       type: attachment ? (attachment.isImage ? 'image' : 'file') : 'text',
       fileUrl: attachment?.uploadedUrl,
       fileName: attachment?.name,
+      replyToMessageId: replyingTo?.id,
     };
 
     onSendMessage(payload);
+    onCancelReply?.();
     setText('');
     setAttachment(null);
     setShowEmojiPicker(false);
@@ -129,6 +223,104 @@ export default function MessageInput({ chatId, onSendMessage }: MessageInputProp
         style={{ display: 'none' }}
         accept="image/*,.pdf,.doc,.docx,.txt"
       />
+
+      {/* Replying Banner */}
+      {replyingTo && (
+        <div
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#f8fafc',
+            borderLeft: '4px solid #3b82f6',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            fontSize: '0.8125rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.875rem' }}>↩️</span>
+            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontWeight: 600, color: '#2563eb', marginRight: '0.375rem' }}>
+                Replying to {replyingTo.sender?.fullName || 'Neighbor'}:
+              </span>
+              <span style={{ color: '#64748b' }}>
+                {replyingTo.content || replyingTo.fileName || 'Attachment'}
+              </span>
+            </div>
+          </div>
+          {onCancelReply && (
+            <button
+              type="button"
+              onClick={onCancelReply}
+              title="Cancel reply"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#94a3b8',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '9999px',
+              }}
+              className="hover:bg-neutral-200 hover:text-neutral-700"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Editing Banner */}
+      {editingMessage && (
+        <div
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#fffbeb',
+            borderLeft: '4px solid #f59e0b',
+            borderBottom: '1px solid #fef3c7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            fontSize: '0.8125rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.875rem' }}>✏️</span>
+            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontWeight: 600, color: '#d97706', marginRight: '0.375rem' }}>
+                Editing message:
+              </span>
+              <span style={{ color: '#78350f' }}>
+                {editingMessage.content}
+              </span>
+            </div>
+          </div>
+          {onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              title="Cancel edit"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#92400e',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '9999px',
+              }}
+              className="hover:bg-amber-100"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Attachment Preview Banner */}
       {attachment && (
@@ -348,7 +540,7 @@ export default function MessageInput({ chatId, onSendMessage }: MessageInputProp
           ref={textInputRef}
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleTextChange}
           placeholder={attachment ? 'Add a caption (optional)...' : 'Type a message...'}
           style={{
             flex: 1,

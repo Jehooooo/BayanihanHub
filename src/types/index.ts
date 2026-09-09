@@ -256,6 +256,19 @@ export interface Chat {
   updatedAt: string;
 }
 
+export interface MessageReaction {
+  userId: string;
+  reaction: string;
+}
+
+export interface MessageReplyPreview {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  isUnsent?: boolean;
+}
+
 export interface Message {
   id: string;
   chatId: string;
@@ -266,7 +279,18 @@ export interface Message {
   fileUrl?: string;
   fileName?: string;
   isRead: boolean;
+  seen?: boolean;
   createdAt: string;
+  // Message Actions fields
+  isUnsent?: boolean;
+  unsentAt?: string;
+  isEdited?: boolean;
+  editedAt?: string;
+  replyToMessageId?: string;
+  replyTo?: MessageReplyPreview;
+  reactions?: MessageReaction[];
+  canEditUnsend?: boolean;
+  sendFailed?: boolean;
 }
 
 // --- Notification Types ---

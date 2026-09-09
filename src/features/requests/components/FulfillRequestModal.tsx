@@ -179,8 +179,8 @@ export default function FulfillRequestModal({
         >
           <div
             style={{
-              width: '2.5rem',
-              height: '2.5rem',
+              width: '2.75rem',
+              height: '2.75rem',
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'var(--color-primary-100)',
               color: 'var(--color-primary-700)',
@@ -188,25 +188,27 @@ export default function FulfillRequestModal({
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              marginTop: '0.125rem',
             }}
           >
             <HandHeart style={{ width: '1.35rem', height: '1.35rem' }} />
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-              <Badge variant="primary" size="sm">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+              <Badge variant="primary" size="sm" style={{ padding: '0.25rem 0.85rem' }}>
                 {request.category.replace('-', ' ')}
               </Badge>
               <Badge
                 variant={request.urgency === 'critical' ? 'danger' : request.urgency === 'high' ? 'warning' : 'default'}
                 size="sm"
                 solid
+                style={{ padding: '0.25rem 0.85rem' }}
               >
                 {request.urgency} urgency
               </Badge>
             </div>
-            <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--color-primary-900)' }}>
+            <h4 style={{ margin: '0 0 0.375rem 0', fontSize: '0.9375rem', fontWeight: 800, color: 'var(--color-primary-900)' }}>
               {request.title}
             </h4>
             <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8125rem', color: 'var(--color-neutral-600)', lineHeight: '1.5' }}>
@@ -365,16 +367,39 @@ export default function FulfillRequestModal({
           </span>
         </div>
 
-        {/* Modal Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--color-neutral-100)' }}>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+        {/* Dedicated Modal Actions / Footer */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: '0.875rem',
+            paddingTop: '1.25rem',
+            paddingBottom: '0.25rem',
+            borderTop: '1px solid var(--color-neutral-200)',
+            flexWrap: 'wrap',
+          }}
+          className="flex-col-reverse sm:flex-row sm:items-center sm:justify-end"
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={onClose}
+            disabled={isSubmitting}
+            style={{ minWidth: '6.5rem', padding: '0.625rem 1.25rem' }}
+            className="w-full sm:w-auto justify-center"
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             variant="primary"
+            size="md"
             disabled={isSubmitting}
-            leftIcon={<HandHeart style={{ width: '1rem', height: '1rem' }} />}
+            leftIcon={<HandHeart style={{ width: '1.125rem', height: '1.125rem', flexShrink: 0 }} />}
+            style={{ padding: '0.625rem 1.5rem', whiteSpace: 'nowrap' }}
+            className="w-full sm:w-auto justify-center shadow-button"
           >
             {isSubmitting ? 'Sending Response...' : 'Send Message & Fulfill'}
           </Button>

@@ -2,6 +2,7 @@ import Avatar from '@/components/ui/Avatar';
 import SearchBar from '@/components/ui/SearchBar';
 import type { Chat, User } from '@/types';
 import { useState } from 'react';
+import { getPresenceInfo } from '@/utils/presence';
 
 interface ConversationListProps {
   chats: Chat[];
@@ -41,6 +42,7 @@ export default function ConversationList({
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {filteredChats.map((chat) => {
           const partner = getOtherParticipant(chat, currentUserId);
+          const partnerPresence = partner ? getPresenceInfo(partner.lastActive, (partner as any).isOnline) : null;
           const isActive = chat.id === activeChatId;
           const unreadCount = chat.unreadCount ?? 0;
           const badge = unreadCount === 0 ? null : unreadCount >= 9 ? '9+' : unreadCount;
@@ -83,7 +85,7 @@ export default function ConversationList({
                   name={partner.fullName}
                   size="md"
                   showStatus
-                  isOnline
+                  isOnline={partnerPresence?.isOnline ?? false}
                 />
               )}
 

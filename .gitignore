@@ -43,3 +43,4 @@ env/
 # Scratch & temporary testing files
 scratch/
 notes.txt
+public/uploads/

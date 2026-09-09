@@ -17,6 +17,8 @@ export default function MessagingPage() {
     activeChat,
     messages,
     isTyping,
+    isPartnerTyping,
+    partnerTypingName,
     isLoadingMessages,
     fetchChats,
     setActiveChat,
@@ -24,6 +26,7 @@ export default function MessagingPage() {
     getOtherParticipant,
     startPolling,
     stopPolling,
+    sendPresencePing,
   } = useChatStore();
 
   const currentUserId = user?.id ?? 'user-1';
@@ -42,6 +45,15 @@ export default function MessagingPage() {
       useChatStore.getState().addChat(navState.initialChat);
     }
   }, [location.state]);
+
+  // Presence heartbeat every 45 seconds while viewing messages
+  useEffect(() => {
+    sendPresencePing(currentUserId);
+    const interval = setInterval(() => {
+      sendPresencePing(currentUserId);
+    }, 45000);
+    return () => clearInterval(interval);
+  }, [currentUserId, sendPresencePing]);
 
   // When on general /messages route with no explicit conversation, ensure activeChat is null + stop polling
   useEffect(() => {
@@ -138,6 +150,8 @@ export default function MessagingPage() {
               currentUserId={currentUserId}
               partner={partner}
               isTyping={isTyping}
+              isPartnerTyping={isPartnerTyping}
+              partnerTypingName={partnerTypingName}
               isLoading={isLoadingMessages}
               onSendMessage={handleSendMessage}
               onBack={handleBack}

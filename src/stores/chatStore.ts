@@ -13,7 +13,11 @@ interface ChatState {
   isLoading: boolean;
   isLoadingMessages: boolean;
   isTyping: boolean;
+  isPartnerTyping: boolean;
+  partnerTypingName: string;
   _pollInterval: ReturnType<typeof setInterval> | null;
+  /** Set of optimistic message IDs that haven't been confirmed by the server yet */
+  _pendingMessageIds: Set<string>;
   fetchChats: (userId: string) => Promise<void>;
   setActiveChat: (chatId: string, userId?: string) => Promise<void>;
   sendMessage: (
@@ -23,8 +27,28 @@ interface ChatState {
     type?: 'text' | 'image' | 'file',
     fileUrl?: string,
     fileName?: string,
+    replyToMessageId?: string,
+  ) => Promise<void>;
+  reactToMessage: (
+    chatId: string,
+    messageId: string,
+    userId: string,
+    reaction: string
+  ) => Promise<void>;
+  unsendMessage: (
+    chatId: string,
+    messageId: string,
+    userId: string
+  ) => Promise<void>;
+  editMessage: (
+    chatId: string,
+    messageId: string,
+    userId: string,
+    newContent: string
   ) => Promise<void>;
   markMessagesAsRead: (chatId: string, userId?: string) => Promise<void>;
+  sendTypingStatus: (chatId: string, userId: string, isTyping: boolean) => Promise<void>;
+  sendPresencePing: (userId: string) => Promise<void>;
   createChat: (participantIds: string[]) => Promise<Chat>;
   getOtherParticipant: (chat: Chat, currentUserId: string) => User | undefined;
   addChat: (chat: Chat) => void;
@@ -37,7 +61,9 @@ const createFallbackUser = (
   fullName: string,
   username = 'neighbor',
   email?: string,
-  avatar = ''
+  avatar = '',
+  lastActive?: string,
+  isOnline?: boolean
 ): User => ({
   id,
   fullName,
@@ -63,7 +89,8 @@ const createFallbackUser = (
   totalDonations: 1,
   badges: [],
   joinedAt: '2025-06-15T08:00:00Z',
-  lastActive: new Date().toISOString(),
+  lastActive: lastActive || new Date().toISOString(),
+  ...(isOnline !== undefined ? { isOnline } : {}),
 });
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -73,7 +100,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isLoadingMessages: false,
   isTyping: false,
+  isPartnerTyping: false,
+  partnerTypingName: '',
   _pollInterval: null,
+  _pendingMessageIds: new Set<string>(),
 
   fetchChats: async (userId: string) => {
     set({ isLoading: true });
@@ -230,9 +260,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     type: 'text' | 'image' | 'file' = 'text',
     fileUrl?: string,
     fileName?: string,
+    replyToMessageId?: string,
   ) => {
+    const tempId = generateId();
     const newMessage: Message = {
-      id: generateId(),
+      id: tempId,
       chatId,
       senderId,
       sender: getUserById(senderId),
@@ -240,14 +272,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       type,
       fileUrl,
       fileName,
+      replyToMessageId,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
 
-    // Optimistic UI update
+    // ─── Optimistic UI update ─────────────────────────────────────────────
+    // Register tempId as pending so the polling loop will NOT overwrite it.
+    const pendingIds = new Set(get()._pendingMessageIds);
+    pendingIds.add(tempId);
     const { messages, chats } = get();
     set({
       messages: [...messages, newMessage],
+      _pendingMessageIds: pendingIds,
       chats: chats.map((c) =>
         c.id === chatId
           ? {
@@ -271,29 +308,223 @@ export const useChatStore = create<ChatState>((set, get) => ({
           type,
           fileUrl,
           fileName,
+          replyToMessageId,
         }),
       });
+
       if (res.ok) {
         const data = await res.json();
-        if (data.message) {
-          set({
-            messages: get().messages.map((m) =>
-              m.id === newMessage.id ? { ...m, ...data.message } : m
-            ),
-          });
-        }
+        // Replace the optimistic message with the server-confirmed version
+        const confirmedMsg: Message = data.message
+          ? { ...newMessage, ...data.message }
+          : newMessage;
+
+        // Remove tempId from pending set and swap the optimistic message
+        const updatedPending = new Set(get()._pendingMessageIds);
+        updatedPending.delete(tempId);
+        set({
+          _pendingMessageIds: updatedPending,
+          messages: get().messages.map((m) =>
+            m.id === tempId ? confirmedMsg : m
+          ),
+        });
+      } else {
+        // Mark the message as failed so the UI can show an error state
+        const updatedPending = new Set(get()._pendingMessageIds);
+        updatedPending.delete(tempId);
+        set({
+          _pendingMessageIds: updatedPending,
+          messages: get().messages.map((m) =>
+            m.id === tempId ? { ...m, sendFailed: true } : m
+          ),
+        });
       }
     } catch {
-      // Fallback
+      // Network error — mark as failed
+      const updatedPending = new Set(get()._pendingMessageIds);
+      updatedPending.delete(tempId);
+      set({
+        _pendingMessageIds: updatedPending,
+        messages: get().messages.map((m) =>
+          m.id === tempId ? { ...m, sendFailed: true } : m
+        ),
+      });
     }
 
     mockMessages.push(newMessage);
 
-    // Simulate "typing" indicator feedback
-    set({ isTyping: true });
-    setTimeout(() => {
-      set({ isTyping: false });
-    }, 1500);
+    // Stop typing state on server after sending
+    get().sendTypingStatus(chatId, senderId, false);
+  },
+
+  reactToMessage: async (
+    chatId: string,
+    messageId: string,
+    userId: string,
+    reaction: string
+  ) => {
+    const currentMessages = get().messages;
+    const target = currentMessages.find((m) => m.id === messageId);
+    if (!target || target.isUnsent) return;
+
+    // Compute optimistic reaction state
+    const currentReactions = target.reactions || [];
+    const existingIndex = currentReactions.findIndex((r) => r.userId === userId);
+    let optimisticReactions = [...currentReactions];
+
+    if (existingIndex >= 0) {
+      if (currentReactions[existingIndex].reaction === reaction) {
+        // Same emoji -> toggle off
+        optimisticReactions.splice(existingIndex, 1);
+      } else {
+        // Different emoji -> replace
+        optimisticReactions[existingIndex] = { userId, reaction };
+      }
+    } else {
+      // New reaction
+      optimisticReactions.push({ userId, reaction });
+    }
+
+    // Apply optimistic update
+    set({
+      messages: currentMessages.map((m) =>
+        m.id === messageId ? { ...m, reactions: optimisticReactions } : m
+      ),
+    });
+
+    try {
+      const res = await fetch(
+        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/react`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, reaction }),
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reactions) {
+          set({
+            messages: get().messages.map((m) =>
+              m.id === messageId ? { ...m, reactions: data.reactions } : m
+            ),
+          });
+        }
+      } else {
+        // Rollback on HTTP error
+        set({ messages: currentMessages });
+      }
+    } catch {
+      // Rollback on network error
+      set({ messages: currentMessages });
+    }
+  },
+
+  unsendMessage: async (chatId: string, messageId: string, userId: string) => {
+    const currentMessages = get().messages;
+    const target = currentMessages.find((m) => m.id === messageId);
+    if (!target || target.isUnsent) return;
+
+    // Optimistic unsend
+    const optimisticMessages = currentMessages.map((m) =>
+      m.id === messageId
+        ? {
+            ...m,
+            isUnsent: true,
+            content: 'This message was unsent.',
+            fileUrl: undefined,
+            fileName: undefined,
+            reactions: [],
+            unsentAt: new Date().toISOString(),
+          }
+        : m
+    );
+
+    set({ messages: optimisticMessages });
+
+    try {
+      const res = await fetch(
+        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsend`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to unsend message');
+      }
+    } catch (err: any) {
+      // Rollback
+      set({ messages: currentMessages });
+      throw err;
+    }
+  },
+
+  editMessage: async (chatId: string, messageId: string, userId: string, newContent: string) => {
+    const currentMessages = get().messages;
+    const target = currentMessages.find((m) => m.id === messageId);
+    if (!target || target.isUnsent) return;
+
+    // Optimistic edit
+    const optimisticMessages = currentMessages.map((m) =>
+      m.id === messageId
+        ? {
+            ...m,
+            content: newContent,
+            isEdited: true,
+            editedAt: new Date().toISOString(),
+          }
+        : m
+    );
+
+    set({ messages: optimisticMessages });
+
+    try {
+      const res = await fetch(
+        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/edit`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, content: newContent }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to edit message');
+      }
+    } catch (err: any) {
+      // Rollback
+      set({ messages: currentMessages });
+      throw err;
+    }
+  },
+
+  sendTypingStatus: async (chatId: string, userId: string, isTyping: boolean) => {
+    try {
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/typing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, isTyping }),
+      });
+    } catch {
+      // Ephemeral event — swallow network errors
+    }
+  },
+
+  sendPresencePing: async (userId: string) => {
+    try {
+      await fetch('/api/conversations/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+    } catch {
+      // Ephemeral heartbeat — swallow network errors
+    }
   },
 
   startPolling: (chatId: string, userId: string) => {
@@ -305,6 +536,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Only poll if this conversation is still active
       if (get().activeChat?.id !== chatId) return;
       try {
+        // 1. Fetch latest messages (including read receipts)
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
         );
@@ -312,16 +544,64 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const data = await res.json();
           if (data.messages && Array.isArray(data.messages)) {
             const current = get().messages;
-            // Only update if new messages arrived (avoids unnecessary re-renders)
-            if (data.messages.length !== current.length) {
-              set({ messages: data.messages });
+            const pending = get()._pendingMessageIds;
+
+            // ─── Merge strategy ──────────────────────────────────────────
+            // Keep any optimistic messages that the server doesn't know about yet.
+            // These are messages whose tempId is still in _pendingMessageIds.
+            const serverIds = new Set((data.messages as Message[]).map((m) => m.id));
+            const pendingMsgs = current.filter(
+              (m) => pending.has(m.id) && !serverIds.has(m.id)
+            );
+
+            // Detect actual changes in server messages (ignoring pending-only diffs)
+            const serverChanged =
+              data.messages.length !== current.filter((m) => !pending.has(m.id)).length ||
+              data.messages.some((m: Message, idx: number) => {
+                const nonPending = current.filter((cm) => !pending.has(cm.id));
+                const cur = nonPending[idx];
+                if (!cur) return true;
+                if (cur.id !== m.id) return true;
+                if (cur.content !== m.content) return true;
+                if (cur.isUnsent !== m.isUnsent) return true;
+                if (cur.isEdited !== m.isEdited) return true;
+                if (cur.isRead !== m.isRead || (cur as any).seen !== (m as any).seen) return true;
+                if ((cur.reactions?.length ?? 0) !== (m.reactions?.length ?? 0)) return true;
+                const curRxns = (cur.reactions || []).map((r) => `${r.userId}:${r.reaction}`).sort().join(',');
+                const mRxns = (m.reactions || []).map((r) => `${r.userId}:${r.reaction}`).sort().join(',');
+                return curRxns !== mRxns;
+              });
+
+            if (serverChanged || pendingMsgs.length > 0) {
+              // Merge: server messages first, then any still-pending optimistic ones appended
+              const merged = [
+                ...data.messages,
+                ...pendingMsgs,
+              ];
+              set({ messages: merged });
             }
+          }
+        }
+
+        // 2. Fetch partner typing status (ephemeral)
+        const typingRes = await fetch(
+          `/api/conversations/${encodeURIComponent(chatId)}/typing?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
+        );
+        if (typingRes.ok) {
+          const typingData = await typingRes.json();
+          if (typingData.isTyping && typingData.typingUsers?.length > 0) {
+            set({
+              isPartnerTyping: true,
+              partnerTypingName: typingData.typingUsers[0]?.name || '',
+            });
+          } else {
+            set({ isPartnerTyping: false, partnerTypingName: '' });
           }
         }
       } catch {
         // Swallow — don't interrupt UX on network hiccup
       }
-    }, 4000);
+    }, 2500);
 
     set({ _pollInterval: interval });
   },
@@ -330,7 +610,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const interval = get()._pollInterval;
     if (interval) {
       clearInterval(interval);
-      set({ _pollInterval: null });
+      set({ _pollInterval: null, isPartnerTyping: false, partnerTypingName: '' });
     }
   },
 
@@ -419,7 +699,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         op.fullName || op.name || 'Neighbor',
         op.username || 'neighbor',
         op.email,
-        op.avatar
+        op.avatar,
+        op.lastActive,
+        op.isOnline
       );
     }
 
