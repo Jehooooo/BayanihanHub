@@ -194,7 +194,7 @@ export default function FulfillRequestModal({
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
               <Badge variant="primary" size="sm">
                 {request.category.replace('-', ' ')}
               </Badge>

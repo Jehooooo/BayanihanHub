@@ -155,12 +155,12 @@ export default function DashboardPage() {
               <ScrollReveal key={req.id} delay={idx * 90} direction="up">
                 <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Badge variant={req.urgency === 'critical' ? 'danger' : 'warning'} size="sm" solid>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <Badge variant={req.urgency === 'critical' ? 'danger' : 'warning'} size="sm" solid style={{ alignSelf: 'flex-start' }}>
                         {req.urgency.toUpperCase()}
                       </Badge>
-                      <span style={{ fontSize: '0.625rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock style={{ width: '0.75rem', height: '0.75rem' }} /> Needed before {req.neededBefore}
+                      <span style={{ fontSize: '0.6rem', color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Clock style={{ width: '0.65rem', height: '0.65rem', flexShrink: 0 }} /> Needed before {req.neededBefore}
                       </span>
                     </div>
                     <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem' }}>{req.title}</h3>
