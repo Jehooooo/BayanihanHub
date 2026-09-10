@@ -114,10 +114,55 @@ function LocationCard({
         </Button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-        <Input label="Street / Landmark" value={locationDetails.street} readOnly helperText="Auto-filled from map" style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }} required />
-        <Input label="Barangay" value={locationDetails.barangay} readOnly helperText="Auto-filled from map" style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }} required />
-        <Input label="Municipality / City" value={locationDetails.municipality} readOnly helperText="Auto-filled from map" style={{ backgroundColor: 'var(--color-neutral-100)', cursor: 'default', color: 'var(--color-neutral-800)', fontWeight: 600 }} required />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <Input
+          label="Street / Landmark"
+          value={locationDetails.street}
+          readOnly
+          helperText="Auto-filled from map"
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 'var(--radius-md, 0.5rem)',
+            padding: '0.5rem 0.75rem',
+            color: '#334155',
+            fontWeight: 500,
+            cursor: 'not-allowed',
+          }}
+          required
+        />
+        <Input
+          label="Barangay"
+          value={locationDetails.barangay}
+          readOnly
+          helperText="Auto-filled from map"
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 'var(--radius-md, 0.5rem)',
+            padding: '0.5rem 0.75rem',
+            color: '#334155',
+            fontWeight: 500,
+            cursor: 'not-allowed',
+          }}
+          required
+        />
+        <Input
+          label="Municipality / City"
+          value={locationDetails.municipality}
+          readOnly
+          helperText="Auto-filled from map"
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 'var(--radius-md, 0.5rem)',
+            padding: '0.5rem 0.75rem',
+            color: '#334155',
+            fontWeight: 500,
+            cursor: 'not-allowed',
+          }}
+          required
+        />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>

@@ -72,6 +72,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={inputType}
             required={required}
+            {...props}
             style={{
               width: '100%',
               height: '2.5rem',
@@ -79,30 +80,45 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               paddingRight: isPassword || rightIcon ? '2.5rem' : '0.875rem',
               fontSize: '0.875rem',
               fontWeight: 500,
-              backgroundColor: '#fff',
-              border: `1px solid ${error ? 'var(--color-danger)' : 'var(--color-neutral-300)'}`,
-              borderRadius: 'var(--radius-md)',
-              color: error ? 'var(--color-danger)' : 'var(--color-neutral-900)',
+              backgroundColor: props.readOnly || props.disabled ? 'var(--color-neutral-50, #f8fafc)' : '#fff',
+              border: `1px solid ${
+                error
+                  ? 'var(--color-danger)'
+                  : props.readOnly || props.disabled
+                  ? 'var(--color-neutral-200, #e2e8f0)'
+                  : 'var(--color-neutral-300)'
+              }`,
+              borderRadius: 'var(--radius-md, 0.5rem)',
+              color: error
+                ? 'var(--color-danger)'
+                : props.readOnly || props.disabled
+                ? 'var(--color-neutral-700, #334155)'
+                : 'var(--color-neutral-900)',
+              cursor: props.readOnly || props.disabled ? 'not-allowed' : 'text',
               outline: 'none',
               transition: 'border-color 150ms, box-shadow 150ms',
+              ...props.style,
             }}
             onFocus={(e) => {
-              e.target.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-primary-500)';
-              e.target.style.boxShadow = error
-                ? '0 0 0 2px rgba(211,47,47,0.15)'
-                : '0 0 0 2px rgba(46,125,50,0.15)';
+              if (!props.readOnly && !props.disabled) {
+                e.target.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-primary-500)';
+                e.target.style.boxShadow = error
+                  ? '0 0 0 2px rgba(211,47,47,0.15)'
+                  : '0 0 0 2px rgba(46,125,50,0.15)';
+              }
               props.onFocus?.(e);
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-neutral-300)';
-              e.target.style.boxShadow = 'none';
+              if (!props.readOnly && !props.disabled) {
+                e.target.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-neutral-300)';
+                e.target.style.boxShadow = 'none';
+              }
               props.onBlur?.(e);
             }}
             aria-invalid={!!error}
             aria-describedby={
               error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
             }
-            {...props}
           />
           {isPassword && (
             <button

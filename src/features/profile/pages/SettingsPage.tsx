@@ -122,19 +122,27 @@ export default function SettingsPage() {
               <Input label="Current Password" type="password" placeholder="••••••••" />
               <Input label="New Password" type="password" placeholder="••••••••" />
             </div>
-          </Card>
 
-          {/* Form Actions */}
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="primary"
-              type="submit"
-              className="font-bold shadow-button px-6"
-              leftIcon={<Save className="w-4 h-4" />}
+            {/* Form Actions Footer inside Card */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                paddingTop: '1.5rem',
+                width: '100%',
+                borderTop: '1px solid var(--color-neutral-100)',
+              }}
             >
-              Save Changes
-            </Button>
-          </div>
+              <Button
+                variant="primary"
+                type="submit"
+                className="font-bold shadow-button px-6"
+                leftIcon={<Save className="w-4 h-4" />}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </Card>
         </form>
 
         <ProfilePictureUploadModal

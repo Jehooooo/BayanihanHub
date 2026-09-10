@@ -337,7 +337,10 @@ export default function ItemDetailsPage() {
                 </h1>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0, fontWeight: 500 }}>
                   <MapPin style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)' }} />
-                  <span>{item.location.barangay}, {item.location.municipality} • {item.distance} km away</span>
+                  <span>
+                    {item.location.barangay}, {item.location.municipality}
+                    {item.distance !== undefined && item.distance !== null ? ` • ${item.distance} km away` : ''}
+                  </span>
                 </p>
               </div>
 
@@ -536,28 +539,53 @@ export default function ItemDetailsPage() {
             </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {userItems.map((uItem) => (
-                <label
-                  key={uItem.id}
-                  className={`
-                    flex items-center gap-3 p-3 rounded-[var(--radius-md)] border cursor-pointer transition-all
-                    ${selectedUserItem === uItem.id ? 'border-primary-500 bg-primary-50' : 'border-neutral-200 hover:bg-neutral-50'}
-                  `}
-                >
-                  <input
-                    type="radio"
-                    name="userItem"
-                    value={uItem.id}
-                    checked={selectedUserItem === uItem.id}
-                    onChange={(e) => setSelectedUserItem(e.target.value)}
-                    className="text-primary-600 focus:ring-primary-500"
-                  />
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900">{uItem.title}</p>
-                    <p className="text-[11px] text-neutral-500">{uItem.condition}</p>
-                  </div>
-                </label>
-              ))}
+              {userItems.map((uItem) => {
+                const isSelected = selectedUserItem === uItem.id;
+                return (
+                  <label
+                    key={uItem.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-lg, 0.5rem)',
+                      border: isSelected
+                        ? '1.5px solid var(--color-primary-600)'
+                        : '1px solid var(--color-neutral-200)',
+                      backgroundColor: isSelected ? 'var(--color-primary-50)' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    className="hover:border-primary-300 hover:bg-neutral-50/80"
+                  >
+                    <input
+                      type="radio"
+                      name="userItem"
+                      value={uItem.id}
+                      checked={isSelected}
+                      onChange={(e) => setSelectedUserItem(e.target.value)}
+                      style={{
+                        margin: 0,
+                        flexShrink: 0,
+                        width: '1rem',
+                        height: '1rem',
+                        accentColor: 'var(--color-primary-600)',
+                        cursor: 'pointer',
+                      }}
+                      className="text-primary-600 focus:ring-primary-500"
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>
+                        {uItem.title}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--color-neutral-500)' }}>
+                        {uItem.condition}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           )}
 

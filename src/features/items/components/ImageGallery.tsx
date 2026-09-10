@@ -41,9 +41,9 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
           onError={() => setFailedIndices((prev) => ({ ...prev, [activeIdx]: true }))}
         />
         {activeIdx === 0 && (
-          <div className="absolute top-4 left-4 sm:top-5 sm:left-5 bg-neutral-900/80 backdrop-blur-md text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-2 pointer-events-none tracking-wide z-10">
-            <span className="text-amber-400 text-sm leading-none">★</span>
-            <span>Primary Photo</span>
+          <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none z-10 shadow-sm border border-white/10 select-none">
+            <span className="text-amber-400 text-xs leading-none">★</span>
+            <span className="leading-tight">Primary Photo</span>
           </div>
         )}
       </div>
