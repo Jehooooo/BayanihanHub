@@ -94,30 +94,30 @@
 }
 
 /* --- Base Styles --- */
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  font-family: var(--font-sans);
-  color: var(--color-neutral-900);
-  background-color: var(--color-neutral-50);
-  line-height: 1.6;
-  min-height: 100vh;
-}
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-neutral-900);
+    background-color: var(--color-neutral-50);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
 
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 /* --- Scrollbar --- */

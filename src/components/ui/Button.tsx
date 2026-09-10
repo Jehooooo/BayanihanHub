@@ -15,15 +15,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-button',
+    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-button border border-transparent',
   secondary:
     'bg-neutral-100 text-neutral-800 hover:bg-neutral-200 active:bg-neutral-300 border border-neutral-200',
   outline:
     'border border-neutral-300 text-neutral-700 bg-white hover:bg-neutral-50 active:bg-neutral-100',
   ghost:
-    'text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200',
+    'text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200 border border-transparent',
   danger:
-    'bg-danger text-white hover:bg-red-700 active:bg-red-800 shadow-button',
+    'bg-danger text-white hover:bg-red-700 active:bg-red-800 shadow-button border border-transparent',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -41,9 +41,31 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
           onError={() => setFailedIndices((prev) => ({ ...prev, [activeIdx]: true }))}
         />
         {activeIdx === 0 && (
-          <div className="absolute top-3 left-3 bg-slate-900/70 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none z-10 shadow-sm border border-white/10 select-none">
-            <span className="text-amber-400 text-xs leading-none">★</span>
-            <span className="leading-tight">Primary Photo</span>
+          <div
+            style={{
+              position: 'absolute',
+              top: '0.75rem',
+              left: '0.75rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#ffffff',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              padding: '0.3rem 0.65rem',
+              borderRadius: '9999px',
+              border: '1px solid rgba(255, 255, 255, 0.22)',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
+              pointerEvents: 'none',
+              zIndex: 10,
+              userSelect: 'none',
+            }}
+          >
+            <span style={{ color: '#f59e0b', fontSize: '0.8125rem', lineHeight: 1 }}>★</span>
+            <span style={{ lineHeight: 1, letterSpacing: '0.015em' }}>Primary Photo</span>
           </div>
         )}
       </div>
