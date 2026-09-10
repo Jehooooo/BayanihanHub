@@ -26,35 +26,35 @@ export default function LandingPage() {
       <Header />
 
       {/* Hero Section */}
-      <section style={{ position: 'relative', overflow: 'hidden', paddingTop: '4rem', paddingBottom: '5rem', background: 'linear-gradient(to bottom, rgba(232,245,233,0.6), #ffffff, var(--color-neutral-50))', borderBottom: '1px solid var(--color-neutral-200)' }}>
+      <section style={{ position: 'relative', overflow: 'hidden', paddingTop: '3rem', paddingBottom: '3.25rem', background: 'linear-gradient(to bottom, rgba(232,245,233,0.6), #ffffff, var(--color-neutral-50))', borderBottom: '1px solid var(--color-neutral-200)' }}>
         <div className="page-container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '3rem', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2.5rem', alignItems: 'center' }}>
             {/* Hero Text Content */}
-            <div style={{ gridColumn: 'span 7 / span 7', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ gridColumn: 'span 7 / span 7', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <ScrollReveal direction="down" delay={40}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-800)', fontSize: '0.75rem', fontWeight: 700, width: 'fit-content' }}>
-                  <Sparkles style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.8rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-800)', fontSize: '0.75rem', fontWeight: 700, width: 'fit-content' }}>
+                  <Sparkles style={{ width: '0.95rem', height: '0.95rem', color: 'var(--color-primary-600)' }} />
                   Community Exchange & Donation Platform
                 </div>
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={80}>
-                <h1 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
+                <h1 style={{ fontSize: '2.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
                   Stronger Together. <br />
                   <span style={{ color: 'var(--color-primary-600)' }}>Share. Care. Inspire.</span>
                 </h1>
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={120}>
-                <p style={{ fontSize: '1.125rem', color: 'var(--color-neutral-600)', maxWidth: '36rem', lineHeight: '1.6', margin: 0 }}>
+                <p style={{ fontSize: '1.05rem', color: 'var(--color-neutral-600)', maxWidth: '36rem', lineHeight: '1.55', margin: 0 }}>
                   Bayanihan Hub connects neighbors to donate unused items, fulfill urgent needs, and exchange goods safely. Build a sustainable community in your barangay today.
                 </p>
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={160}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingTop: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingTop: '0.25rem' }}>
                   <Link to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/register'} style={{ textDecoration: 'none' }}>
-                    <Button variant="primary" size="lg" className="font-bold px-8 shadow-button" rightIcon={<ArrowRight style={{ width: '1.25rem', height: '1.25rem' }} />}>
+                    <Button variant="primary" size="lg" className="font-bold px-7 shadow-button" rightIcon={<ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />}>
                       {isAuthenticated ? 'Go to Dashboard' : 'Join the Community'}
                     </Button>
                   </Link>
@@ -68,7 +68,7 @@ export default function LandingPage() {
 
               {/* Key Features Badges Row */}
               <ScrollReveal direction="up" delay={200}>
-                <div style={{ paddingTop: '1rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.5rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-600)' }}>
+                <div style={{ paddingTop: '0.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-neutral-600)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <CheckCircle style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} /> 100% Free Sharing
                   </div>
@@ -101,12 +101,12 @@ export default function LandingPage() {
                     </span>
                   </div>
 
-                  <div style={{ height: '13rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-100)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-neutral-200)', padding: '1.5rem', textAlign: 'center' }}>
-                    <div style={{ width: '4rem', height: '4rem', borderRadius: '1rem', backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                      <BookOpen style={{ width: '2rem', height: '2rem', color: 'var(--color-primary-600)' }} />
+                  <div style={{ height: '12rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-100)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-neutral-200)', padding: '1.25rem', textAlign: 'center' }}>
+                    <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '0.875rem', backgroundColor: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.625rem' }}>
+                      <BookOpen style={{ width: '1.75rem', height: '1.75rem', color: 'var(--color-primary-600)' }} />
                     </div>
-                    <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '1rem', margin: 0 }}>Grade 10 Textbooks & Uniform</h3>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem', lineHeight: '1.5', maxWidth: '18rem', margin: '0.25rem 0 0 0' }}>
+                    <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.9375rem', margin: 0 }}>Grade 10 Textbooks & Uniform</h3>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem', lineHeight: '1.45', maxWidth: '18rem', margin: '0.25rem 0 0 0' }}>
                       Donating a complete set of high school books and uniforms to a student in need.
                     </p>
                   </div>
@@ -125,31 +125,31 @@ export default function LandingPage() {
       </section>
 
       {/* Statistics Section */}
-      <section style={{ padding: '3rem 0', backgroundColor: 'var(--color-primary-700)', color: '#fff' }}>
+      <section style={{ padding: '2rem 0', backgroundColor: 'var(--color-primary-700)', color: '#fff' }}>
         <div className="page-container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2rem', textAlign: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
             <ScrollReveal direction="up" delay={50}>
-              <div style={{ padding: '0 1rem' }}>
-                <p style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>1,240+</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.25rem' }}>Active Neighbors</p>
+              <div style={{ padding: '0 0.75rem' }}>
+                <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>1,240+</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Active Neighbors</p>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={120}>
-              <div style={{ padding: '0 1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                <p style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>890+</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.25rem' }}>Items Donated</p>
+              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>890+</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Items Donated</p>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={190}>
-              <div style={{ padding: '0 1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                <p style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>630+</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.25rem' }}>Exchanges Done</p>
+              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>630+</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Exchanges Done</p>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={260}>
-              <div style={{ padding: '0 1rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                <p style={{ fontSize: '2.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>99%</p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.25rem' }}>Community Trust</p>
+              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+                <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>99%</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Community Trust</p>
               </div>
             </ScrollReveal>
           </div>
@@ -157,26 +157,26 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section style={{ padding: '5rem 0' }}>
+      <section style={{ padding: '3.25rem 0' }}>
         <div className="page-container">
           <ScrollReveal direction="up" delay={60}>
-            <div style={{ textAlign: 'center', maxWidth: '42rem', margin: '0 auto 4rem auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-neutral-900)', letterSpacing: '-0.025em', margin: 0 }}>How Bayanihan Hub Helps</h2>
-              <p style={{ fontSize: '1rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
+            <div style={{ textAlign: 'center', maxWidth: '42rem', margin: '0 auto 2.5rem auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--color-neutral-900)', letterSpacing: '-0.025em', margin: 0 }}>How Bayanihan Hub Helps</h2>
+              <p style={{ fontSize: '0.9375rem', color: 'var(--color-neutral-600)', lineHeight: '1.55', margin: 0 }}>
                 Empowering barangays through zero-waste item sharing, emergency community requests, and fair bartering.
               </p>
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
             <ScrollReveal direction="up" delay={80}>
-              <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+              <div style={{ backgroundColor: '#fff', padding: '1.75rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#f0fdf4', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <Heart style={{ width: '1.5rem', height: '1.5rem' }} />
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: '#f0fdf4', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                    <Heart style={{ width: '1.35rem', height: '1.35rem' }} />
                   </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.5rem' }}>Item Donations</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.375rem' }}>Item Donations</h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-600)', lineHeight: '1.55', margin: 0 }}>
                     Give away surplus household goods, clothes, textbooks, or appliances directly to individuals in your local neighborhood who need them.
                   </p>
                 </div>
@@ -184,13 +184,13 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal direction="up" delay={160}>
-              <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+              <div style={{ backgroundColor: '#fff', padding: '1.75rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <Repeat style={{ width: '1.5rem', height: '1.5rem' }} />
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                    <Repeat style={{ width: '1.35rem', height: '1.35rem' }} />
                   </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.5rem' }}>Item Exchange</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.375rem' }}>Item Exchange</h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-600)', lineHeight: '1.55', margin: 0 }}>
                     Trade goods you no longer use for something useful. Propose fair swaps with interactive item-to-item offer matching.
                   </p>
                 </div>
@@ -198,13 +198,13 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal direction="up" delay={240}>
-              <div style={{ backgroundColor: '#fff', padding: '2rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+              <div style={{ backgroundColor: '#fff', padding: '1.75rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                 <div>
-                  <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <Users style={{ width: '1.5rem', height: '1.5rem' }} />
+                  <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                    <Users style={{ width: '1.35rem', height: '1.35rem' }} />
                   </div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.5rem' }}>Community Requests</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', marginBottom: '0.375rem' }}>Community Requests</h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-600)', lineHeight: '1.55', margin: 0 }}>
                     Need urgent school supplies, medical goods, or tools? Post a request and get matched with generous donors nearby.
                   </p>
                 </div>
@@ -215,47 +215,47 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Steps */}
-      <section style={{ padding: '5rem 0', backgroundColor: 'rgba(241,245,243,0.7)', borderTop: '1px solid var(--color-neutral-200)', borderBottom: '1px solid var(--color-neutral-200)' }}>
+      <section style={{ padding: '3.25rem 0', backgroundColor: 'rgba(241,245,243,0.7)', borderTop: '1px solid var(--color-neutral-200)', borderBottom: '1px solid var(--color-neutral-200)' }}>
         <div className="page-container">
           <ScrollReveal direction="up" delay={60}>
-            <div style={{ textAlign: 'center', maxWidth: '42rem', margin: '0 auto 4rem auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-neutral-900)', letterSpacing: '-0.025em', margin: 0 }}>How It Works</h2>
+            <div style={{ textAlign: 'center', maxWidth: '42rem', margin: '0 auto 2.5rem auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--color-neutral-900)', letterSpacing: '-0.025em', margin: 0 }}>How It Works</h2>
               <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-600)', margin: 0 }}>Start sharing in 3 easy steps</p>
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', textAlign: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
             <ScrollReveal direction="up" delay={80}>
-              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
-                <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '0.875rem', height: '100%' }}>
+                <div style={{ width: '3rem', height: '3rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                   1
                 </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Create an Account</h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.6' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Create an Account</h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.55' }}>
                   Sign up with your barangay location to connect directly with neighbors around you.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal direction="up" delay={160}>
-              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
-                <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '0.875rem', height: '100%' }}>
+                <div style={{ width: '3rem', height: '3rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                   2
                 </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Post or Browse Items</h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.6' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Post or Browse Items</h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.55' }}>
                   Upload photos of items you want to give/exchange, or search active listings nearby.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal direction="up" delay={240}>
-              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%' }}>
-                <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '0.875rem', height: '100%' }}>
+                <div style={{ width: '3rem', height: '3rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                   3
                 </div>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Connect & Exchange</h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.6' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>Connect & Exchange</h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', maxWidth: '18rem', margin: '0 auto', lineHeight: '1.55' }}>
                   Chat securely, arrange meeting details, and complete the exchange with trust ratings.
                 </p>
               </div>
@@ -265,20 +265,20 @@ export default function LandingPage() {
       </section>
 
       {/* Call to Action Banner */}
-      <section style={{ padding: '4rem 0', backgroundColor: 'var(--color-primary-600)', color: '#fff', textAlign: 'center' }}>
-        <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
+      <section style={{ padding: '3.25rem 0', backgroundColor: 'var(--color-primary-600)', color: '#fff', textAlign: 'center' }}>
+        <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center' }}>
           <ScrollReveal direction="scale" delay={60}>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 800, letterSpacing: '-0.025em', margin: 0 }}>Ready to make a difference in your community?</h2>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em', margin: 0 }}>Ready to make a difference in your community?</h2>
           </ScrollReveal>
           <ScrollReveal direction="up" delay={120}>
-            <p style={{ fontSize: '1rem', color: 'var(--color-primary-100)', lineHeight: '1.6', margin: 0 }}>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--color-primary-100)', lineHeight: '1.55', margin: 0 }}>
               Join thousands of neighbors fostering sustainability, trust, and mutual aid across the Philippines.
             </p>
           </ScrollReveal>
           <ScrollReveal direction="up" delay={180}>
-            <div style={{ paddingTop: '0.5rem' }}>
+            <div style={{ paddingTop: '0.25rem' }}>
               <Link to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/register'} style={{ textDecoration: 'none' }}>
-                <Button variant="secondary" size="lg" className="font-bold px-8 shadow-button">
+                <Button variant="secondary" size="lg" className="font-bold px-7 shadow-button">
                   {isAuthenticated ? 'Go to Dashboard' : 'Get Started Now'}
                 </Button>
               </Link>
