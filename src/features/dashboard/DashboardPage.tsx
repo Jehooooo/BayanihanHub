@@ -19,6 +19,7 @@ import FulfillRequestModal from '@/features/requests/components/FulfillRequestMo
 import { itemsService } from '@/services/items.service';
 import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
+import BetaNoticeModal from '@/components/common/BetaNoticeModal';
 import type { Item, ItemRequest } from '@/types';
 
 export default function DashboardPage() {
@@ -44,6 +45,7 @@ export default function DashboardPage() {
 
   return (
     <PageLayout>
+      <BetaNoticeModal scope="home" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '4.5rem' }}>
         {/* Welcome Hero Banner */}
         <ScrollReveal direction="down" duration={550}>

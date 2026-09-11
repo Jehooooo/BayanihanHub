@@ -11,9 +11,12 @@ else:
 
 PORT: int = int(os.getenv("PORT", "3001"))
 HOST: str = os.getenv("HOST", "0.0.0.0")
+ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
+DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
+JWT_SECRET: str = os.getenv("JWT_SECRET", "bayanihan-hub-secret-key-beta-2026")
 VERIFICATION_PROVIDER: str = os.getenv("VERIFICATION_PROVIDER", "biometric")
 VERIFICATION_API_KEY: str = os.getenv("VERIFICATION_API_KEY", "")
-CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "*").split(",")
+CORS_ORIGINS: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 MAX_DOCUMENT_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB limit
 
 # MySQL Database Configuration

@@ -12,12 +12,13 @@ app = FastAPI(
     title="Bayanihan Hub Community Platform API",
     description="Python FastAPI backend powering identity verification, items, barter exchanges, community requests, direct messaging, and AI assistant for Bayanihan Hub.",
     version="1.0.0",
+    debug=config.DEBUG,
 )
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.CORS_ORIGINS if config.CORS_ORIGINS != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,13 +110,13 @@ def db_health_check(db: Session = Depends(get_db)):
         db.execute(text("SELECT 1"))
         return {
             "status": "connected",
-            "engine": "MySQL 8.4 (Laragon)",
             "database": "bayanihan_hub",
         }
     except Exception as exc:
+        terminal_logger.error(f"Database health check failed: {exc}", category="DATABASE")
         return {
             "status": "disconnected",
-            "error": str(exc),
+            "message": "Database service is temporarily unavailable. Please try again later.",
         }
 
 
@@ -126,5 +127,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=config.HOST,
         port=config.PORT,
-        reload=True,
+        reload=config.DEBUG,
     )
