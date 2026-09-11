@@ -106,7 +106,7 @@ export default function TerminalPage() {
         </div>
 
         {/* Live System Diagnostics Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Database Card */}
           <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', backgroundColor: '#fff' }}>
             <div

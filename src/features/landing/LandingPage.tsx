@@ -28,9 +28,9 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section style={{ position: 'relative', overflow: 'hidden', paddingTop: '3rem', paddingBottom: '3.25rem', background: 'linear-gradient(to bottom, rgba(232,245,233,0.6), #ffffff, var(--color-neutral-50))', borderBottom: '1px solid var(--color-neutral-200)' }}>
         <div className="page-container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2.5rem', alignItems: 'center' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             {/* Hero Text Content */}
-            <div style={{ gridColumn: 'span 7 / span 7', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="lg:col-span-7 flex flex-col gap-5">
               <ScrollReveal direction="down" delay={40}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.8rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-800)', fontSize: '0.75rem', fontWeight: 700, width: 'fit-content' }}>
                   <Sparkles style={{ width: '0.95rem', height: '0.95rem', color: 'var(--color-primary-600)' }} />
@@ -39,27 +39,27 @@ export default function LandingPage() {
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={80}>
-                <h1 style={{ fontSize: '2.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 leading-[1.15] tracking-tight">
                   Stronger Together. <br />
                   <span style={{ color: 'var(--color-primary-600)' }}>Share. Care. Inspire.</span>
                 </h1>
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={120}>
-                <p style={{ fontSize: '1.05rem', color: 'var(--color-neutral-600)', maxWidth: '36rem', lineHeight: '1.55', margin: 0 }}>
+                <p className="text-base sm:text-lg text-neutral-600 max-w-xl leading-relaxed">
                   Bayanihan Hub connects neighbors to donate unused items, fulfill urgent needs, and exchange goods safely. Build a sustainable community in your barangay today.
                 </p>
               </ScrollReveal>
 
               <ScrollReveal direction="up" delay={160}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', paddingTop: '0.25rem' }}>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
                   <Link to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/register'} style={{ textDecoration: 'none' }}>
-                    <Button variant="primary" size="lg" className="font-bold px-7 shadow-button" rightIcon={<ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />}>
+                    <Button variant="primary" size="lg" className="w-full sm:w-auto font-bold px-7 shadow-button" rightIcon={<ArrowRight style={{ width: '1.15rem', height: '1.15rem' }} />}>
                       {isAuthenticated ? 'Go to Dashboard' : 'Join the Community'}
                     </Button>
                   </Link>
                   <Link to="/browse" style={{ textDecoration: 'none' }}>
-                    <Button variant="outline" size="lg" className="font-semibold px-6">
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto font-semibold px-6">
                       Browse Available Items
                     </Button>
                   </Link>
@@ -83,7 +83,7 @@ export default function LandingPage() {
             </div>
 
             {/* Visual Demo Card */}
-            <div style={{ gridColumn: 'span 5 / span 5', position: 'relative' }}>
+            <div className="lg:col-span-5 relative mt-6 lg:mt-0">
               <ScrollReveal direction="scale" delay={150}>
                 <div style={{ margin: '0 auto', maxWidth: '26rem', backgroundColor: '#fff', padding: '1.5rem', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-elevated)', border: '1px solid var(--color-neutral-200)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -125,9 +125,9 @@ export default function LandingPage() {
       </section>
 
       {/* Statistics Section */}
-      <section style={{ padding: '2rem 0', backgroundColor: 'var(--color-primary-700)', color: '#fff' }}>
+      <section style={{ padding: '2.5rem 0', backgroundColor: 'var(--color-primary-700)', color: '#fff' }}>
         <div className="page-container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
             <ScrollReveal direction="up" delay={50}>
               <div style={{ padding: '0 0.75rem' }}>
                 <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>1,240+</p>
@@ -135,19 +135,19 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={120}>
-              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+              <div className="px-3 lg:border-l lg:border-white/20">
                 <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>890+</p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Items Donated</p>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={190}>
-              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+              <div className="px-3 lg:border-l lg:border-white/20">
                 <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>630+</p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Exchanges Done</p>
               </div>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={260}>
-              <div style={{ padding: '0 0.75rem', borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
+              <div className="px-3 lg:border-l lg:border-white/20">
                 <p style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: 0 }}>99%</p>
                 <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', fontWeight: 500, marginTop: '0.2rem' }}>Community Trust</p>
               </div>
@@ -168,7 +168,7 @@ export default function LandingPage() {
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <ScrollReveal direction="up" delay={80}>
               <div style={{ backgroundColor: '#fff', padding: '1.75rem', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
                 <div>
@@ -224,7 +224,7 @@ export default function LandingPage() {
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', textAlign: 'center' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
             <ScrollReveal direction="up" delay={80}>
               <div style={{ padding: '1.5rem', backgroundColor: '#fff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', boxShadow: 'var(--shadow-card)', display: 'flex', flexDirection: 'column', gap: '0.875rem', height: '100%' }}>
                 <div style={{ width: '3rem', height: '3rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary-600)', color: '#fff', fontWeight: 800, fontSize: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
@@ -268,7 +268,7 @@ export default function LandingPage() {
       <section style={{ padding: '3.25rem 0', backgroundColor: 'var(--color-primary-600)', color: '#fff', textAlign: 'center' }}>
         <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center' }}>
           <ScrollReveal direction="scale" delay={60}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em', margin: 0 }}>Ready to make a difference in your community?</h2>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Ready to make a difference in your community?</h2>
           </ScrollReveal>
           <ScrollReveal direction="up" delay={120}>
             <p style={{ fontSize: '0.9375rem', color: 'var(--color-primary-100)', lineHeight: '1.55', margin: 0 }}>

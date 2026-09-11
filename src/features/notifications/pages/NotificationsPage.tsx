@@ -61,8 +61,10 @@ export default function NotificationsPage() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
-    fetchNotifications(user?.id ?? 'user-1');
-  }, [user, fetchNotifications]);
+    if (user?.id) {
+      fetchNotifications(user.id);
+    }
+  }, [user?.id, fetchNotifications]);
 
   const handleNotificationClick = (n: Notification) => {
     setSelectedNotification(n);

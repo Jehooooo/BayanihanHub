@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
 export default function ExchangePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const currentUserId = user?.id ?? 'user-1';
+  const currentUserId = user?.id;
 
   const [mainTab, setMainTab] = useState<'my_items' | 'proposals' | 'community'>('my_items');
   const [proposalStatusTab, setProposalStatusTab] = useState('all');
@@ -30,7 +30,7 @@ export default function ExchangePage() {
     try {
       const [itemsData, proposalsData] = await Promise.all([
         itemsService.getItems({ type: 'exchange' }),
-        exchangeService.getExchanges(currentUserId),
+        currentUserId ? exchangeService.getExchanges(currentUserId) : Promise.resolve([]),
       ]);
       setExchangeItems(itemsData);
       setExchanges(proposalsData);
@@ -114,7 +114,7 @@ export default function ExchangePage() {
         {mainTab === 'my_items' && (
           <div>
             {isLoading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {[1, 2, 3].map((n) => (
                   <div key={n} style={{ height: '18rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-200)', animation: 'pulse 1.5s infinite' }} />
                 ))}
@@ -128,7 +128,7 @@ export default function ExchangePage() {
                 onAction={() => navigate('/post')}
               />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {myExchangeItems.map((item) => (
                   <ItemCard key={item.id} item={item} onFavoriteToggle={handleFavoriteToggle} />
                 ))}
@@ -141,7 +141,7 @@ export default function ExchangePage() {
         {mainTab === 'community' && (
           <div>
             {isLoading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {[1, 2, 3, 4].map((n) => (
                   <div key={n} style={{ height: '18rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-200)', animation: 'pulse 1.5s infinite' }} />
                 ))}
@@ -155,7 +155,7 @@ export default function ExchangePage() {
                 onAction={() => navigate('/post')}
               />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {exchangeItems.map((item) => (
                   <ItemCard key={item.id} item={item} onFavoriteToggle={handleFavoriteToggle} />
                 ))}
@@ -195,7 +195,7 @@ export default function ExchangePage() {
                   <ExchangeCard
                     key={exc.id}
                     exchange={exc}
-                    currentUserId={currentUserId}
+                    currentUserId={currentUserId || ''}
                     onStatusUpdate={handleStatusUpdate}
                   />
                 ))}

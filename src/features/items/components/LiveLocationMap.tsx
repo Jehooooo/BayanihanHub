@@ -546,7 +546,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
               <span>Locating accurate Street, Barangay, and Municipality…</span>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.25rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
               <div style={{ backgroundColor: 'var(--color-neutral-50)', padding: '0.55rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
                 <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-400)', textTransform: 'uppercase', display: 'block' }}>
                   Street / Landmark

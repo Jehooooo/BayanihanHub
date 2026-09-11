@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import type { Notification } from '../types';
-import { mockNotifications, generateId } from '../data/mockData';
+import { generateId } from '../utils/id';
 
 interface NotificationState {
   notifications: Notification[];
@@ -27,6 +27,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   currentUserId: null,
 
   fetchNotifications: async (userId: string) => {
+    if (!userId) {
+      set({ notifications: [], unreadCount: 0, isLoading: false });
+      return;
+    }
+
     set({ isLoading: true, currentUserId: userId });
     const currentReadIds = get().readIds;
 
@@ -35,12 +40,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         const apiNotifs: Notification[] = (data.notifications || [])
-          .filter((n: any) => {
-            if (!n.userId) return true;
-            const normN = String(n.userId).replace('user-', '');
-            const normU = String(userId).replace('user-', '');
-            return normN === normU || (normU === '1' && normN === '6') || (normU === '6' && normN === '1');
-          })
           .map((n: any) => ({
             id: String(n.id),
             userId: String(n.userId || userId),
@@ -50,37 +49,23 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             link: n.link,
             isRead: Boolean(n.isRead) || currentReadIds.has(String(n.id)),
             createdAt: n.createdAt,
-          }));
-
-        // Also merge mock notifications for any demo items that don't collide
-        const userMockNotifs = mockNotifications.filter((n) => n.userId === userId);
-        const existingIds = new Set(apiNotifs.map((n) => n.id));
-        const combined = [
-          ...apiNotifs,
-          ...userMockNotifs.filter((n) => !existingIds.has(n.id)),
-        ]
-          .map((n) => (currentReadIds.has(n.id) ? { ...n, isRead: true } : n))
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          }))
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         set({
-          notifications: combined,
-          unreadCount: combined.filter((n) => !n.isRead).length,
+          notifications: apiNotifs,
+          unreadCount: apiNotifs.filter((n) => !n.isRead).length,
           isLoading: false,
         });
         return;
       }
-    } catch {
-      // Graceful fallback to mock data on network error
+    } catch (err) {
+      console.error('[NotificationStore] Error fetching notifications:', err);
     }
 
-    const fallback = mockNotifications
-      .filter((n) => n.userId === userId)
-      .map((n) => (currentReadIds.has(n.id) ? { ...n, isRead: true } : n))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
     set({
-      notifications: fallback,
-      unreadCount: fallback.filter((n) => !n.isRead).length,
+      notifications: [],
+      unreadCount: 0,
       isLoading: false,
     });
   },

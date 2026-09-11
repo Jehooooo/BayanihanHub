@@ -15,14 +15,7 @@ export default function FloatingTerminalDrawer() {
   return (
     <>
       {/* Floating Toggle Button */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '1.25rem',
-          left: '1.25rem',
-          zIndex: 45,
-        }}
-      >
+      <div className="fixed z-45 bottom-20 lg:bottom-5 left-3 lg:left-5">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}

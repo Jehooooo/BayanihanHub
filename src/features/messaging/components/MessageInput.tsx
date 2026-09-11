@@ -404,6 +404,7 @@ export default function MessageInput({
               left: '1rem',
               marginBottom: '0.5rem',
               width: '15.5rem',
+              maxWidth: 'calc(100vw - 2rem)',
               backgroundColor: '#fff',
               borderRadius: 'var(--radius-lg)',
               boxShadow: 'var(--shadow-elevated)',

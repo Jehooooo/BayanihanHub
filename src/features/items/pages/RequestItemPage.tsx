@@ -52,6 +52,10 @@ export default function RequestItemPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) {
+      toast.error('Please log in to request an item.');
+      return;
+    }
     if (!formData.title.trim() || !formData.description.trim()) {
       toast.error('Please fill in all required fields.');
       return;
@@ -65,12 +69,12 @@ export default function RequestItemPage() {
         category: formData.category,
         urgency: formData.urgency,
         status: 'active',
-        userId: user?.id ?? 'user-1',
+        userId: user.id,
         location: {
-          address: user?.address ?? '',
-          barangay: user?.barangay ?? 'Poblacion',
-          municipality: user?.municipality ?? 'San Fernando',
-          province: user?.province ?? 'La Union',
+          address: user.address ?? '',
+          barangay: user.barangay ?? 'Poblacion',
+          municipality: user.municipality ?? 'San Fernando',
+          province: user.province ?? 'La Union',
         },
         neededBefore: formData.neededBefore,
         images: [],
@@ -81,10 +85,10 @@ export default function RequestItemPage() {
       let targetChatId: string | undefined;
       if (item?.ownerId) {
         try {
-          const chat = await createChat([user?.id ?? 'user-1', item.ownerId]);
+          const chat = await createChat([user.id, item.ownerId]);
           targetChatId = chat.id;
           const donationMsg = `🎁 Donation Request for "${item.title}":\n\n${formData.description}\n\nNeeded before: ${formData.neededBefore}`;
-          await sendMessage(chat.id, user?.id ?? 'user-1', donationMsg, 'text');
+          await sendMessage(chat.id, user.id, donationMsg, 'text');
           await setActiveChat(chat.id);
         } catch {
           // Continue
@@ -236,15 +240,7 @@ export default function RequestItemPage() {
         </div>
 
         {/* Request Form */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--color-neutral-200)',
-            boxShadow: 'var(--shadow-card)',
-            padding: '1.75rem 2rem',
-          }}
-        >
+        <div className="bg-white rounded-[var(--radius-xl)] border border-neutral-200 shadow-[var(--shadow-card)] p-4 sm:p-6 md:p-8">
           <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0 0 1.25rem 0', paddingBottom: '0.75rem', borderBottom: '1px solid var(--color-neutral-100)' }}>
             Request Details
           </h2>
@@ -257,7 +253,7 @@ export default function RequestItemPage() {
               required
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <Select
                 label="Category"
                 options={categories.map((c) => ({ value: c.id, label: c.name }))}

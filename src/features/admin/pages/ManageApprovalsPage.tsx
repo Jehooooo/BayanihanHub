@@ -221,7 +221,7 @@ export default function ManageApprovalsPage() {
         {activeMainSection === 'identity' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Metric Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
               <Card padding="md" style={{ backgroundColor: '#fff', border: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Clock style={{ width: '1.5rem', height: '1.5rem' }} />
@@ -473,7 +473,7 @@ export default function ManageApprovalsPage() {
                   </div>
 
                   {/* Side-by-Side Visual Inspection Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Left: Uploaded ID Document */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -542,7 +542,7 @@ export default function ManageApprovalsPage() {
                   </div>
 
                   {/* Biometric Analysis Breakdown */}
-                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-neutral-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                  <div className="p-4 bg-neutral-50 rounded-[var(--radius-lg)] border border-neutral-200 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <div>
                       <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, margin: 0 }}>FACIAL GEOMETRY</p>
                       <p style={{ fontSize: '0.875rem', fontWeight: 700, color: selectedVerif.matchDetails.faceMatch ? '#16a34a' : '#dc2626', margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -569,7 +569,7 @@ export default function ManageApprovalsPage() {
                   </div>
 
                   {/* ID Details Details Row */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', fontSize: '0.75rem' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div>
                       <span style={{ color: 'var(--color-neutral-400)' }}>Date of Birth:</span>
                       <p style={{ margin: '0.125rem 0 0 0', fontWeight: 600, color: 'var(--color-neutral-800)' }}>
@@ -723,7 +723,7 @@ export default function ManageApprovalsPage() {
         {activeMainSection === 'photos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Top Summary Metric Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
               <Card padding="md" style={{ backgroundColor: '#fff', border: '1px solid var(--color-neutral-200)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ width: '3rem', height: '3rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Clock style={{ width: '1.5rem', height: '1.5rem' }} />

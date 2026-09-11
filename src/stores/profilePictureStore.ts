@@ -5,38 +5,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ProfilePictureSubmission, ProfilePictureStatus, Notification } from '../types';
-import { mockUsers, mockNotifications, getUserById, generateId } from '../data/mockData';
+import { generateId } from '../utils/id';
 import { useAuthStore } from './authStore';
 import { useNotificationStore } from './notificationStore';
-
-const initialSubmissions: ProfilePictureSubmission[] = [
-  {
-    id: 'sub-1',
-    userId: 'user-2',
-    user: mockUsers[1],
-    imageUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
-    status: 'pending',
-    submittedAt: '2026-08-06T08:30:00Z',
-  },
-  {
-    id: 'sub-2',
-    userId: 'user-4',
-    user: mockUsers[3],
-    imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80',
-    status: 'pending',
-    submittedAt: '2026-08-06T09:15:00Z',
-  },
-  {
-    id: 'sub-3',
-    userId: 'user-3',
-    user: mockUsers[2],
-    imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80',
-    status: 'approved',
-    submittedAt: '2026-08-04T10:00:00Z',
-    reviewedAt: '2026-08-04T11:00:00Z',
-    reviewedBy: 'Admin User',
-  },
-];
 
 interface ProfilePictureState {
   submissions: ProfilePictureSubmission[];
@@ -51,7 +22,7 @@ interface ProfilePictureState {
 export const useProfilePictureStore = create<ProfilePictureState>()(
   persist(
     (set, get) => ({
-      submissions: initialSubmissions,
+      submissions: [],
 
       fetchSubmissions: async () => {
         try {
@@ -63,16 +34,14 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               return;
             }
           }
-        } catch {
-          // Fallback
+        } catch (err) {
+          console.error('[ProfilePictureStore] Error fetching avatars:', err);
         }
       },
 
       submitProfilePicture: async (userId: string, imageUrl: string) => {
-        const user = getUserById(userId) || useAuthStore.getState().user || undefined;
         const now = new Date().toISOString();
 
-        // Backend sync
         try {
           await fetch('/api/users/profile/avatar', {
             method: 'POST',
@@ -80,7 +49,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
             body: JSON.stringify({ userId, imageUrl }),
           });
         } catch {
-          // Fallback
+          // Best effort
         }
 
         const existingIdx = get().submissions.findIndex(
@@ -102,7 +71,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
           submission = {
             id: `sub-${generateId()}`,
             userId,
-            user,
             imageUrl,
             status: 'pending',
             submittedAt: now,
@@ -110,7 +78,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
           set({ submissions: [submission, ...get().submissions] });
         }
 
-        // Update auth user state
         const authUser = useAuthStore.getState().user;
         if (authUser && authUser.id === userId) {
           useAuthStore.getState().updateProfile({
@@ -131,7 +98,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
             method: 'POST',
           });
         } catch {
-          // Fallback
+          // Best effort
         }
 
         const next = get().submissions.map((sub) => {
@@ -143,14 +110,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               reviewedBy,
               rejectionReason: undefined,
             };
-
-            const targetUser = mockUsers.find((u) => u.id === sub.userId);
-            if (targetUser) {
-              targetUser.avatar = sub.imageUrl;
-              targetUser.pendingAvatar = undefined;
-              targetUser.avatarStatus = 'approved';
-              targetUser.avatarRejectionReason = undefined;
-            }
 
             const currentAuthUser = useAuthStore.getState().user;
             if (currentAuthUser && currentAuthUser.id === sub.userId) {
@@ -172,7 +131,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               isRead: false,
               createdAt: now,
             };
-            mockNotifications.unshift(notif);
             useNotificationStore.getState().addNotification(notif);
 
             return updated;
@@ -193,7 +151,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
             body: JSON.stringify({ reason: rejectionReason }),
           });
         } catch {
-          // Fallback
+          // Best effort
         }
 
         const next = get().submissions.map((sub) => {
@@ -205,13 +163,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               reviewedAt: now,
               reviewedBy,
             };
-
-            const targetUser = mockUsers.find((u) => u.id === sub.userId);
-            if (targetUser) {
-              targetUser.pendingAvatar = undefined;
-              targetUser.avatarStatus = 'rejected';
-              targetUser.avatarRejectionReason = rejectionReason;
-            }
 
             const currentAuthUser = useAuthStore.getState().user;
             if (currentAuthUser && currentAuthUser.id === sub.userId) {
@@ -232,7 +183,6 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
               isRead: false,
               createdAt: now,
             };
-            mockNotifications.unshift(notif);
             useNotificationStore.getState().addNotification(notif);
 
             return updated;

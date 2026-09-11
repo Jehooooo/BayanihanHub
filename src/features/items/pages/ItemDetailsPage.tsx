@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Heart,
@@ -11,6 +11,9 @@ import {
   Calendar,
   Truck,
   Star,
+  MoreVertical,
+  Flag,
+  AlertTriangle,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ImageGallery from '../components/ImageGallery';
@@ -19,6 +22,7 @@ import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
+import ReportModal from '@/features/moderation/components/ReportModal';
 import { itemsService } from '@/services/items.service';
 import { exchangeService } from '@/services/exchange.service';
 import { useAuthStore } from '@/stores/authStore';
@@ -41,6 +45,27 @@ export default function ItemDetailsPage() {
   const [selectedUserItem, setSelectedUserItem] = useState('');
   const [userItems, setUserItems] = useState<Item[]>([]);
   const [isRequestingDonation, setIsRequestingDonation] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [overflowMenuOpen, setOverflowMenuOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const [adminReportStatus, setAdminReportStatus] = useState<{
+    hasReports: boolean;
+    activeReportsCount: number;
+    totalReportsCount: number;
+    status: string;
+  } | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -50,6 +75,17 @@ export default function ItemDetailsPage() {
       });
     }
   }, [id]);
+
+  useEffect(() => {
+    if (user?.role === 'admin' && id) {
+      fetch(`/api/reports/target-status/item/${encodeURIComponent(id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setAdminReportStatus(data);
+        })
+        .catch(() => {});
+    }
+  }, [user?.role, id]);
 
   useEffect(() => {
     if (user) {
@@ -252,23 +288,41 @@ export default function ItemDetailsPage() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2rem', alignItems: 'start' }}>
+        {/* Admin-Only Moderation Notice Banner (Section 19: Post-Level Report Status) */}
+        {user?.role === 'admin' && adminReportStatus?.hasReports && (
+          <div
+            style={{
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              backgroundColor: '#fff7ed',
+              border: '1px solid #fed7aa',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#9a3412', fontSize: '0.8125rem' }}>
+              <AlertTriangle style={{ width: '1.25rem', height: '1.25rem', color: '#ea580c', flexShrink: 0 }} />
+              <span>
+                <strong>Admin Moderation Notice:</strong> This post has <strong>{adminReportStatus.totalReportsCount} report(s)</strong> ({adminReportStatus.activeReportsCount} active). Status: <Badge variant="warning">{adminReportStatus.status.toUpperCase()}</Badge>
+              </span>
+            </div>
+            <Link to="/admin/reports" style={{ textDecoration: 'none' }}>
+              <Button variant="outline" size="sm">
+                Review in Admin Console &rarr;
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Left Column: Image Gallery & Detailed Description */}
-          <div style={{ gridColumn: 'span 7 / span 7', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="lg:col-span-7 flex flex-col gap-6">
             <ImageGallery images={item.images} title={item.title} />
 
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                padding: '1.75rem 2rem',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid var(--color-neutral-200)',
-                boxShadow: 'var(--shadow-card)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.5rem',
-              }}
-            >
+            <div className="bg-white p-4 sm:p-6 lg:p-7 rounded-[var(--radius-xl)] border border-neutral-200 shadow-[var(--shadow-card)] flex flex-col gap-5">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.875rem', borderBottom: '1px solid var(--color-neutral-100)' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>
                   Item Description
@@ -283,7 +337,7 @@ export default function ItemDetailsPage() {
               </p>
 
               {/* Pickup & Availability Grid */}
-              <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="pt-4 border-t border-neutral-100 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1.125rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
                   <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-100)', color: 'var(--color-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Truck style={{ width: '1.35rem', height: '1.35rem' }} />
@@ -312,19 +366,8 @@ export default function ItemDetailsPage() {
           </div>
 
           {/* Right Column: Title, Badges, Owner Card, CTAs */}
-          <div style={{ gridColumn: 'span 5 / span 5', display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '5rem' }}>
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                padding: '1.75rem 2rem',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid var(--color-neutral-200)',
-                boxShadow: 'var(--shadow-card)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.5rem',
-              }}
-            >
+          <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-20">
+            <div className="bg-white p-4 sm:p-6 lg:p-7 rounded-[var(--radius-xl)] border border-neutral-200 shadow-[var(--shadow-card)] flex flex-col gap-5">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm" solid>
@@ -332,7 +375,7 @@ export default function ItemDetailsPage() {
                   </Badge>
                   <Badge variant="default" size="sm">{item.condition}</Badge>
                 </div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', lineHeight: '1.2', margin: 0, letterSpacing: '-0.025em' }}>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-neutral-900 leading-tight tracking-tight">
                   {item.title}
                 </h1>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0, fontWeight: 500 }}>
@@ -516,6 +559,78 @@ export default function ItemDetailsPage() {
                 >
                   <Share2 style={{ width: '1.125rem', height: '1.125rem' }} /> <span>Share Link</span>
                 </button>
+
+                {/* ⋮ Overflow menu — shown only to authenticated non-owners */}
+                {isAuthenticated && !isOwner && (
+                  <div ref={overflowRef} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setOverflowMenuOpen((o) => !o)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-neutral-500)',
+                        cursor: 'pointer',
+                        padding: '0.45rem',
+                        borderRadius: 'var(--radius-md)',
+                        transition: 'all 150ms',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      aria-label="More options"
+                    >
+                      <MoreVertical style={{ width: '1.125rem', height: '1.125rem' }} />
+                    </button>
+
+                    {overflowMenuOpen && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          bottom: '110%',
+                          backgroundColor: '#fff',
+                          border: '1px solid var(--color-neutral-200)',
+                          borderRadius: 'var(--radius-lg)',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                          zIndex: 50,
+                          minWidth: '10rem',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOverflowMenuOpen(false);
+                            setReportModalOpen(true);
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.625rem',
+                            padding: '0.75rem 1rem',
+                            fontSize: '0.8125rem',
+                            fontWeight: 600,
+                            color: '#dc2626',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 120ms',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <Flag style={{ width: '0.875rem', height: '0.875rem' }} />
+                          Report Post
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -612,6 +727,17 @@ export default function ItemDetailsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Report Post Modal */}
+      {item && (
+        <ReportModal
+          isOpen={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+          targetType="item"
+          targetId={item.id}
+          targetTitle={item.title}
+        />
+      )}
     </PageLayout>
   );
 }

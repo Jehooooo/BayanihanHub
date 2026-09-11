@@ -1,25 +1,38 @@
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles } from 'lucide-react';
+import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles, MoreVertical, Flag } from 'lucide-react';
 import type { Item } from '@/types';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
+import ReportModal from '@/features/moderation/components/ReportModal';
 import { getCategoryName } from '@/data/categories';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ItemCardProps {
   item: Item;
   onFavoriteToggle?: (id: string) => void;
+  /** If provided, the 3-dot report menu will be hidden (e.g. on own profile) */
+  currentUserId?: string;
 }
 
-export default function ItemCard({ item, onFavoriteToggle }: ItemCardProps) {
+export default function ItemCard({ item, onFavoriteToggle, currentUserId }: ItemCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const isDonation = item.type === 'donation';
+  const [reportOpen, setReportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const isOwner = (currentUserId || user?.id) === item.ownerId ||
+    (currentUserId || user?.id) === item.owner?.id;
+  const canReport = user && !isOwner;
 
   const handleCardClick = () => {
     sessionStorage.setItem('browse-scroll-pos', String(window.scrollY));
     navigate(`/items/${item.id}`);
   };
 
-  return (
+  return (<>
     <div
       onClick={handleCardClick}
       style={{ cursor: 'pointer', height: '100%', textDecoration: 'none' }}
@@ -199,6 +212,75 @@ export default function ItemCard({ item, onFavoriteToggle }: ItemCardProps) {
               <Heart style={{ width: '1rem', height: '1rem', fill: item.isFavorited ? 'currentColor' : 'none' }} />
             </button>
           )}
+
+          {/* ⋮ Report button — only for authenticated non-owners */}
+          {canReport && (
+            <div
+              ref={menuRef}
+              style={{ position: 'absolute', top: '0.625rem', right: onFavoriteToggle ? '2.5rem' : '0.625rem', zIndex: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+                style={{
+                  padding: '0.4rem',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
+                  color: 'var(--color-neutral-600)',
+                }}
+                aria-label="More options"
+              >
+                <MoreVertical style={{ width: '0.875rem', height: '0.875rem' }} />
+              </button>
+
+              {menuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '110%',
+                    right: 0,
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--color-neutral-200)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    zIndex: 50,
+                    minWidth: '9rem',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setReportOpen(true); }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.625rem 0.875rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#dc2626',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <Flag style={{ width: '0.75rem', height: '0.75rem' }} /> Report Post
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Card Content */}
@@ -240,6 +322,15 @@ export default function ItemCard({ item, onFavoriteToggle }: ItemCardProps) {
         </div>
       </Card>
     </div>
-  );
+
+    {/* Report Modal — portal outside the card click handler */}
+    <ReportModal
+      isOpen={reportOpen}
+      onClose={() => setReportOpen(false)}
+      targetType="item"
+      targetId={item.id}
+      targetTitle={item.title}
+    />
+  </>);
 }
 

@@ -44,7 +44,7 @@ export default function ExchangeCard({ exchange, currentUserId, onStatusUpdate }
       </div>
 
       {/* Item Swap Comparison Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', padding: '1rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 sm:p-4 rounded-[var(--radius-lg)] bg-neutral-50 border border-neutral-200">
         {/* Offered Item */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-primary-700)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>You Offer</span>
@@ -53,7 +53,7 @@ export default function ExchangeCard({ exchange, currentUserId, onStatusUpdate }
         </div>
 
         {/* Requested Item */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', borderLeft: '1px solid var(--color-neutral-200)', paddingLeft: '1rem' }}>
+        <div className="flex flex-col gap-1 border-t sm:border-t-0 sm:border-l border-neutral-200 pt-2.5 sm:pt-0 sm:pl-4">
           <span style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--color-neutral-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>They Offer</span>
           <div style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem' }}>{exchange.requestedItem?.title || 'Requested Item'}</div>
           <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)' }}>{exchange.requestedItem?.condition}</span>

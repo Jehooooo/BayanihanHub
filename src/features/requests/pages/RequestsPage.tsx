@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { HandHeart, Plus, Clock, MessageSquare } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { HandHeart, Plus, Clock, MessageSquare, MoreVertical, Flag } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import { requestsService } from '@/services/requests.service';
 import { useAuthStore } from '@/stores/authStore';
 import type { ItemRequest, RequestUrgency } from '@/types';
 import FulfillRequestModal from '../components/FulfillRequestModal';
+import ReportModal from '@/features/moderation/components/ReportModal';
 import toast from 'react-hot-toast';
 
 export default function RequestsPage() {
@@ -26,6 +27,8 @@ export default function RequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedRequestForFulfill, setSelectedRequestForFulfill] = useState<ItemRequest | null>(null);
+  const [selectedRequestForReport, setSelectedRequestForReport] = useState<ItemRequest | null>(null);
+  const [activeMenuRequestId, setActiveMenuRequestId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,8 +49,22 @@ export default function RequestsPage() {
     loadRequests();
   }, [loadRequests]);
 
+  useEffect(() => {
+    function handleDocClick() {
+      setActiveMenuRequestId(null);
+    }
+    if (activeMenuRequestId) {
+      document.addEventListener('click', handleDocClick);
+    }
+    return () => document.removeEventListener('click', handleDocClick);
+  }, [activeMenuRequestId]);
+
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) {
+      toast.error('Please log in to post a request');
+      return;
+    }
     if (!formData.title || !formData.description) {
       toast.error('Please fill in all required fields');
       return;
@@ -59,12 +76,12 @@ export default function RequestsPage() {
       category: formData.category,
       urgency: formData.urgency as any,
       status: 'active',
-      userId: user?.id || 'user-1',
+      userId: user.id,
       location: {
-        address: user?.address || 'Community Center',
-        barangay: user?.barangay || 'San Fernando',
-        municipality: user?.municipality || 'City of San Fernando',
-        province: user?.province || 'La Union',
+        address: user.address || 'Community Center',
+        barangay: user.barangay || 'San Fernando',
+        municipality: user.municipality || 'City of San Fernando',
+        province: user.province || 'La Union',
       },
       neededBefore: formData.neededBefore,
       images: [],
@@ -86,7 +103,7 @@ export default function RequestsPage() {
     <PageLayout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4.5rem' }}>
         <ScrollReveal direction="down" duration={500}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Community Assistance Requests</h1>
               <p style={{ fontSize: '0.875rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem' }}>
@@ -98,6 +115,7 @@ export default function RequestsPage() {
               size="md"
               leftIcon={<Plus style={{ width: '1.125rem', height: '1.125rem' }} />}
               onClick={() => setCreateModalOpen(true)}
+              className="w-full sm:w-auto"
               style={{
                 borderRadius: '9999px',
                 padding: '0.625rem 1.25rem',
@@ -138,7 +156,7 @@ export default function RequestsPage() {
             <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem' }}>Post a new request to get help from generous neighbors.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {requests.map((req, idx) => (
               <ScrollReveal key={req.id} delay={idx * 70} direction="up">
                 <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', border: '1px solid var(--color-neutral-200)', height: '100%' }}>
@@ -158,9 +176,85 @@ export default function RequestsPage() {
                       >
                         Urgency: {req.urgency.toUpperCase()}
                       </Badge>
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Clock style={{ width: '0.875rem', height: '0.875rem' }} /> Needed before {req.neededBefore}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Clock style={{ width: '0.875rem', height: '0.875rem' }} /> Needed before {req.neededBefore}
+                        </span>
+
+                        {/* 3-Dot Action Menu for Non-Owners */}
+                        {user && req.userId !== user.id && (
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuRequestId(activeMenuRequestId === req.id ? null : req.id);
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '1.75rem',
+                                height: '1.75rem',
+                                borderRadius: '9999px',
+                                border: '1px solid var(--color-neutral-200)',
+                                backgroundColor: '#ffffff',
+                                cursor: 'pointer',
+                                color: 'var(--color-neutral-500)',
+                              }}
+                              title="Request Options"
+                            >
+                              <MoreVertical style={{ width: '0.875rem', height: '0.875rem' }} />
+                            </button>
+
+                            {activeMenuRequestId === req.id && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: '2rem',
+                                  width: '9.5rem',
+                                  backgroundColor: '#ffffff',
+                                  borderRadius: '0.375rem',
+                                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                                  border: '1px solid var(--color-neutral-200)',
+                                  padding: '0.25rem',
+                                  zIndex: 30,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuRequestId(null);
+                                    setSelectedRequestForReport(req);
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    width: '100%',
+                                    padding: '0.35rem 0.5rem',
+                                    fontSize: '0.6875rem',
+                                    fontWeight: 600,
+                                    color: '#b91c1c',
+                                    border: 'none',
+                                    borderRadius: '0.25rem',
+                                    backgroundColor: 'transparent',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                >
+                                  <Flag style={{ width: '0.75rem', height: '0.75rem' }} />
+                                  <span>Report Request</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -219,7 +313,7 @@ export default function RequestsPage() {
             required
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select
               label="Category"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
@@ -275,6 +369,17 @@ export default function RequestsPage() {
         request={selectedRequestForFulfill}
         onSuccess={loadRequests}
       />
+
+      {/* Polymorphic Report Modal for Request */}
+      {selectedRequestForReport && (
+        <ReportModal
+          isOpen={Boolean(selectedRequestForReport)}
+          onClose={() => setSelectedRequestForReport(null)}
+          targetType="request"
+          targetId={selectedRequestForReport.id}
+          targetTitle={selectedRequestForReport.title}
+        />
+      )}
     </PageLayout>
   );
 }

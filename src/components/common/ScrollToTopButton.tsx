@@ -37,7 +37,7 @@ export default function ScrollToTopButton() {
       title="Scroll to top"
       style={{
         position: 'fixed',
-        bottom: '5.25rem',
+        bottom: '9.25rem',
         right: '1.5rem',
         zIndex: 998,
         width: '2.75rem',

@@ -318,7 +318,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Input
               label="Full Name (Legal Name)"
               value={formData.fullName}
@@ -336,7 +336,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Input
               label="Email Address"
               type="email"
@@ -366,7 +366,7 @@ export default function RegisterPage() {
             required
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Barangay"
               value={formData.barangay}
@@ -387,7 +387,7 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Input
               label="Password"
               type="password"
@@ -508,7 +508,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Quick ID Highlights Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)', backgroundColor: '#fff', fontSize: '0.75rem' }}>
               <p style={{ fontWeight: 700, color: 'var(--color-neutral-800)', margin: 0 }}>Primary National IDs</p>
               <p style={{ color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>PhilSys National ID, Passport, Driver's License, UMID, Postal ID</p>
@@ -581,7 +581,7 @@ export default function RegisterPage() {
           />
 
           {/* Date of Birth & Expiration Date */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <Input
               label="Date of Birth"
               type="date"
@@ -854,20 +854,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Overview Card */}
-              <div
-                style={{
-                  width: '100%',
-                  padding: '1.25rem',
-                  borderRadius: 'var(--radius-xl)',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  textAlign: 'left',
-                  fontSize: '0.8125rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '0.75rem',
-                }}
-              >
+              <div className="w-full p-4 rounded-[var(--radius-xl)] bg-slate-50 border border-slate-200 text-left text-[0.8125rem] grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span style={{ color: '#64748b', fontSize: '0.6875rem', textTransform: 'uppercase', fontWeight: 600 }}>
                     Applicant Name
@@ -1183,20 +1170,7 @@ export default function RegisterPage() {
             </p>
 
             {/* Overview Box */}
-            <div
-              style={{
-                width: '100%',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '1rem',
-                padding: '1rem 1.25rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '0.75rem',
-                textAlign: 'left',
-                fontSize: '0.8125rem',
-              }}
-            >
+            <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left text-[0.8125rem]">
               <div>
                 <span style={{ color: '#64748b', fontSize: '0.6875rem', textTransform: 'uppercase', fontWeight: 600 }}>
                   Applicant

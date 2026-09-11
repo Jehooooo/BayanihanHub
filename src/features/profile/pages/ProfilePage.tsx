@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -12,6 +12,12 @@ import {
   Trophy,
   ArrowLeft,
   Package,
+  MoreVertical,
+  Flag,
+  Ban,
+  ShieldAlert,
+  AlertOctagon,
+  CheckCircle2,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
@@ -19,13 +25,17 @@ import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Tabs from '@/components/ui/Tabs';
+import Modal from '@/components/ui/Modal';
 import ItemCard from '@/features/items/components/ItemCard';
 import ProfilePictureUploadModal from '../components/ProfilePictureUploadModal';
+import ReportModal from '@/features/moderation/components/ReportModal';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedItemsStore } from '@/stores/savedItemsStore';
-import { mockItems, mockUsers, getUserById } from '@/data/mockData';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { itemsService } from '@/services/items.service';
+import { adminService } from '@/services/admin.service';
 import type { User, Item } from '@/types';
+import toast from 'react-hot-toast';
 
 function getBadgeIcon(nameOrIcon?: string) {
   switch (nameOrIcon?.toLowerCase()) {
@@ -69,6 +79,7 @@ export default function ProfilePage() {
   const location = useLocation();
   const { user: currentUser } = useAuthStore();
   const { savedIds } = useSavedItemsStore();
+  const { blockUser, blockedUsers } = useSettingsStore();
 
   const isOwnProfile = !id || id === currentUser?.id;
   const [profileUser, setProfileUser] = useState<User | null>(isOwnProfile ? currentUser : null);
@@ -77,6 +88,30 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('posted');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 3-dot overflow menu & modal states
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Admin moderation history states
+  const isAdmin = currentUser?.role === 'admin';
+  const [moderationHistory, setModerationHistory] = useState<any>(null);
+  const [isLoadingModHistory, setIsLoadingModHistory] = useState(false);
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
 
   // Fetch target profile and listed items from backend and local store
   useEffect(() => {
@@ -94,14 +129,14 @@ export default function ProfilePage() {
             const data = await res.json();
             if (data && data.profile) {
               targetUser = data.profile;
+            } else {
+              targetUser = null;
             }
+          } else {
+            targetUser = null;
           }
         } catch {
-          // ignore
-        }
-
-        if (!targetUser) {
-          targetUser = getUserById(id) || mockUsers.find((u) => u.id === id || String(u.id).endsWith(id)) || null;
+          targetUser = null;
         }
       }
 
@@ -112,14 +147,11 @@ export default function ProfilePage() {
       try {
         const allItems = await itemsService.getItems();
         if (isMounted) {
-          const targetId = String(targetUser?.id ?? (isOwnProfile ? (currentUser?.id ?? 'user-1') : (id ?? ''))).trim();
-          const targetBare = targetId.replace('user-', '');
+          const targetId = String(targetUser?.id ?? (isOwnProfile ? currentUser?.id : (id ?? ''))).trim();
 
           const matched = allItems.filter((item) => {
             if (matchesUser(item, targetId)) return true;
             if (isOwnProfile) {
-              // Current user in local session or demo user
-              if (targetBare === '1' && (matchesUser(item, 'user-1') || matchesUser(item, '1'))) return true;
               if (currentUser?.id && matchesUser(item, currentUser.id)) return true;
               if (currentUser?.email && item.owner?.email === currentUser.email) return true;
             }
@@ -143,8 +175,7 @@ export default function ProfilePage() {
         }
       } catch {
         if (isMounted) {
-          const fallback = mockItems.filter((i) => i.ownerId === currentUser?.id || i.ownerId === 'user-1');
-          setUserItems(fallback);
+          setUserItems([]);
         }
       } finally {
         if (isMounted) {
@@ -160,14 +191,59 @@ export default function ProfilePage() {
     };
   }, [id, isOwnProfile, currentUser, savedIds]);
 
+  // Load admin moderation history if viewing as admin
+  useEffect(() => {
+    if (!isAdmin || !profileUser?.id) return;
+
+    let isMounted = true;
+    setIsLoadingModHistory(true);
+    adminService
+      .getUserModerationHistory(profileUser.id)
+      .then((data) => {
+        if (isMounted) setModerationHistory(data);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setModerationHistory({
+            warnings: 0,
+            suspensions: 0,
+            removedPosts: 0,
+            reportsReceived: 0,
+            history: [],
+          });
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingModHistory(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAdmin, profileUser?.id]);
+
   const displayedUser = profileUser || currentUser;
   const donationsCount = userItems.filter((i) => i.type === 'donation').length;
   const exchangesCount = userItems.filter((i) => i.type === 'exchange').length;
+  const isBlocked = blockedUsers.some((b) => b.userId === displayedUser?.id);
+
+  const handleConfirmBlock = () => {
+    if (!displayedUser) return;
+    blockUser({
+      userId: displayedUser.id,
+      fullName: displayedUser.fullName || 'Neighbor',
+      username: displayedUser.username || `user_${displayedUser.id}`,
+      avatar: displayedUser.avatar || '',
+      blockedAt: new Date().toISOString(),
+    });
+    setIsBlockModalOpen(false);
+    toast.success(`@${displayedUser.username || displayedUser.fullName} has been blocked.`);
+  };
 
   return (
     <PageLayout>
       <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Navigation Back Button — returns to Item Details (Flow 3 Branch A) or previous view */}
+        {/* Navigation Back Button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             type="button"
@@ -276,29 +352,130 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* User Stats Pill Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textAlign: 'center', backgroundColor: 'var(--color-neutral-50)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
-                <div>
-                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                    <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: '#f59e0b', color: '#f59e0b' }} />
-                    {displayedUser?.rating || 4.9}
-                  </span>
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Rating</span>
+              {/* Right Side: Stats Pill Bar + 3-Dot Action Menu for Non-Self Profiles */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textAlign: 'center', backgroundColor: 'var(--color-neutral-50)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+                  <div>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                      <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: '#f59e0b', color: '#f59e0b' }} />
+                      {displayedUser?.rating || 4.9}
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Rating</span>
+                  </div>
+                  <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
+                  <div>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
+                      {Math.max(displayedUser?.totalExchanges || 0, exchangesCount)}
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Exchanges</span>
+                  </div>
+                  <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
+                  <div>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
+                      {Math.max(displayedUser?.totalDonations || 0, donationsCount)}
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Donations</span>
+                  </div>
                 </div>
-                <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
-                <div>
-                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {Math.max(displayedUser?.totalExchanges || 0, exchangesCount)}
-                  </span>
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Exchanges</span>
-                </div>
-                <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
-                <div>
-                  <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                    {Math.max(displayedUser?.totalDonations || 0, donationsCount)}
-                  </span>
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Donations</span>
-                </div>
+
+                {/* 3-Dot Menu Button for Reporting / Blocking (Non-self only) */}
+                {!isOwnProfile && (
+                  <div style={{ position: 'relative' }} ref={menuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsMenuOpen((prev) => !prev)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '2.5rem',
+                        height: '2.5rem',
+                        borderRadius: '9999px',
+                        border: '1px solid var(--color-neutral-300)',
+                        backgroundColor: '#ffffff',
+                        cursor: 'pointer',
+                        color: 'var(--color-neutral-700)',
+                        transition: 'all 150ms ease',
+                      }}
+                      title="Profile Options"
+                    >
+                      <MoreVertical style={{ width: '1.125rem', height: '1.125rem' }} />
+                    </button>
+
+                    {isMenuOpen && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: '2.8rem',
+                          width: '11.5rem',
+                          backgroundColor: '#ffffff',
+                          borderRadius: '0.5rem',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                          border: '1px solid var(--color-neutral-200)',
+                          padding: '0.35rem',
+                          zIndex: 50,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsReportModalOpen(true);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            width: '100%',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: '#b91c1c',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <Flag style={{ width: '0.875rem', height: '0.875rem' }} />
+                          <span>Report User</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsBlockModalOpen(true);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            width: '100%',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: isBlocked ? '#d97706' : 'var(--color-neutral-700)',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-neutral-100)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          <Ban style={{ width: '0.875rem', height: '0.875rem' }} />
+                          <span>{isBlocked ? 'Blocked' : 'Block User'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -364,6 +541,100 @@ export default function ProfilePage() {
           </div>
         </Card>
 
+        {/* ── ADMIN MODERATION HISTORY SECTION (VISIBLE TO ADMINS ONLY) ── */}
+        {isAdmin && !isOwnProfile && (
+          <Card style={{ padding: '1.25rem', border: '1px solid #fed7aa', backgroundColor: '#fffaf5' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldAlert style={{ width: '1.125rem', height: '1.125rem', color: '#ea580c' }} />
+                <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#9a3412', margin: 0 }}>
+                  Moderation History (Confidential &bull; Admin Access Only)
+                </h3>
+              </div>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, backgroundColor: '#ffedd5', color: '#c2410c', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                AUDITED
+              </span>
+            </div>
+
+            {/* 4 Stat Counters */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #fed7aa', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9a3412', display: 'block' }}>Warnings</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
+                  {moderationHistory?.warnings ?? 0}
+                </span>
+              </div>
+              <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #fed7aa', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9a3412', display: 'block' }}>Suspensions</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
+                  {moderationHistory?.suspensions ?? 0}
+                </span>
+              </div>
+              <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #fed7aa', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9a3412', display: 'block' }}>Removed Posts</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>
+                  {moderationHistory?.removedPosts ?? 0}
+                </span>
+              </div>
+              <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #fed7aa', textAlign: 'center' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#9a3412', display: 'block' }}>Reports Received</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#b91c1c' }}>
+                  {moderationHistory?.reportsReceived ?? 0}
+                </span>
+              </div>
+            </div>
+
+            {/* History Table */}
+            <div className="bg-white rounded-md border border-neutral-200 overflow-x-auto w-full">
+              <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--color-neutral-100)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-neutral-500)', textTransform: 'uppercase' }}>
+                  Chronological Enforcement Log
+                </span>
+              </div>
+              {isLoadingModHistory ? (
+                <p style={{ padding: '1rem', margin: 0, fontSize: '0.75rem', color: 'var(--color-neutral-400)', textAlign: 'center' }}>
+                  Loading moderation records...
+                </p>
+              ) : !moderationHistory?.history || moderationHistory.history.length === 0 ? (
+                <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--color-neutral-500)', fontSize: '0.75rem' }}>
+                  <CheckCircle2 style={{ width: '1.25rem', height: '1.25rem', color: 'var(--color-success)', margin: '0 auto 0.25rem auto' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>Clean Moderation Record</p>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.6875rem', color: 'var(--color-neutral-400)' }}>No infractions or formal actions recorded against this account.</p>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-neutral-200)', color: 'var(--color-neutral-400)', fontSize: '0.6875rem' }}>
+                      <th style={{ padding: '0.5rem 0.75rem' }}>Date</th>
+                      <th style={{ padding: '0.5rem 0.75rem' }}>Action</th>
+                      <th style={{ padding: '0.5rem 0.75rem' }}>Details / Reason</th>
+                      <th style={{ padding: '0.5rem 0.75rem' }}>Admin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {moderationHistory.history.map((h: any) => (
+                      <tr key={h.id} style={{ borderBottom: '1px solid var(--color-neutral-100)' }}>
+                        <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600, color: 'var(--color-neutral-700)', whiteSpace: 'nowrap' }}>
+                          {h.date}
+                        </td>
+                        <td style={{ padding: '0.5rem 0.75rem', fontWeight: 700, color: h.action.includes('SUSPEND') ? '#b91c1c' : '#d97706' }}>
+                          {h.action}
+                        </td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--color-neutral-600)' }}>
+                          {h.details || 'Administrative record'}
+                        </td>
+                        <td style={{ padding: '0.5rem 0.75rem', color: 'var(--color-neutral-400)', whiteSpace: 'nowrap' }}>
+                          {h.admin}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Navigation Tabs */}
         <Tabs
           tabs={[
@@ -379,7 +650,7 @@ export default function ProfilePage() {
         {activeTab === 'posted' && (
           <div>
             {userItems.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {userItems.map((item) => (
                   <ItemCard key={item.id} item={item} />
                 ))}
@@ -396,7 +667,7 @@ export default function ProfilePage() {
         {activeTab === 'favorites' && isOwnProfile && (
           <div>
             {savedItems.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {savedItems.map((item) => (
                   <ItemCard key={item.id} item={item} />
                 ))}
@@ -432,11 +703,47 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Upload Avatar Modal */}
         {isOwnProfile && (
           <ProfilePictureUploadModal
             isOpen={isUploadModalOpen}
             onClose={() => setIsUploadModalOpen(false)}
           />
+        )}
+
+        {/* Polymorphic Report Modal for User */}
+        {!isOwnProfile && displayedUser && (
+          <ReportModal
+            isOpen={isReportModalOpen}
+            onClose={() => setIsReportModalOpen(false)}
+            targetType="user"
+            targetId={displayedUser.id}
+            targetTitle={`@${displayedUser.username || displayedUser.fullName || 'user'}`}
+          />
+        )}
+
+        {/* Block User Confirmation Modal */}
+        {!isOwnProfile && displayedUser && (
+          <Modal
+            isOpen={isBlockModalOpen}
+            onClose={() => setIsBlockModalOpen(false)}
+            title={`Block @${displayedUser.username || displayedUser.fullName}?`}
+            size="sm"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-600)', margin: 0, lineHeight: 1.5 }}>
+                Blocking this neighbor will prevent them from messaging you or proposing barter exchanges. You can unblock them at any time in Settings &gt; Data &amp; Privacy.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <Button variant="ghost" size="sm" onClick={() => setIsBlockModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="danger" size="sm" onClick={handleConfirmBlock}>
+                  Block Neighbor
+                </Button>
+              </div>
+            </div>
+          </Modal>
         )}
       </div>
     </PageLayout>

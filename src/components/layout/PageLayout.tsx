@@ -10,12 +10,16 @@ interface PageLayoutProps {
 
 export default function PageLayout({ children, showSidebar = true }: PageLayoutProps) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-neutral-50)' }}>
+    <div className="min-h-screen flex flex-col bg-[var(--color-neutral-50)] w-full overflow-x-hidden">
       <Header fullWidth={showSidebar} />
-      <div style={{ flex: 1, display: 'flex', width: '100%', minWidth: 0 }}>
+      <div className="flex-1 flex w-full min-w-0 relative">
         {showSidebar && <Sidebar />}
-        <main style={{ flex: 1, padding: '1.75rem 2rem', minWidth: 0, paddingBottom: showSidebar ? '5rem' : '2rem' }}>
-          <div style={{ maxWidth: '82rem', width: '100%' }}>
+        <main
+          className={`flex-1 min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7 ${
+            showSidebar ? 'pb-24 lg:pb-10' : 'pb-8'
+          }`}
+        >
+          <div className="max-w-[82rem] w-full min-w-0 mx-auto">
             {children}
           </div>
         </main>

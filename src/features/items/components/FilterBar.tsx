@@ -49,19 +49,7 @@ export default function FilterBar({ filters, onFilterChange, onReset }: FilterBa
   );
 
   return (
-    <div
-      style={{
-        backgroundColor: '#ffffff',
-        padding: '1.25rem 1.5rem',
-        borderRadius: 'var(--radius-xl)',
-        border: '1px solid var(--color-neutral-200)',
-        boxShadow: 'var(--shadow-card)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem',
-        marginBottom: '1.5rem',
-      }}
-    >
+    <div className="bg-white p-3.5 sm:p-5 rounded-[var(--radius-xl)] border border-neutral-200 shadow-[var(--shadow-card)] flex flex-col gap-4 mb-6">
       {/* Top Search Bar */}
       <div>
         <SearchBar
@@ -72,16 +60,8 @@ export default function FilterBar({ filters, onFilterChange, onReset }: FilterBa
       </div>
 
       {/* Filter Dropdowns & Reset Bar */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--color-neutral-100)',
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.875rem', alignItems: 'center' }}>
+      <div className="flex flex-col gap-3.5 pt-3.5 border-t border-neutral-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
           <Select
             options={categoryOptions}
             value={filters.category ?? ''}
@@ -113,9 +93,9 @@ export default function FilterBar({ filters, onFilterChange, onReset }: FilterBa
         </div>
 
         {/* Action Row for Reset Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', fontWeight: 600 }}>
-            <SlidersHorizontal style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-neutral-400)' }} />
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+          <div className="flex items-center gap-2 text-xs text-neutral-500 font-semibold">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
             <span>Filter items by specific criteria</span>
           </div>
 

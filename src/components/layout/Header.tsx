@@ -47,17 +47,16 @@ export default function Header({ fullWidth = false }: HeaderProps) {
       }}
     >
       <div
-        className={fullWidth ? undefined : 'page-container'}
-        style={fullWidth ? { padding: '0 1.5rem', width: '100%' } : undefined}
+        className={fullWidth ? 'w-full px-3.5 sm:px-6' : 'page-container'}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '4rem', gap: '0.75rem' }}>
           {/* Brand Logo */}
           <Link
             to={homePath}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0, textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, textDecoration: 'none' }}
           >
             <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2.25rem', width: 'auto', objectFit: 'contain' }} />
-            <span style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', letterSpacing: '-0.025em' }}>
+            <span className="text-base sm:text-lg font-extrabold text-neutral-900 tracking-tight">
               Bayanihan Hub
             </span>
           </Link>

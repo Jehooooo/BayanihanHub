@@ -89,7 +89,7 @@ export default function BrowsePage() {
 
         {/* Item Grid */}
         {isLoading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -105,7 +105,7 @@ export default function BrowsePage() {
             onAction={handleResetFilters}
           />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {items.map((item, idx) => (
               <ScrollReveal key={item.id} delay={idx * 60} direction="up">
                 <ItemCard

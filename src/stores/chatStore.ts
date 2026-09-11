@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import type { Chat, Message, User } from '../types';
-import { mockChats, mockMessages, mockUsers, generateId, getUserById } from '../data/mockData';
+import { generateId } from '../utils/id';
 
 interface ChatState {
   chats: Chat[];
@@ -58,7 +58,7 @@ interface ChatState {
 
 const createFallbackUser = (
   id: string,
-  fullName: string,
+  fullName = 'Neighbor',
   username = 'neighbor',
   email?: string,
   avatar = '',
@@ -69,11 +69,11 @@ const createFallbackUser = (
   fullName,
   username,
   email: email || `${username}@example.com`,
-  phone: '+63 900 000 0000',
-  address: 'Barangay Center',
-  barangay: 'Poblacion',
-  municipality: 'San Fernando',
-  province: 'La Union',
+  phone: '',
+  address: '',
+  barangay: '',
+  municipality: '',
+  province: '',
   avatar,
   role: 'user',
   isVerified: true,
@@ -84,11 +84,11 @@ const createFallbackUser = (
   isTrusted: true,
   isSuspended: false,
   rating: 5.0,
-  totalRatings: 1,
+  totalRatings: 0,
   totalExchanges: 0,
-  totalDonations: 1,
+  totalDonations: 0,
   badges: [],
-  joinedAt: '2025-06-15T08:00:00Z',
+  joinedAt: '2026-01-01T00:00:00Z',
   lastActive: lastActive || new Date().toISOString(),
   ...(isOnline !== undefined ? { isOnline } : {}),
 });
@@ -106,6 +106,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   _pendingMessageIds: new Set<string>(),
 
   fetchChats: async (userId: string) => {
+    if (!userId) {
+      set({ chats: [], isLoading: false });
+      return;
+    }
     set({ isLoading: true });
 
     try {
@@ -113,37 +117,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         const apiChats: Chat[] = data.chats || data.conversations || [];
-        const apiChatIds = new Set(apiChats.map((c) => c.id));
-
-        const userMockChats = mockChats
-          .filter((c) => c.participants.includes(userId) && !apiChatIds.has(c.id))
-          .map((chat) => {
-            const chatMessages = mockMessages.filter((m) => m.chatId === chat.id);
-            const lastMessage = chatMessages.length > 0
-              ? chatMessages.sort(
-                  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                )[0]
-              : undefined;
-
-            return {
-              ...chat,
-              lastMessage,
-              messageCount: chatMessages.length,
-              totalMessages: chatMessages.length,
-              participantUsers: chat.participants
-                .map((pid) => getUserById(pid))
-                .filter(Boolean) as User[],
-            };
-          });
-
-        const combined = [...apiChats, ...userMockChats].sort(
-          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
 
         const currentActive = get().activeChat;
         const chatsWithActiveRead = currentActive
-          ? combined.map((c) => (c.id === currentActive.id ? { ...c, unreadCount: 0 } : c))
-          : combined;
+          ? apiChats.map((c) => (c.id === currentActive.id ? { ...c, unreadCount: 0 } : c))
+          : apiChats;
         const updatedActive = currentActive
           ? chatsWithActiveRead.find((c) => c.id === currentActive.id) || currentActive
           : null;
@@ -151,49 +129,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
         set({ chats: chatsWithActiveRead, activeChat: updatedActive, isLoading: false });
         return;
       }
-    } catch {
-      // Fallback to mock data
+    } catch (err) {
+      console.error('[ChatStore] Error fetching chats:', err);
     }
 
-    const userChats = mockChats
-      .filter((c) => c.participants.includes(userId))
-      .map((chat) => {
-        const chatMessages = mockMessages.filter((m) => m.chatId === chat.id);
-        const lastMessage = chatMessages.length > 0
-          ? chatMessages.sort(
-              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            )[0]
-          : undefined;
-
-        return {
-          ...chat,
-          lastMessage,
-          messageCount: chatMessages.length,
-          totalMessages: chatMessages.length,
-          participantUsers: chat.participants
-            .map((pid) => getUserById(pid))
-            .filter(Boolean) as User[],
-        };
-      })
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-    const currentActive = get().activeChat;
-    const chatsWithActiveRead = currentActive
-      ? userChats.map((c) => (c.id === currentActive.id ? { ...c, unreadCount: 0 } : c))
-      : userChats;
-    const updatedActive = currentActive
-      ? chatsWithActiveRead.find((c) => c.id === currentActive.id) || currentActive
-      : null;
-
-    set({ chats: chatsWithActiveRead, activeChat: updatedActive, isLoading: false });
+    set({ chats: [], isLoading: false });
   },
 
   setActiveChat: async (chatId: string, userId?: string) => {
-    let chat = get().chats.find((c) => c.id === chatId) ?? null;
-    if (!chat) {
-      const mockC = mockChats.find((c) => c.id === chatId);
-      if (mockC) chat = mockC;
-    }
+    const chat = get().chats.find((c) => c.id === chatId) ?? null;
     if (chat) {
       set({
         activeChat: { ...chat, unreadCount: 0 },
@@ -204,19 +148,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ isLoadingMessages: true });
     }
 
-    const effectiveUserId = userId || 'user-1';
-    get().markMessagesAsRead(chatId, effectiveUserId);
+    if (userId) {
+      get().markMessagesAsRead(chatId, userId);
+    }
 
     try {
-      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(effectiveUserId)}&user_id=${encodeURIComponent(effectiveUserId)}`);
+      const param = userId ? `?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}` : '';
+      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages${param}`);
       if (res.ok) {
         const data = await res.json();
         if (data.messages && Array.isArray(data.messages)) {
           const count = data.messages.length;
-          if (!chat) {
-            chat = get().chats.find((c) => c.id === chatId) ?? null;
-          }
-          const updatedChat = chat ? { ...chat, messageCount: count, totalMessages: count, unreadCount: 0 } : null;
+          const currentChat = (chat || get().chats.find((c) => c.id === chatId)) ?? null;
+          const updatedChat = currentChat ? { ...currentChat, messageCount: count, totalMessages: count, unreadCount: 0 } : null;
           set({
             activeChat: updatedChat || get().activeChat,
             messages: data.messages,
@@ -228,27 +172,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return;
         }
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error(`[ChatStore] Error fetching messages for chat ${chatId}:`, err);
     }
 
-    const chatMessages = mockMessages
-      .filter((m) => m.chatId === chatId)
-      .map((msg) => ({
-        ...msg,
-        sender: getUserById(msg.senderId),
-      }))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-    const count = chatMessages.length;
-    const updatedChat = chat ? { ...chat, messageCount: count, totalMessages: count, unreadCount: 0 } : null;
-
     set({
-      activeChat: updatedChat || get().activeChat,
-      messages: chatMessages,
-      chats: get().chats.map((c) =>
-        c.id === chatId ? { ...c, messageCount: count, totalMessages: count, unreadCount: 0 } : c
-      ),
+      messages: [],
       isLoadingMessages: false,
     });
   },
@@ -267,7 +196,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       id: tempId,
       chatId,
       senderId,
-      sender: getUserById(senderId),
       content,
       type,
       fileUrl,
@@ -277,8 +205,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: new Date().toISOString(),
     };
 
-    // ─── Optimistic UI update ─────────────────────────────────────────────
-    // Register tempId as pending so the polling loop will NOT overwrite it.
+    // Optimistic UI update
     const pendingIds = new Set(get()._pendingMessageIds);
     pendingIds.add(tempId);
     const { messages, chats } = get();
@@ -314,12 +241,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       if (res.ok) {
         const data = await res.json();
-        // Replace the optimistic message with the server-confirmed version
         const confirmedMsg: Message = data.message
           ? { ...newMessage, ...data.message }
           : newMessage;
 
-        // Remove tempId from pending set and swap the optimistic message
         const updatedPending = new Set(get()._pendingMessageIds);
         updatedPending.delete(tempId);
         set({
@@ -329,7 +254,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ),
         });
       } else {
-        // Mark the message as failed so the UI can show an error state
         const updatedPending = new Set(get()._pendingMessageIds);
         updatedPending.delete(tempId);
         set({
@@ -340,7 +264,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
       }
     } catch {
-      // Network error — mark as failed
       const updatedPending = new Set(get()._pendingMessageIds);
       updatedPending.delete(tempId);
       set({
@@ -350,156 +273,77 @@ export const useChatStore = create<ChatState>((set, get) => ({
         ),
       });
     }
-
-    mockMessages.push(newMessage);
-
-    // Stop typing state on server after sending
-    get().sendTypingStatus(chatId, senderId, false);
   },
 
-  reactToMessage: async (
-    chatId: string,
-    messageId: string,
-    userId: string,
-    reaction: string
-  ) => {
-    const currentMessages = get().messages;
-    const target = currentMessages.find((m) => m.id === messageId);
-    if (!target || target.isUnsent) return;
+  reactToMessage: async (chatId: string, messageId: string, userId: string, reaction: string) => {
+    const { messages } = get();
+    const currentMessages = [...messages];
 
-    // Compute optimistic reaction state
-    const currentReactions = target.reactions || [];
-    const existingIndex = currentReactions.findIndex((r) => r.userId === userId);
-    let optimisticReactions = [...currentReactions];
-
-    if (existingIndex >= 0) {
-      if (currentReactions[existingIndex].reaction === reaction) {
-        // Same emoji -> toggle off
-        optimisticReactions.splice(existingIndex, 1);
-      } else {
-        // Different emoji -> replace
-        optimisticReactions[existingIndex] = { userId, reaction };
-      }
-    } else {
-      // New reaction
-      optimisticReactions.push({ userId, reaction });
-    }
-
-    // Apply optimistic update
     set({
-      messages: currentMessages.map((m) =>
-        m.id === messageId ? { ...m, reactions: optimisticReactions } : m
-      ),
+      messages: messages.map((m) => {
+        if (m.id !== messageId) return m;
+        const currentRxns = m.reactions ? [...m.reactions] : [];
+        const existingIdx = currentRxns.findIndex((r) => r.userId === userId && r.reaction === reaction);
+
+        if (existingIdx !== -1) {
+          currentRxns.splice(existingIdx, 1);
+        } else {
+          currentRxns.push({ userId, reaction });
+        }
+        return { ...m, reactions: currentRxns };
+      }),
     });
 
     try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/react`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, reaction }),
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (data.reactions) {
-          set({
-            messages: get().messages.map((m) =>
-              m.id === messageId ? { ...m, reactions: data.reactions } : m
-            ),
-          });
-        }
-      } else {
-        // Rollback on HTTP error
-        set({ messages: currentMessages });
-      }
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, reaction }),
+      });
     } catch {
-      // Rollback on network error
       set({ messages: currentMessages });
     }
   },
 
   unsendMessage: async (chatId: string, messageId: string, userId: string) => {
-    const currentMessages = get().messages;
-    const target = currentMessages.find((m) => m.id === messageId);
-    if (!target || target.isUnsent) return;
+    const { messages } = get();
+    const currentMessages = [...messages];
 
-    // Optimistic unsend
-    const optimisticMessages = currentMessages.map((m) =>
-      m.id === messageId
-        ? {
-            ...m,
-            isUnsent: true,
-            content: 'This message was unsent.',
-            fileUrl: undefined,
-            fileName: undefined,
-            reactions: [],
-            unsentAt: new Date().toISOString(),
-          }
-        : m
-    );
-
-    set({ messages: optimisticMessages });
+    set({
+      messages: messages.map((m) =>
+        m.id === messageId ? { ...m, isUnsent: true, content: 'This message was unsent.' } : m
+      ),
+    });
 
     try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsend`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId }),
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to unsend message');
-      }
-    } catch (err: any) {
-      // Rollback
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+    } catch {
       set({ messages: currentMessages });
-      throw err;
     }
   },
 
   editMessage: async (chatId: string, messageId: string, userId: string, newContent: string) => {
-    const currentMessages = get().messages;
-    const target = currentMessages.find((m) => m.id === messageId);
-    if (!target || target.isUnsent) return;
+    const { messages } = get();
+    const currentMessages = [...messages];
 
-    // Optimistic edit
-    const optimisticMessages = currentMessages.map((m) =>
-      m.id === messageId
-        ? {
-            ...m,
-            content: newContent,
-            isEdited: true,
-            editedAt: new Date().toISOString(),
-          }
-        : m
-    );
-
-    set({ messages: optimisticMessages });
+    set({
+      messages: messages.map((m) =>
+        m.id === messageId ? { ...m, content: newContent, isEdited: true, editedAt: new Date().toISOString() } : m
+      ),
+    });
 
     try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/edit`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, content: newContent }),
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || 'Failed to edit message');
-      }
-    } catch (err: any) {
-      // Rollback
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/edit`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, content: newContent }),
+      });
+    } catch {
       set({ messages: currentMessages });
-      throw err;
     }
   },
 
@@ -511,7 +355,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         body: JSON.stringify({ userId, isTyping }),
       });
     } catch {
-      // Ephemeral event — swallow network errors
+      // Ephemeral event
     }
   },
 
@@ -523,20 +367,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         body: JSON.stringify({ userId }),
       });
     } catch {
-      // Ephemeral heartbeat — swallow network errors
+      // Ephemeral heartbeat
     }
   },
 
   startPolling: (chatId: string, userId: string) => {
-    // Clear any existing interval before starting a new one
     const existing = get()._pollInterval;
     if (existing) clearInterval(existing);
 
     const interval = setInterval(async () => {
-      // Only poll if this conversation is still active
       if (get().activeChat?.id !== chatId) return;
       try {
-        // 1. Fetch latest messages (including read receipts)
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
         );
@@ -546,15 +387,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const current = get().messages;
             const pending = get()._pendingMessageIds;
 
-            // ─── Merge strategy ──────────────────────────────────────────
-            // Keep any optimistic messages that the server doesn't know about yet.
-            // These are messages whose tempId is still in _pendingMessageIds.
             const serverIds = new Set((data.messages as Message[]).map((m) => m.id));
             const pendingMsgs = current.filter(
               (m) => pending.has(m.id) && !serverIds.has(m.id)
             );
 
-            // Detect actual changes in server messages (ignoring pending-only diffs)
             const serverChanged =
               data.messages.length !== current.filter((m) => !pending.has(m.id)).length ||
               data.messages.some((m: Message, idx: number) => {
@@ -567,23 +404,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 if (cur.isEdited !== m.isEdited) return true;
                 if (cur.isRead !== m.isRead || (cur as any).seen !== (m as any).seen) return true;
                 if ((cur.reactions?.length ?? 0) !== (m.reactions?.length ?? 0)) return true;
-                const curRxns = (cur.reactions || []).map((r) => `${r.userId}:${r.reaction}`).sort().join(',');
-                const mRxns = (m.reactions || []).map((r) => `${r.userId}:${r.reaction}`).sort().join(',');
-                return curRxns !== mRxns;
+                return false;
               });
 
             if (serverChanged || pendingMsgs.length > 0) {
-              // Merge: server messages first, then any still-pending optimistic ones appended
-              const merged = [
-                ...data.messages,
-                ...pendingMsgs,
-              ];
-              set({ messages: merged });
+              set({ messages: [...data.messages, ...pendingMsgs] });
             }
           }
         }
 
-        // 2. Fetch partner typing status (ephemeral)
         const typingRes = await fetch(
           `/api/conversations/${encodeURIComponent(chatId)}/typing?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
         );
@@ -599,7 +428,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         }
       } catch {
-        // Swallow — don't interrupt UX on network hiccup
+        // Best effort
       }
     }, 2500);
 
@@ -615,10 +444,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   markMessagesAsRead: async (chatId: string, userId?: string) => {
-    const effectiveUserId = userId || 'user-1';
+    if (!userId) return;
     const { messages, chats } = get();
     const updatedMessages = messages.map((m) =>
-      m.chatId === chatId && m.senderId !== effectiveUserId ? { ...m, isRead: true } : m
+      m.chatId === chatId && m.senderId !== userId ? { ...m, isRead: true } : m
     );
     const updatedChats = chats.map((c) =>
       c.id === chatId ? { ...c, unreadCount: 0 } : c
@@ -630,15 +459,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     set({ messages: updatedMessages, chats: updatedChats, activeChat: updatedActive });
 
-    const mockC = mockChats.find((c) => c.id === chatId);
-    if (mockC) mockC.unreadCount = 0;
-
     try {
-      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(effectiveUserId)}&user_id=${encodeURIComponent(effectiveUserId)}`, {
+      await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`, {
         method: 'PATCH',
       });
     } catch {
-      // Fallback
+      // Best effort
     }
   },
 
@@ -648,37 +474,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     );
     if (existingChat) return existingChat;
 
-    try {
-      const res = await fetch('/api/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ participantIds }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.conversation) {
-          set({ chats: [data.conversation, ...get().chats] });
-          return data.conversation;
-        }
+    const res = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participantIds }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.conversation) {
+        set({ chats: [data.conversation, ...get().chats] });
+        return data.conversation;
       }
-    } catch {
-      // Fallback
     }
 
-    const newChat: Chat = {
-      id: generateId(),
-      participants: participantIds,
-      participantUsers: participantIds
-        .map((pid) => mockUsers.find((u) => u.id === pid))
-        .filter(Boolean) as User[],
-      unreadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    mockChats.push(newChat);
-    set({ chats: [newChat, ...get().chats] });
-    return newChat;
+    throw new Error('Failed to start conversation.');
   },
 
   addChat: (chat: Chat) => {
@@ -691,7 +501,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   getOtherParticipant: (chat: Chat, currentUserId: string): User | undefined => {
-    // 1. Check if backend provided otherParticipant
     if ((chat as any).otherParticipant) {
       const op = (chat as any).otherParticipant;
       return createFallbackUser(
@@ -705,7 +514,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       );
     }
 
-    // 2. Check chat.participantUsers
     if (chat.participantUsers && chat.participantUsers.length > 0) {
       const pUser = chat.participantUsers.find(
         (u) =>
@@ -723,19 +531,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    // 3. Check mockUsers / getUserById
     const otherId = chat.participants.find(
       (pid) =>
         pid !== currentUserId &&
         String(pid).replace('user-', '') !== String(currentUserId).replace('user-', '')
     );
     if (otherId) {
-      const mock =
-        getUserById(otherId) ||
-        mockUsers.find((u) => u.id === otherId || `user-${u.id}` === otherId);
-      if (mock) return mock;
-
-      // 4. Synthesize a valid fallback User so UI always renders cleanly
       return createFallbackUser(
         otherId,
         (chat as any).title || (chat as any).recipientName || 'Neighbor',

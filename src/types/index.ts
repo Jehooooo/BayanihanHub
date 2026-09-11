@@ -346,21 +346,70 @@ export interface Rating {
 
 // --- Report Types ---
 
-export type ReportReason = 'inappropriate' | 'spam' | 'scam' | 'offensive' | 'duplicate' | 'other';
-export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+export type ReportTargetType = 'item' | 'user' | 'request' | 'message';
+
+export type ReportReason =
+  // Post / Item reasons
+  | 'scam_fraud'
+  | 'prohibited_item'
+  | 'misleading_information'
+  | 'spam'
+  | 'inappropriate_content'
+  | 'harassment'
+  | 'duplicate_post'
+  | 'wrong_category'
+  // User reasons
+  | 'fake_identity'
+  | 'inappropriate_behavior'
+  | 'suspicious_activity'
+  // Request reasons
+  | 'false_information'
+  | 'inappropriate_request'
+  | 'prohibited_request'
+  // Generic
+  | 'other';
+
+export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed';
+
+export type ReportSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface Report {
   id: string;
-  reporterId: string;
-  reporter?: User;
-  targetType: 'item' | 'user' | 'message';
+  reportId?: number;
+  reporterId?: string;
+  reporter?: {
+    id: string;
+    fullName: string;
+    username: string;
+    avatar?: string | null;
+    email?: string | null;
+  };
+  targetType: ReportTargetType;
   targetId: string;
   reason: ReportReason;
   description: string;
   status: ReportStatus;
+  severity?: ReportSeverity;
+  adminReviewerId?: string;
+  adminAction?: string;
+  adminNotes?: string;
+  resolutionNote?: string;
   resolvedBy?: string;
   resolution?: string;
+  reportedUser?: {
+    id: string;
+    fullName: string;
+    username: string;
+    avatar?: string | null;
+    isVerified?: boolean;
+    rating?: number;
+    status?: string;
+    location?: string;
+  } | null;
+  targetDetails?: any;
+  targetReportsCount?: number;
   createdAt: string;
+  updatedAt?: string;
   resolvedAt?: string;
 }
 

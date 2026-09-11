@@ -5,7 +5,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, AuthCredentials, RegisterData } from '../types';
-import { mockUsers, generateId } from '../data/mockData';
+import { generateId } from '../utils/id';
+import { getUserFriendlyErrorMessage } from '../utils/errorHandler';
 import { useSavedItemsStore } from './savedItemsStore';
 import { useIdentityVerificationStore } from './identityVerificationStore';
 import { maskIdNumber } from '../services/verification.service';
@@ -44,8 +45,10 @@ export const useAuthStore = create<AuthState>()(
           const data = await response.json();
 
           if (!response.ok) {
-            const errorMsg =
-              data.detail || data.message || 'Invalid email or password. Please try again.';
+            const errorMsg = getUserFriendlyErrorMessage(
+              data.detail || data.message,
+              'Invalid email or password. Please try again.'
+            );
             set({ error: errorMsg, isLoading: false });
             return false;
           }
@@ -61,58 +64,12 @@ export const useAuthStore = create<AuthState>()(
           });
           return false;
         } catch (err: any) {
-          // Fallback to local check if offline
-          console.warn('[Login] Network error, checking local store:', err);
-          const cleanEmail = credentials.email.trim().toLowerCase();
-          const user = mockUsers.find(
-            (u) =>
-              u.email.toLowerCase() === cleanEmail ||
-              u.username.toLowerCase() === cleanEmail
-          );
-
-          if (!user) {
-            set({
-              error: 'Invalid email or password. Please try again.',
-              isLoading: false,
-            });
-            return false;
-          }
-
-          if (user.isSuspended) {
-            set({
-              error: 'Your account has been suspended. Please contact support.',
-              isLoading: false,
-            });
-            return false;
-          }
-
-          const status = user.account_status || (user.isVerified ? 'APPROVED' : 'PENDING');
-
-          if (status === 'PENDING') {
-            set({
-              error:
-                'Your account is still pending administrator verification. Please wait until your registration has been reviewed.',
-              isLoading: false,
-            });
-            return false;
-          }
-
-          if (status === 'REJECTED') {
-            set({
-              error:
-                'Your registration was not approved. Please review the provided information or contact an administrator.',
-              isLoading: false,
-            });
-            return false;
-          }
-
-          if (status === 'APPROVED') {
-            set({ user, isAuthenticated: true, isLoading: false, error: null });
-            return true;
-          }
-
+          console.warn('[Login] Network error:', err);
           set({
-            error: 'Your account requires administrator review before sign in.',
+            error: getUserFriendlyErrorMessage(
+              err,
+              'Unable to connect to the server. Please check your connection and try again.'
+            ),
             isLoading: false,
           });
           return false;
@@ -153,10 +110,10 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json();
 
           if (!response.ok) {
-            const errorMsg =
-              result.detail ||
-              result.message ||
-              'Registration failed. Please check your details.';
+            const errorMsg = getUserFriendlyErrorMessage(
+              result.detail || result.message,
+              'Registration failed. Please check your details.'
+            );
             set({ error: errorMsg, isLoading: false });
             return false;
           }
@@ -164,8 +121,7 @@ export const useAuthStore = create<AuthState>()(
           const userId = result.user?.id || `user-${generateId()}`;
           const maskedIdNumber = data.idNumber ? maskIdNumber(data.idNumber) : undefined;
 
-          // CRITICAL RULE: Newly registered users are created with status PENDING.
-          // Facial verification success does NOT mean administrator approval.
+          // Newly registered users are created with status PENDING
           const newUser: User = {
             id: userId,
             fullName: data.fullName,
@@ -197,36 +153,7 @@ export const useAuthStore = create<AuthState>()(
             lastActive: new Date().toISOString(),
           };
 
-          // Create the identity verification application record for administrator review
-          if (data.idType && data.idNumber) {
-            useIdentityVerificationStore.getState().submitVerification({
-              userId,
-              user: newUser,
-              idType: data.idType,
-              idNumber: data.idNumber,
-              fullNameOnId: data.fullNameOnId || data.fullName,
-              dob: data.dob || '',
-              expirationDate: data.expirationDate,
-              extraInfo: data.extraInfo,
-              idDocumentUrl: data.idDocumentUrl || '',
-              faceImageUrl: data.faceImageUrl || '',
-              status: 'PENDING',
-              provider: 'BayanihanHub-Python-FastAPI-Engine',
-              confidenceScore: data.verificationConfidence || 95,
-              matchDetails: {
-                faceMatch: true,
-                nameMatch: true,
-                livenessVerified: true,
-              },
-              verifiedAt: undefined,
-              reviewedBy: 'Pending Administrator Review',
-            });
-          }
-
-          // Add user to local registry
-          mockUsers.push(newUser);
-
-          // Refresh verifications from backend
+          // Refresh verifications from backend for admins
           useIdentityVerificationStore.getState().fetchVerifications().catch(() => {});
 
           // NEVER AUTO-LOGIN: User remains logged out until administrator review and approval
@@ -235,9 +162,10 @@ export const useAuthStore = create<AuthState>()(
         } catch (err: any) {
           console.error('[Register] API call error:', err);
           set({
-            error:
-              err.message ||
-              'Unable to connect to the registration server. Please try again.',
+            error: getUserFriendlyErrorMessage(
+              err,
+              'Unable to connect to the registration server. Please try again.'
+            ),
             isLoading: false,
           });
           return false;
@@ -254,12 +182,6 @@ export const useAuthStore = create<AuthState>()(
         if (user) {
           const updatedUser = { ...user, ...updates };
           set({ user: updatedUser });
-
-          // Update in mock data
-          const idx = mockUsers.findIndex((u) => u.id === user.id);
-          if (idx !== -1) {
-            mockUsers[idx] = updatedUser;
-          }
         }
       },
 

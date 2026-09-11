@@ -29,7 +29,7 @@ export default function MessagingPage() {
     sendPresencePing,
   } = useChatStore();
 
-  const currentUserId = user?.id ?? 'user-1';
+  const currentUserId = user?.id;
 
   // Explicit target chat ONLY from intentional flows (route param /messages/:conversationId, query ?chatId, or nav state)
   const searchParams = new URLSearchParams(location.search);
@@ -48,6 +48,7 @@ export default function MessagingPage() {
 
   // Presence heartbeat every 45 seconds while viewing messages
   useEffect(() => {
+    if (!currentUserId) return;
     sendPresencePing(currentUserId);
     const interval = setInterval(() => {
       sendPresencePing(currentUserId);
@@ -65,6 +66,7 @@ export default function MessagingPage() {
 
   // Fetch conversations list on mount / user change
   useEffect(() => {
+    if (!currentUserId) return;
     fetchChats(currentUserId).then(() => {
       if (explicitChatId) {
         setActiveChat(explicitChatId, currentUserId);
@@ -74,14 +76,14 @@ export default function MessagingPage() {
 
   // Open explicit conversation when navigating with an ID
   useEffect(() => {
-    if (explicitChatId && activeChat?.id !== explicitChatId) {
+    if (explicitChatId && activeChat?.id !== explicitChatId && currentUserId) {
       setActiveChat(explicitChatId, currentUserId);
     }
   }, [explicitChatId, activeChat, currentUserId, setActiveChat]);
 
   // Start / stop polling as the active chat changes
   useEffect(() => {
-    if (activeChat) {
+    if (activeChat && currentUserId) {
       startPolling(activeChat.id, currentUserId);
     } else {
       stopPolling();
@@ -93,7 +95,9 @@ export default function MessagingPage() {
 
   const handleSelectChat = (chatId: string) => {
     navigate(`/messages/${encodeURIComponent(chatId)}`);
-    setActiveChat(chatId, currentUserId);
+    if (currentUserId) {
+      setActiveChat(chatId, currentUserId);
+    }
   };
 
   const handleBack = () => {
@@ -103,13 +107,13 @@ export default function MessagingPage() {
   };
 
   const handleSendMessage = (payload: SendMessagePayload) => {
-    if (activeChat) {
+    if (activeChat && currentUserId) {
       sendMessage(activeChat.id, currentUserId, payload.content, payload.type, payload.fileUrl, payload.fileName);
     }
   };
 
   const partner = activeChat
-    ? getOtherParticipant(activeChat, currentUserId)
+    ? getOtherParticipant(activeChat, currentUserId || '')
     : undefined;
 
   return (
@@ -120,12 +124,7 @@ export default function MessagingPage() {
         triggering page-level scroll.
       */}
       <div
-        style={{
-          margin: '-1.75rem -2rem',
-          height: 'calc(100vh - 4rem)', /* 4rem = header height */
-          display: 'flex',
-          overflow: 'hidden',
-        }}
+        className="-mx-3.5 -my-4 sm:-mx-6 sm:-my-6 lg:-mx-8 lg:-my-7 h-[calc(100dvh-4rem-4.5rem)] lg:h-[calc(100vh-4rem)] flex overflow-hidden"
       >
         <div
           className="bg-white rounded-none border-0 shadow-none overflow-hidden flex w-full h-full"
@@ -137,7 +136,7 @@ export default function MessagingPage() {
               chats={chats}
               activeChatId={activeChat?.id}
               onSelectChat={handleSelectChat}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId || ''}
               getOtherParticipant={getOtherParticipant}
             />
           </div>
@@ -147,7 +146,7 @@ export default function MessagingPage() {
             <ChatWindow
               chat={activeChat}
               messages={messages}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId || ''}
               partner={partner}
               isTyping={isTyping}
               isPartnerTyping={isPartnerTyping}

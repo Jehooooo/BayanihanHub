@@ -15,30 +15,34 @@ export const useSavedItemsStore = create<SavedItemsState>()(
     (set, get) => ({
       savedIds: [],
 
-      saveItem: async (id: string, userId = 'user-1') => {
+      saveItem: async (id: string, userId?: string) => {
         const { savedIds } = get();
         if (!savedIds.includes(id)) {
           set({ savedIds: [...savedIds, id] });
         }
 
-        try {
-          await fetch(`/api/items/${encodeURIComponent(id)}/save?userId=${encodeURIComponent(userId)}`, {
-            method: 'POST',
-          });
-        } catch {
-          // Local state already updated
+        if (userId) {
+          try {
+            await fetch(`/api/items/${encodeURIComponent(id)}/save?userId=${encodeURIComponent(userId)}`, {
+              method: 'POST',
+            });
+          } catch {
+            // Local state already updated
+          }
         }
       },
 
-      unsaveItem: async (id: string, userId = 'user-1') => {
+      unsaveItem: async (id: string, userId?: string) => {
         set((state) => ({ savedIds: state.savedIds.filter((sid) => sid !== id) }));
 
-        try {
-          await fetch(`/api/items/${encodeURIComponent(id)}/save?userId=${encodeURIComponent(userId)}`, {
-            method: 'POST',
-          });
-        } catch {
-          // Local state already updated
+        if (userId) {
+          try {
+            await fetch(`/api/items/${encodeURIComponent(id)}/save?userId=${encodeURIComponent(userId)}`, {
+              method: 'POST',
+            });
+          } catch {
+            // Local state already updated
+          }
         }
       },
 
@@ -51,6 +55,7 @@ export const useSavedItemsStore = create<SavedItemsState>()(
       },
 
       syncFromBackend: async (userId: string) => {
+        if (!userId) return;
         try {
           const res = await fetch(`/api/items/saved?userId=${encodeURIComponent(userId)}`);
           if (res.ok) {

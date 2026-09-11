@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai, terminal
+from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai, terminal, reports
 from app.db import get_db, engine
 from app.services.terminal_logger import terminal_logger
 import app.config as config
@@ -62,7 +62,7 @@ async def on_startup_logging():
         terminal_logger.error("Database connection failed", category="DATABASE", details=str(exc))
         terminal_logger.error("Unable to connect to MySQL database", category="DATABASE")
 
-    terminal_logger.info("API routes initialized (11 routers loaded)", category="SYSTEM")
+    terminal_logger.info("API routes initialized (12 routers loaded)", category="SYSTEM")
     terminal_logger.info("Authentication service ready", category="AUTH")
     terminal_logger.info("Real-time WebSocket & SSE log engine active", category="SYSTEM")
     terminal_logger.success(f"Backend server listening on http://{config.HOST}:{config.PORT}", category="SYSTEM")
@@ -72,6 +72,7 @@ async def on_startup_logging():
 app.include_router(auth.router)
 app.include_router(verification.router)
 app.include_router(admin.router)
+app.include_router(reports.router)
 app.include_router(notifications.router)
 app.include_router(items.router)
 app.include_router(exchanges.router)

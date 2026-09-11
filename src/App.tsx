@@ -25,8 +25,6 @@ import ManageRequestsPage from '@/features/admin/pages/ManageRequestsPage';
 import ManageReportsPage from '@/features/admin/pages/ManageReportsPage';
 import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
-import TerminalPage from '@/features/admin/pages/TerminalPage';
-import FloatingTerminalDrawer from '@/components/terminal/FloatingTerminalDrawer';
 import { useAuthStore } from '@/stores/authStore';
 import AiChatbotModal from '@/components/AiChatbotModal';
 import ScrollToTopButton from '@/components/common/ScrollToTopButton';
@@ -70,7 +68,6 @@ export default function App() {
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <AiChatbotModal />
       <ScrollToTopButton />
-      <FloatingTerminalDrawer />
       <Routes>
         {/* Public Routes (redirect to dashboard if already authenticated) */}
         <Route
@@ -236,14 +233,6 @@ export default function App() {
           element={
             <AdminRoute>
               <AdminDashboardPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/terminal"
-          element={
-            <AdminRoute>
-              <TerminalPage />
             </AdminRoute>
           }
         />

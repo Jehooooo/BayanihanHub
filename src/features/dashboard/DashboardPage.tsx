@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
 
   const [recentItems, setRecentItems] = useState<Item[]>([]);
+  const [totalItemsCount, setTotalItemsCount] = useState<number>(0);
   const [activeRequests, setActiveRequests] = useState<ItemRequest[]>([]);
   const [selectedRequestForFulfill, setSelectedRequestForFulfill] = useState<ItemRequest | null>(null);
 
@@ -33,8 +34,11 @@ export default function DashboardPage() {
       itemsService.getItems({ sortBy: 'newest' }),
       requestsService.getRequests('active'),
     ]).then(([items, reqs]) => {
+      setTotalItemsCount(items.length);
       setRecentItems(items.slice(0, 6));
       setActiveRequests(reqs.slice(0, 3));
+    }).catch(() => {
+      // keep empty states
     });
   }, []);
 
@@ -43,25 +47,23 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '4.5rem' }}>
         {/* Welcome Hero Banner */}
         <ScrollReveal direction="down" duration={550}>
-          <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(to bottom right, var(--color-primary-700), var(--color-primary-600), var(--color-primary-800))', borderRadius: 'var(--radius-xl)', padding: '1.75rem 2rem', color: '#fff', boxShadow: 'var(--shadow-elevated)' }}>
-            <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-100)', width: 'fit-content' }}>
-                  <Sparkles style={{ width: '0.875rem', height: '0.875rem' }} /> Community Exchange & Donation
-                </div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.025em' }}>
-                  Kumusta, {user?.fullName || 'Neighbor'}!
-                </h1>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-primary-100)', maxWidth: '36rem', lineHeight: '1.6' }}>
-                  See what essential items your neighbors are sharing today, or post a request to get support from your barangay.
-                </p>
+          <div className="relative overflow-hidden rounded-[var(--radius-xl)] p-5 sm:p-7 md:p-8 text-white shadow-[var(--shadow-elevated)] bg-gradient-to-br from-[var(--color-primary-700)] via-[var(--color-primary-600)] to-[var(--color-primary-800)]">
+            <div className="relative z-10 flex flex-col gap-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-[var(--color-primary-100)] w-fit">
+                <Sparkles className="w-3.5 h-3.5" /> Community Exchange & Donation
               </div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
+                Kumusta, {user?.fullName || 'Neighbor'}!
+              </h1>
+              <p className="text-xs sm:text-sm text-[var(--color-primary-100)] max-w-xl leading-relaxed">
+                See what essential items your neighbors are sharing today, or post a request to get support from your barangay.
+              </p>
             </div>
           </div>
         </ScrollReveal>
 
         {/* Quick Stats Grid with Staggered Scroll Animation */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <ScrollReveal delay={0} direction="up">
             <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
               <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: '#ecfdf5', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -69,7 +71,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Posts</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>12</p>
+                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{totalItemsCount}</p>
               </div>
             </Card>
           </ScrollReveal>
@@ -81,7 +83,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exchanges</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalExchanges || 18}</p>
+                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalExchanges ?? 0}</p>
               </div>
             </Card>
           </ScrollReveal>
@@ -93,7 +95,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Donations</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalDonations || 12}</p>
+                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalDonations ?? 0}</p>
               </div>
             </Card>
           </ScrollReveal>
@@ -106,7 +108,7 @@ export default function DashboardPage() {
               <div>
                 <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rating</p>
                 <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Star style={{ width: '1rem', height: '1rem', fill: '#f59e0b', color: '#f59e0b' }} /> {user?.rating || 4.8}
+                  <Star style={{ width: '1rem', height: '1rem', fill: '#f59e0b', color: '#f59e0b' }} /> {user?.rating != null ? Number(user.rating).toFixed(1) : '5.0'}
                 </p>
               </div>
             </Card>
@@ -127,7 +129,7 @@ export default function DashboardPage() {
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {recentItems.map((item, idx) => (
               <ScrollReveal key={item.id} delay={idx * 70} direction="up">
                 <ItemCard item={item} />
@@ -150,7 +152,7 @@ export default function DashboardPage() {
             </div>
           </ScrollReveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeRequests.map((req, idx) => (
               <ScrollReveal key={req.id} delay={idx * 90} direction="up">
                 <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>

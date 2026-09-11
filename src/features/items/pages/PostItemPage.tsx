@@ -208,7 +208,7 @@ function PhotoUploadCard({
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', paddingTop: '0.25rem' }}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-1">
         {images.map((img, idx) => (
           <div
             key={idx}
@@ -465,6 +465,7 @@ export default function PostItemPage() {
   // ── Submit Handlers ──
   const handleDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) { toast.error('Please log in to post a donation.'); return; }
     if (!donationForm.title || !donationForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
@@ -474,7 +475,7 @@ export default function PostItemPage() {
         condition: donationForm.condition, type: 'donation', quantity: 1,
         description: donationForm.description,
         images: images.length > 0 ? images : [fallbackImg],
-        status: 'available', ownerId: user?.id ?? 'user-1',
+        status: 'available', ownerId: user.id,
         location: locationPayload,
         pickupOptions: donationForm.pickupOptions.split(',').map((s) => s.trim()),
         availability: donationForm.availability,
@@ -487,6 +488,7 @@ export default function PostItemPage() {
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) { toast.error('Please log in to post a request.'); return; }
     if (!requestForm.title || !requestForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
@@ -496,7 +498,7 @@ export default function PostItemPage() {
         condition: requestForm.preferredCondition, type: 'request', quantity: 1,
         description: `[${requestForm.urgency === 'urgent' ? 'URGENT' : 'NORMAL'}] ${requestForm.description}`,
         images: images.length > 0 ? images : [fallbackImg],
-        status: 'available', ownerId: user?.id ?? 'user-1',
+        status: 'available', ownerId: user.id,
         location: locationPayload,
         pickupOptions: ['Meet up'],
         availability: 'Flexible',
@@ -510,7 +512,7 @@ export default function PostItemPage() {
           category: requestForm.category,
           urgency: requestForm.urgency === 'urgent' ? 'high' : 'medium',
           status: 'active',
-          userId: user?.id ?? 'user-1',
+          userId: user.id,
           location: {
             address: locationPayload.address,
             barangay: locationPayload.barangay,
@@ -532,6 +534,7 @@ export default function PostItemPage() {
 
   const handleExchangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) { toast.error('Please log in to post an exchange.'); return; }
     if (!exchangeForm.offerTitle || !exchangeForm.offerDescription || !exchangeForm.wantItem) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
     try {
@@ -541,7 +544,7 @@ export default function PostItemPage() {
         condition: exchangeForm.offerCondition, type: 'exchange', quantity: 1,
         description: `${exchangeForm.offerDescription}\n\nLooking for: ${exchangeForm.wantItem}`,
         images: images.length > 0 ? images : [fallbackImg],
-        status: 'available', ownerId: user?.id ?? 'user-1',
+        status: 'available', ownerId: user.id,
         location: locationPayload,
         pickupOptions: exchangeForm.meetupOptions.split(',').map((s) => s.trim()),
         availability: 'Flexible',
@@ -578,7 +581,7 @@ export default function PostItemPage() {
             <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>What are you posting?</h3>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0' }}>Select the type of listing you want to create.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.875rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {TYPE_OPTIONS.map((opt) => {
               const isActive = selectedType === opt.value;
               return (
@@ -638,12 +641,12 @@ export default function PostItemPage() {
                 </h3>
               </div>
               <Input label="Item Title *" placeholder="e.g. Grade 10 Math Textbooks & Notebooks" value={donationForm.title} onChange={(e) => setDonationForm({ ...donationForm, title: e.target.value })} required />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={donationForm.category} onChange={(e) => setDonationForm({ ...donationForm, category: e.target.value })} />
                 <Select label="Condition" options={CONDITION_OPTIONS} value={donationForm.condition} onChange={(e) => setDonationForm({ ...donationForm, condition: e.target.value as ItemCondition })} />
               </div>
               <Textarea label="Description *" placeholder="Describe the item's condition, size, any wear & tear, and why you're donating it..." value={donationForm.description} onChange={(e) => setDonationForm({ ...donationForm, description: e.target.value })} required rows={4} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Input label="Pickup / Delivery Options" value={donationForm.pickupOptions} onChange={(e) => setDonationForm({ ...donationForm, pickupOptions: e.target.value })} placeholder="Meet up, Delivery" />
                 <Input label="Available Schedule" value={donationForm.availability} onChange={(e) => setDonationForm({ ...donationForm, availability: e.target.value })} placeholder="Weekdays after 5PM" />
               </div>
@@ -676,7 +679,7 @@ export default function PostItemPage() {
 
               <Input label="Item You're Looking For *" placeholder="e.g. Second-hand school uniform, size M" value={requestForm.title} onChange={(e) => setRequestForm({ ...requestForm, title: e.target.value })} required />
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={requestForm.category} onChange={(e) => setRequestForm({ ...requestForm, category: e.target.value })} />
                 <Select label="Preferred Condition" options={[{ value: 'Any', label: 'Any Condition' }, ...CONDITION_OPTIONS]} value={requestForm.preferredCondition} onChange={(e) => setRequestForm({ ...requestForm, preferredCondition: e.target.value as ItemCondition })} />
               </div>
@@ -686,7 +689,7 @@ export default function PostItemPage() {
               {/* Urgency */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>Urgency</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {([
                     { value: 'normal', label: 'Normal', desc: 'Needed within a few weeks', color: '#2563eb' },
                     { value: 'urgent', label: 'Urgent', desc: 'Needed as soon as possible', color: '#dc2626' },
@@ -743,7 +746,7 @@ export default function PostItemPage() {
                 </h3>
               </div>
               <Input label="Item You're Offering *" placeholder="e.g. Portable Bluetooth Speaker" value={exchangeForm.offerTitle} onChange={(e) => setExchangeForm({ ...exchangeForm, offerTitle: e.target.value })} required />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Select label="Category" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={exchangeForm.offerCategory} onChange={(e) => setExchangeForm({ ...exchangeForm, offerCategory: e.target.value })} />
                 <Select label="Condition" options={CONDITION_OPTIONS} value={exchangeForm.offerCondition} onChange={(e) => setExchangeForm({ ...exchangeForm, offerCondition: e.target.value as ItemCondition })} />
               </div>
@@ -759,7 +762,7 @@ export default function PostItemPage() {
                 </h3>
               </div>
               <Input label="Item You Want *" placeholder="e.g. School backpack for Grade 7, any color" value={exchangeForm.wantItem} onChange={(e) => setExchangeForm({ ...exchangeForm, wantItem: e.target.value })} required />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Select label="Preferred Category" options={[{ value: 'any', label: 'Any Category' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]} value={exchangeForm.wantCategory} onChange={(e) => setExchangeForm({ ...exchangeForm, wantCategory: e.target.value })} />
                 <Input label="Meetup / Delivery Preference" value={exchangeForm.meetupOptions} onChange={(e) => setExchangeForm({ ...exchangeForm, meetupOptions: e.target.value })} placeholder="Meet up, Delivery" />
               </div>

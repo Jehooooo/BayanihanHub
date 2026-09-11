@@ -119,40 +119,47 @@ export default function Sidebar() {
 
       {/* Mobile Bottom Navigation */}
       <nav
-        className="lg:!hidden"
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 40,
-          backgroundColor: 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--color-neutral-200)',
-          boxShadow: 'var(--shadow-elevated)',
-        }}
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
       >
-        <ul style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '0.375rem 0.25rem', listStyle: 'none', margin: 0 }}>
-          {navItems.slice(0, 5).map((item) => {
+        <ul className="flex items-center justify-around px-1 py-1.5 list-none m-0 max-w-lg mx-auto">
+          {[
+            { to: '/dashboard', icon: Home, label: 'Home' },
+            { to: '/browse', icon: Search, label: 'Browse' },
+            { to: '/post', icon: PlusCircle, label: 'Post', isCta: true },
+            { to: '/requests', icon: HandHeart, label: 'Requests' },
+            { to: '/messages', icon: MessageCircle, label: 'Messages', badge: unreadMessagesCount },
+          ].map((item) => {
             const isActive = location.pathname.startsWith(item.to);
             return (
-              <li key={item.to}>
+              <li key={item.to} className="flex-1 text-center">
                 <NavLink
                   to={item.to}
+                  onClick={() => {
+                    if (item.to === '/messages') {
+                      useChatStore.setState({ activeChat: null, messages: [] });
+                    }
+                  }}
+                  className="flex flex-col items-center justify-center min-h-[44px] py-1 px-1 rounded-md text-decoration-none transition-colors relative"
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.125rem',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: 'var(--radius-sm)',
-                    textDecoration: 'none',
                     color: isActive ? 'var(--color-primary-600)' : 'var(--color-neutral-500)',
-                    fontWeight: isActive ? 700 : 400,
+                    fontWeight: isActive ? 700 : 500,
                   }}
                 >
-                  <item.icon style={{ width: '1rem', height: '1rem' }} />
-                  <span style={{ fontSize: '0.625rem' }}>{item.label}</span>
+                  {item.isCta ? (
+                    <div className="w-9 h-9 rounded-full bg-primary-600 text-white flex items-center justify-center shadow-md -mt-3 mb-0.5 transition-transform active:scale-95">
+                      <item.icon className="w-5 h-5 text-white" />
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <item.icon className="w-5 h-5" />
+                      {Boolean(item.badge && item.badge > 0) && (
+                        <span className="absolute -top-1 -right-2 min-w-[15px] h-[15px] px-1 bg-primary-600 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center leading-none">
+                          {item.badge! > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-[10px] tracking-tight">{item.label}</span>
                 </NavLink>
               </li>
             );

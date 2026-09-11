@@ -41,15 +41,7 @@ export default function Modal({
   return (
     <div
       ref={overlayRef}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
@@ -58,47 +50,19 @@ export default function Modal({
       aria-label={title}
     >
       {/* Backdrop */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(4px)',
-        }}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity" />
 
       {/* Modal Content */}
       <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: size === 'sm' ? '30rem' : size === 'md' ? '36rem' : size === 'lg' ? '48rem' : '56rem',
-          backgroundColor: '#ffffff',
-          borderRadius: '1.25rem',
-          boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.25)',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          border: '1px solid var(--color-neutral-200)',
-          zIndex: 10,
-        }}
+        className={`relative w-full ${
+          size === 'sm' ? 'max-w-md' : size === 'md' ? 'max-w-xl' : size === 'lg' ? 'max-w-3xl' : 'max-w-4xl'
+        } bg-white rounded-2xl sm:rounded-3xl shadow-[var(--shadow-modal)] flex flex-col max-h-[92vh] overflow-hidden border border-neutral-200 z-10 animate-scale-in`}
       >
         {/* Header */}
         {(title || showClose) && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1.25rem 1.75rem',
-              borderBottom: '1px solid var(--color-neutral-100)',
-              backgroundColor: '#fafbfc',
-              flexShrink: 0,
-            }}
-          >
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-neutral-100 bg-neutral-50/80 shrink-0">
             {title && (
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0, letterSpacing: '-0.015em' }}>
+              <h2 className="text-base sm:text-lg font-bold text-neutral-900 m-0 tracking-tight">
                 {title}
               </h2>
             )}
@@ -106,37 +70,17 @@ export default function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                style={{
-                  padding: '0.375rem',
-                  borderRadius: '0.5rem',
-                  color: 'var(--color-neutral-400)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background-color 150ms',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-neutral-200)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/70 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer flex items-center justify-center"
                 aria-label="Close modal"
               >
-                <X style={{ width: '1.25rem', height: '1.25rem' }} />
+                <X className="w-5 h-5" />
               </button>
             )}
           </div>
         )}
 
         {/* Body */}
-        <div
-          style={{
-            padding: '1.5rem 1.75rem 1.75rem 1.75rem',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
+        <div className="p-4 sm:p-6 overflow-y-auto flex flex-col gap-4 text-neutral-800 text-sm leading-relaxed">
           {children}
         </div>
       </div>

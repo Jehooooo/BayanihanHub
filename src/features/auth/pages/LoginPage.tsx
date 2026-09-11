@@ -11,8 +11,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('maria@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,35 +92,6 @@ export default function LoginPage() {
         >
           Log In
         </Button>
-
-        {/* Demo Quick Logins */}
-        <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--color-neutral-100)' }}>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', textAlign: 'center', marginBottom: '0.75rem' }}>Quick demo accounts:</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEmail('maria@example.com');
-                setPassword('password123');
-              }}
-            >
-              User Demo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEmail('admin@bayanihanhub.com');
-                setPassword('admin123');
-              }}
-            >
-              Admin Demo
-            </Button>
-          </div>
-        </div>
 
         <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--color-neutral-600)', paddingTop: '0.5rem' }}>
           Don't have an account?{' '}

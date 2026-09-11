@@ -1,0 +1,921 @@
+<USER_REQUEST>
+# MVP ADD-ON — REPORTING & ADMIN MODERATION SYSTEM
+
+## Objective
+
+Add a complete **Report** system to BayanihanHub so users can report problematic **posts/items, community requests, and other users**, while Admins can review reports and take appropriate moderation actions.
+
+The system must connect directly to the existing **Admin Dashboard, Users, Posts, Requests, Reports, Notifications, and Audit Logs** systems.
+
+**Do not create a separate moderation system if one already exists. Extend the existing implementation.**
+
+---
+
+# 1. Add Report Button
+
+Add a **3-dot action menu** or **Report** button wherever appropriate.
+
+### On Posts / Donation Items
+
+Example:
+
+```text
+[ ❤️ Save ] [ Request Donation ] [ ⋮ ]
+
+                         └── Report Post
+```
+
+The **Report Post** option should be available to users viewing another user's post.
+
+### On User Profiles
+
+Add:
+
+```text
+[ ⋮ ]
+
+   Report User
+   Block User
+```
+
+Do not allow users to report themselves.
+
+---
+
+# 2. Report Post Modal
+
+When the user selects **Report Post**, open a confirmation/report modal.
+
+Example:
+
+```text
+Report Post
+
+Why are you reporting this post?
+
+○ Scam or fraud
+○ Prohibited item
+○ Misleading information
+○ Spam
+○ Inappropriate content
+○ Harassment
+○ Duplicate post
+○ Wrong category
+○ Other
+
+Additional Details
+[________________________________]
+[________________________________]
+
+                 [ Cancel ] [ Submit Report ]
+```
+
+### Requirements
+
+* Reason is required.
+* Additional details should be optional.
+* Prevent empty/invalid submissions.
+* Show loading state while submitting.
+* Prevent duplicate rapid submissions.
+* Show success confirmation after submission.
+
+Example:
+
+> ✓ Report submitted successfully. Our administrators will review it.
+
+---
+
+# 3. Report User Modal
+
+When reporting a user:
+
+```text
+Report User
+
+You are reporting:
+@username
+
+Reason:
+
+○ Scam or fraud
+○ Harassment
+○ Fake identity
+○ Inappropriate behavior
+○ Spam
+○ Suspicious activity
+○ Other
+
+Additional Details
+[________________________________]
+
+                 [ Cancel ] [ Submit Report ]
+```
+
+The reported user must be stored as the target of the report.
+
+---
+
+# 4. Report Community Request
+
+Add reporting to community requests as well.
+
+Example:
+
+```text
+[ Request Details ]
+
+[ ⋮ ]
+
+Report Request
+```
+
+Possible reasons:
+
+```text
+Scam or fraud
+False information
+Spam
+Inappropriate request
+Harassment
+Prohibited request
+Other
+```
+
+---
+
+# 5. Report Database Design
+
+Inspect the existing `Reports` implementation first.
+
+If a report table already exists, extend it rather than creating a duplicate table.
+
+The report must be able to identify:
+
+```text
+Reporter
+Reported User
+Reported Post / Item
+Reported Request
+Report Type / Reason
+Description
+Status
+Admin Reviewer
+Admin Action
+Admin Notes
+Created At
+Updated At
+Resolved At
+```
+
+Maintain the BayanihanHub database requirements:
+
+* MySQL
+* 3NF
+* InnoDB
+* `utf8mb4`
+* Proper foreign keys
+* Proper indexes
+* No unnecessary duplication
+* No relational data hidden inside JSON
+
+Do not require every target field to be populated.
+
+A report may target:
+
+```text
+USER
+POST / ITEM
+REQUEST
+```
+
+depending on what the user reported.
+
+---
+
+# 6. Report Status
+
+Use clear moderation statuses:
+
+```text
+Pending
+Under Review
+Resolved
+Dismissed
+```
+
+Optional:
+
+```text
+Escalated
+```
+
+Recommended workflow:
+
+```text
+User submits report
+        ↓
+Pending
+        ↓
+Admin opens report
+        ↓
+Under Review
+        ↓
+Admin investigates
+        ↓
+Action Taken / Resolved
+        OR
+Dismissed
+```
+
+---
+
+# 7. Admin Reports Dashboard
+
+Improve the existing Admin **Reports** page.
+
+Display:
+
+```text
+Reports
+
+[ All ] [ Pending ] [ Under Review ] [ Resolved ] [ Dismissed ]
+
+---------------------------------------------------------
+Reporter       Target       Reason       Status    Date
+---------------------------------------------------------
+User123        Post #102    Scam         Pending   Today
+User456        User789      Harassment   Review    Yesterday
+```
+
+Add:
+
+* Search
+* Status filter
+* Report type filter
+* Date filter
+* Sort by newest/oldest
+* Pagination
+
+Use existing admin UI patterns.
+
+---
+
+# 8. Report Details
+
+When an Admin opens a report, show a complete moderation view.
+
+Example:
+
+```text
+Report #102
+
+Reported by:
+@juan123
+
+Reported user:
+@maria456
+
+Reported post:
+"Free School Supplies"
+
+Reason:
+Scam or fraud
+
+Description:
+"This user requested payment before giving the item."
+
+Submitted:
+September 10, 2026
+
+Status:
+Pending
+```
+
+Also show the actual reported content where possible.
+
+---
+
+# 9. Admin Investigation Tools
+
+The Admin should be able to inspect the reported target directly.
+
+For a reported post:
+
+```text
+[ View Post ]
+[ View Poster Profile ]
+```
+
+For a reported user:
+
+```text
+[ View Profile ]
+[ View User's Posts ]
+[ View User's Reports ]
+[ View Verification Status ]
+```
+
+For a reported request:
+
+```text
+[ View Request ]
+[ View Requester Profile ]
+```
+
+This allows Admins to investigate before taking action.
+
+---
+
+# 10. Admin Actions for Reported Posts
+
+When a post violates BayanihanHub rules, Admins should be able to take action directly from the report.
+
+Actions:
+
+```text
+Remove Post
+Hide Post
+Restore Post
+Warn User
+Suspend User
+Dismiss Report
+```
+
+For **Remove Post**, require a reason.
+
+Example:
+
+```text
+Remove Post
+
+Reason:
+[________________________________]
+
+Notify the post owner?
+☑ Yes
+
+Message:
+[________________________________]
+
+[ Cancel ] [ Remove Post ]
+```
+
+The removal should preferably be a **soft removal**, preserving the record for moderation/audit purposes.
+
+---
+
+# 11. Admin Actions for Reported Users
+
+If the report concerns a user, allow Admins to take appropriate action.
+
+Actions:
+
+```text
+Warn User
+Suspend User
+Restrict User
+Remove User
+Dismiss Report
+```
+
+For suspension:
+
+```text
+Suspend User
+
+Duration:
+
+○ 1 day
+○ 3 days
+○ 7 days
+○ 14 days
+○ 30 days
+○ 60 days
+○ 90 days
+○ Custom
+○ Permanent
+
+Reason:
+[________________________________]
+
+Notify user?
+☑ Yes
+
+[ Cancel ] [ Suspend User ]
+```
+
+Reuse the existing BayanihanHub suspension system if already implemented.
+
+---
+
+# 12. Admin Warning System
+
+Add a lightweight warning action.
+
+Example:
+
+```text
+Warn User
+
+Reason:
+[________________________________]
+
+Message to user:
+[________________________________]
+
+[ Cancel ] [ Send Warning ]
+```
+
+The warning should:
+
+* Be stored in the moderation/audit system.
+* Notify the user.
+* Be visible to Admins when reviewing the user's moderation history.
+
+Do not publicly expose moderation history.
+
+---
+
+# 13. Automatic Notifications
+
+Notify the reporter when appropriate:
+
+```text
+Your report has been received.
+```
+
+When resolved:
+
+```text
+Your report has been reviewed by BayanihanHub administrators.
+```
+
+Notify the reported user only when appropriate according to the action taken.
+
+For example:
+
+```text
+Your post was removed.
+
+Reason:
+The post violated BayanihanHub's community guidelines.
+
+Admin message:
+[message]
+```
+
+Do not reveal unnecessary information about the reporter.
+
+---
+
+# 14. Reporter's Privacy
+
+**Never reveal the identity of the reporter to the reported user.**
+
+For example, do not send:
+
+> "John reported your post."
+
+Instead:
+
+> "Your post was reported and reviewed by BayanihanHub administrators."
+
+Reporter information should only be available to authorized Admins.
+
+---
+
+# 15. Duplicate Report Prevention
+
+Prevent abuse of the report system.
+
+A user should not be able to repeatedly submit hundreds of identical reports against the same target.
+
+Implement reasonable duplicate prevention, for example:
+
+```text
+Same user
++
+Same target
++
+Same report reason
++
+Existing pending report
+```
+
+should normally reuse or prevent another duplicate report.
+
+Do not completely prevent users from submitting legitimate future reports if the situation changes.
+
+---
+
+# 16. Admin Moderation History
+
+On the Admin user profile, add:
+
+```text
+Moderation History
+
+Warnings: 2
+Suspensions: 1
+Removed Posts: 3
+Reports Received: 5
+
+-----------------------------------------
+Date        Action       Reason
+-----------------------------------------
+Sep 10      Warning      Spam
+Sep 02      Post Removed Prohibited item
+Aug 15      Suspension  Harassment
+```
+
+This should only be visible to authorized Admins.
+
+---
+
+# 17. Report Severity
+
+Optionally classify reports:
+
+```text
+Low
+Medium
+High
+Critical
+```
+
+Recommended examples:
+
+```text
+Low:
+Spam / duplicate
+
+Medium:
+Misleading content
+
+High:
+Scam / harassment
+
+Critical:
+Severe safety-related violation
+```
+
+Do not automatically punish users solely based on severity.
+
+Severity is an aid for Admin prioritization.
+
+---
+
+# 18. Admin Dashboard Integration
+
+Add report statistics to the Admin Dashboard.
+
+Example:
+
+```text
+Reports
+
+Pending Reports       12
+Under Review           4
+Resolved              87
+High Priority          3
+```
+
+Add a shortcut:
+
+```text
+[ Review Reports ]
+```
+
+If there are pending/high-priority reports, display an appropriate notification/badge.
+
+---
+
+# 19. Post-Level Report Status
+
+If a post has an active report, Admins should be able to see:
+
+```text
+⚠ 3 Reports
+```
+
+Users should **not** see the number of reports against a post unless intentionally exposed by the platform.
+
+Admins can see:
+
+```text
+Reports: 3
+Status: Under Review
+```
+
+---
+
+# 20. Moderation Action Confirmation
+
+Every destructive or restrictive Admin action must require confirmation.
+
+Examples:
+
+```text
+Remove Post?
+```
+
+```text
+Suspend User?
+```
+
+```text
+Delete User?
+```
+
+```text
+Dismiss Report?
+```
+
+Do not perform destructive actions from a single accidental click.
+
+---
+
+# 21. Audit Logs
+
+Every Admin moderation action must be recorded using the existing audit-log system.
+
+Examples:
+
+```text
+REPORT_CREATED
+REPORT_REVIEWED
+REPORT_RESOLVED
+REPORT_DISMISSED
+POST_REMOVED_BY_ADMIN
+POST_RESTORED_BY_ADMIN
+USER_WARNED
+USER_SUSPENDED
+USER_RESTRICTED
+USER_REMOVED
+```
+
+Store:
+
+```text
+Admin
+Target
+Action
+Reason
+Timestamp
+```
+
+Do not store passwords, tokens, or other sensitive credentials.
+
+---
+
+# 22. API Security
+
+All moderation actions must be protected server-side.
+
+Never rely only on hiding Admin buttons in the frontend.
+
+Backend must verify:
+
+```text
+Authenticated?
+        ↓
+Admin role?
+        ↓
+Permission to perform action?
+        ↓
+Target exists?
+        ↓
+Action valid?
+        ↓
+Execute action
+```
+
+A normal user must not be able to manually call an Admin endpoint and remove posts or suspend users.
+
+---
+
+# 23. Relationship Between Reports and Existing Admin Actions
+
+Connect this feature to the existing BayanihanHub systems.
+
+Example:
+
+```text
+User reports Post
+        ↓
+Admin Reports
+        ↓
+Admin investigates
+        ↓
+Remove Post
+        ↓
+Existing Posts system marks post removed
+        ↓
+Existing Notification system notifies owner
+        ↓
+Existing Audit Log records action
+```
+
+For a user:
+
+```text
+User reports User
+        ↓
+Admin Reports
+        ↓
+Admin investigates
+        ↓
+Suspend User
+        ↓
+Existing User/Suspension system enforces suspension
+        ↓
+Existing Notification system notifies user
+        ↓
+Existing Audit Log records action
+```
+
+**Do not create separate user-suspension, notification, or post-removal logic.**
+
+Reuse the existing implementations.
+
+---
+
+# 24. UX Requirements
+
+The reporting system should feel integrated into BayanihanHub.
+
+Use:
+
+* 3-dot menus
+* Consistent icons
+* Modal dialogs
+* Clear warning states
+* Toast notifications
+* Loading states
+* Empty states
+* Error states
+* Responsive layouts
+
+Example:
+
+```text
+⋮
+├── Save
+├── Share
+├── Report Post
+└── Block User
+```
+
+Only show actions that make sense for the current user.
+
+---
+
+# 25. Important Security & Privacy Rules
+
+**DO NOT:**
+
+* Reveal the reporter's identity.
+* Allow users to report themselves.
+* Allow normal users to execute Admin actions.
+* Delete moderation evidence immediately.
+* Allow unlimited duplicate reports.
+* Trust frontend-only authorization.
+* Create duplicate moderation systems.
+* Automatically suspend users simply because they were reported.
+
+**DO:**
+
+* Preserve moderation evidence.
+* Require Admin review.
+* Log Admin actions.
+* Require reasons for moderation actions.
+* Notify affected users appropriately.
+* Enforce permissions on the backend.
+* Reuse existing BayanihanHub systems.
+
+---
+
+# 26. Final End-to-End Flow
+
+### User Side
+
+```text
+View Post
+   ↓
+⋮
+   ↓
+Report Post
+   ↓
+Select Reason
+   ↓
+Optional Details
+   ↓
+Submit
+   ↓
+Report Created
+   ↓
+Success Notification
+```
+
+### Admin Side
+
+```text
+Admin Dashboard
+   ↓
+Reports
+   ↓
+Open Report
+   ↓
+Review Report + Target
+   ↓
+Investigate
+   ↓
+Take Action
+   │
+   ├── Dismiss
+   ├── Warn User
+   ├── Remove Post
+   ├── Restore Post
+   ├── Restrict User
+   └── Suspend User
+   ↓
+Require Reason
+   ↓
+Execute Existing Moderation Logic
+   ↓
+Notify User Where Appropriate
+   ↓
+Create Audit Log
+   ↓
+Mark Report Resolved
+```
+
+---
+
+# Final Goal
+
+Turn BayanihanHub's reporting feature into a proper **community moderation workflow**:
+
+> **Users report → Admin investigates → Admin takes action on the post/user → affected user is notified → action is audited → report is resolved.**
+
+The key requirement is that **reporting must not be a dead-end form**.
+
+A report must give Admins enough information and tools to actually take action against the **reported post, request, or user**, while preserving privacy, security, auditability, and the existing BayanihanHub architecture.
+
+
+Feature: Persistent Floating Settings Navigation
+
+User Story
+As a user, when I'm inside the Settings section (on the main list or any sub-page like Notifications or Privacy & Trust), I want the settings navigation menu to stay accessible so I can jump between sections without scrolling back up or tapping "back" repeatedly.
+
+Problem
+Currently the settings nav list (Profile & Location, Community Discovery, Notifications, Privacy & Trust, Messaging, Account & Security, Appearance, Data & Privacy, Danger Zone) is likely a static list — once the user scrolls down or navigates into a sub-page, it's gone from view.
+
+Requirements
+
+Sticky positioning
+The nav panel should use position: sticky (web) or an equivalent fixed/floating container (mobile) so it remains anchored within the viewport as the page content scrolls beneath it.
+It should not overlap the top app bar/header.
+Persistence across sub-pages
+When a user taps into a sub-section (e.g., "Notifications"), the nav panel remains available — either as a collapsed floating button/handle that expands on tap, or as a persistent rail/drawer, so switching sections doesn't require backing out first.
+Active state indicator
+The currently active section keeps the highlighted state (green background + left accent bar, as in the current design) so users always know where they are.
+Responsive behavior
+Desktop/tablet: sidebar stays pinned to the left as a sticky column.
+Mobile: collapse into a floating pill/FAB that expands into the full list on tap, or a bottom sheet — avoid permanently consuming vertical space on small screens.
+Danger Zone stays visually distinct
+Red text/icon treatment preserved regardless of container state (floating, collapsed, expanded).
+
+Acceptance Criteria
+
+ Scrolling settings content does not scroll the nav out of view.
+ Nav remains reachable from any settings sub-page without a back navigation.
+ Active item highlight updates correctly when switching sections via the floating nav.
+ No visual overlap with header/status bar at any scroll position.
+ Works at minimum down to a ~320px mobile viewport width.
+
+Out of scope (MVP)
+
+Drag-to-reorder nav items
+Customizable/user-hidden sections
+Animations beyond a basic expand/collapse transition
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-10T21:53:40+08:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\Jeho\Downloads\BayanihanHubAfter\MVP Prompt — BayanihanHub Settings & Account Management.md (LANGUAGE_MARKDOWN)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\Jeho\Downloads\BayanihanHubAfter\MVP Prompt — BayanihanHub Settings & Account Management.md (LANGUAGE_MARKDOWN)
+- c:\Users\Jeho\Downloads\Jehooooo\README.md (LANGUAGE_MARKDOWN)
+- c:\Users\Jeho\Downloads\BayanihanHubAfter\src\features\items\components\ImageGallery.tsx (LANGUAGE_TSX)
+- c:\Users\Jeho\Downloads\BayanihanHubAfter\src\features\items\pages\ItemDetailsPage.tsx (LANGUAGE_TSX)
+Browser State:
+  Page F03B8DDF77ED8D68A38CBA54B955132F (Bayanihan Hub) - http://localhost:5173/settings [ACTIVE]
+    Viewport: 1536x730, Page Height: 6707
+Running terminal commands:
+- npm run dev (in c:\Users\Jeho\Downloads\BayanihanHubAfter, running for 1h56m23s)
+- npm run backend:venv (in c:\Users\Jeho\Downloads\BayanihanHubAfter, running for 1h56m18s)
+</ADDITIONAL_METADATA>

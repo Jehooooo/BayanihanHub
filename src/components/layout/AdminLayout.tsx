@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,7 +12,8 @@ import {
   Settings,
   ArrowLeft,
   LogOut,
-  Terminal,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfilePictureStore } from '@/stores/profilePictureStore';
@@ -24,7 +25,6 @@ interface AdminLayoutProps {
 
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/admin/terminal', icon: Terminal, label: 'Backend Terminal' },
   { to: '/admin/approvals', icon: ShieldCheck, label: 'Identity & Approvals', badgeKey: 'approvals' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/posts', icon: Package, label: 'Posts' },
@@ -41,71 +41,66 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
   const pendingApprovalsCount = getPendingPhotoCount() + getPendingVerifCount();
   const navigate = useNavigate();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', backgroundColor: '#f1f5f3' }}>
-      {/* Admin Sidebar */}
-      <aside
-        style={{
-          width: '16rem',
-          backgroundColor: '#0f172a',
-          color: '#fff',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          borderRight: '1px solid #1e293b',
-        }}
-      >
-        <div style={{ padding: '1.25rem', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link to="/admin" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}>
-            <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" style={{ height: '2rem', width: 'auto', objectFit: 'contain' }} />
-            <div>
-              <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#fff', display: 'block', margin: 0 }}>Bayanihan Hub</span>
-              <span style={{ fontSize: '0.625rem', color: 'var(--color-primary-400)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block' }}>Admin Panel</span>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#f1f5f3] w-full overflow-x-hidden">
+      {/* Mobile Admin Header (Visible on < lg) */}
+      <div className="lg:hidden sticky top-0 z-40 bg-[#0f172a] text-white flex items-center justify-between px-4 h-14 border-b border-[#1e293b] shadow-sm">
+        <Link to="/admin" className="flex items-center gap-2.5 text-decoration-none">
+          <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" className="h-7 w-auto object-contain" />
+          <div className="flex flex-col">
+            <span className="font-bold text-xs text-white leading-tight">Bayanihan Hub</span>
+            <span className="text-[9px] text-[var(--color-primary-400)] font-semibold tracking-wider uppercase">Admin Panel</span>
+          </div>
+        </Link>
 
-        <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto' }}>
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none"
+          aria-label="Toggle admin navigation"
+        >
+          {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileNavOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-xs transition-opacity"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      {/* Mobile Slide-over Drawer */}
+      <div
+        className={`lg:hidden fixed top-14 bottom-0 left-0 w-72 bg-[#0f172a] text-white z-50 flex flex-col transform transition-transform duration-200 ease-in-out ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
           {adminNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.75rem',
-                padding: '0.625rem 0.875rem',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.8125rem',
-                fontWeight: isActive ? 700 : 600,
-                textDecoration: 'none',
-                backgroundColor: isActive ? 'var(--color-primary-600)' : 'transparent',
-                color: isActive ? '#ffffff' : '#94a3b8',
-                transition: 'all 150ms ease-in-out',
-              })}
+              onClick={() => setMobileNavOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-decoration-none transition-all ${
+                  isActive
+                    ? 'bg-[var(--color-primary-600)] text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`
+              }
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <item.icon style={{ width: '1rem', height: '1rem', flexShrink: 0 }} />
+              <div className="flex items-center gap-3">
+                <item.icon className="w-4 h-4 shrink-0" />
                 <span>{item.label}</span>
               </div>
 
               {item.badgeKey === 'approvals' && pendingApprovalsCount > 0 && (
-                <span
-                  style={{
-                    backgroundColor: '#d97706',
-                    color: '#fff',
-                    fontSize: '0.6875rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.45rem',
-                    borderRadius: '9999px',
-                  }}
-                >
+                <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {pendingApprovalsCount}
                 </span>
               )}
@@ -113,12 +108,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           ))}
         </nav>
 
-        <div style={{ padding: '1rem', borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+        <div className="p-3 border-t border-slate-800 flex flex-col gap-1.5 shrink-0 bg-slate-950/40">
           <Link
             to="/dashboard"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.75rem', color: '#94a3b8', textDecoration: 'none', fontWeight: 500 }}
+            onClick={() => setMobileNavOpen(false)}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 text-decoration-none font-medium hover:text-white hover:bg-slate-800/40"
           >
-            <ArrowLeft style={{ width: '1rem', height: '1rem' }} />
+            <ArrowLeft className="w-4 h-4" />
             Back to Main App
           </Link>
           <button
@@ -126,17 +122,82 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               logout();
               navigate('/login');
             }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', width: '100%', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.75rem', color: '#f87171', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs text-red-400 bg-transparent border-0 cursor-pointer text-left font-semibold hover:bg-red-950/30"
           >
-            <LogOut style={{ width: '1rem', height: '1rem' }} />
+            <LogOut className="w-4 h-4" />
+            Logout ({user?.fullName?.split(' ')[0]})
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Sidebar (hidden on mobile) */}
+      <aside
+        className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen bg-[#0f172a] text-white border-r border-[#1e293b]"
+      >
+        <div className="p-5 border-b border-[#1e293b] flex items-center justify-between">
+          <Link to="/admin" className="flex items-center gap-2.5 text-decoration-none">
+            <img src="/Logo1Revise.png" alt="Bayanihan Hub Logo" className="h-8 w-auto object-contain" />
+            <div>
+              <span className="font-bold text-sm text-white block m-0">Bayanihan Hub</span>
+              <span className="text-[10px] text-[var(--color-primary-400)] font-semibold tracking-wider uppercase block">Admin Panel</span>
+            </div>
+          </Link>
+        </div>
+
+        <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+          {adminNavItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-decoration-none transition-all ${
+                  isActive
+                    ? 'bg-[var(--color-primary-600)] text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span>{item.label}</span>
+              </div>
+
+              {item.badgeKey === 'approvals' && pendingApprovalsCount > 0 && (
+                <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {pendingApprovalsCount}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-[#1e293b] flex flex-col gap-1.5 shrink-0 bg-slate-950/40">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 text-decoration-none font-medium hover:text-white hover:bg-slate-800/40"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Main App
+          </Link>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs text-red-400 bg-transparent border-0 cursor-pointer text-left font-semibold hover:bg-red-950/30"
+          >
+            <LogOut className="w-4 h-4" />
             Logout ({user?.fullName?.split(' ')[0]})
           </button>
         </div>
       </aside>
 
       {/* Main Admin Content */}
-      <main style={{ flex: 1, minWidth: 0, padding: '2rem', overflowY: 'auto' }}>
-        {children}
+      <main className="flex-1 min-w-0 p-3.5 sm:p-6 lg:p-8 overflow-y-auto w-full">
+        <div className="max-w-[85rem] w-full mx-auto min-w-0">
+          {children}
+        </div>
       </main>
     </div>
   );
