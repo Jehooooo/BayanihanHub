@@ -13,6 +13,7 @@ import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import ScrollReveal from '@/components/common/ScrollReveal';
 import { useAuthStore } from '@/stores/authStore';
+import BetaNoticeModal from '@/components/common/BetaNoticeModal';
 
 export default function LandingPage() {
   const { isAuthenticated, user } = useAuthStore();
@@ -23,6 +24,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-neutral-50)' }}>
+      <BetaNoticeModal />
       <Header />
 
       {/* Hero Section */}

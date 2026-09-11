@@ -37,7 +37,7 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Log in to access your donations, exchanges, and messages"
     >
-      <BetaNoticeModal scope="login" />
+      <BetaNoticeModal />
       {error && (
         <div style={{ marginBottom: '1.5rem', padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: 'var(--color-danger)', fontSize: '0.875rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span>{error}</span>

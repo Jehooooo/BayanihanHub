@@ -45,7 +45,7 @@ export default function DashboardPage() {
 
   return (
     <PageLayout>
-      <BetaNoticeModal scope="home" />
+      <BetaNoticeModal />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '4.5rem' }}>
         {/* Welcome Hero Banner */}
         <ScrollReveal direction="down" duration={550}>

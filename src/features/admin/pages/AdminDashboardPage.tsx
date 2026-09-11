@@ -12,6 +12,7 @@ import { useProfilePictureStore } from '@/stores/profilePictureStore';
 import { useIdentityVerificationStore } from '@/stores/identityVerificationStore';
 import { adminService } from '@/services/admin.service';
 import { ShieldAlert, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import BetaNoticeModal from '@/components/common/BetaNoticeModal';
 
 export default function AdminDashboardPage() {
   const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
@@ -60,6 +61,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminLayout>
+      <BetaNoticeModal />
       <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>System Overview</h1>
