@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -9,21 +10,8 @@
       "destination": "https://bayanihanhub-api.onrender.com/uploads/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|uploads/|assets/|.*\\..*).*)",
       "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "type": "service",
-        "service": "bayanihanhub-api"
-      }
     }
-  ],
-  "services": {
-    "bayanihanhub-api": {
-      "root": ".",
-      "framework": "vite"
-    }
-  }
+  ]
 }
