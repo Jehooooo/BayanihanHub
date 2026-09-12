@@ -44,3 +44,4 @@ env/
 scratch/
 notes.txt
 public/uploads/
+.vercel
