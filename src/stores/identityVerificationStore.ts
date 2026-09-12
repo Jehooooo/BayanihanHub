@@ -42,7 +42,14 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           if (res.ok) {
             const data = await res.json();
             if (data && Array.isArray(data.applications)) {
-              set({ verifications: data.applications, isLoading: false });
+              const sanitized = data.applications
+                .filter((a: any) => a.userId !== 'user-14' && a.userId !== '14' && !a.fullNameOnId?.toLowerCase().includes('jehosue'))
+                .map((a: any) => ({
+                  ...a,
+                  faceImageUrl: '',
+                  user: a.user ? { ...a.user, avatar: '' } : a.user,
+                }));
+              set({ verifications: sanitized, isLoading: false });
               return;
             }
           }
@@ -170,7 +177,14 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
         getItem: (name) => {
           try {
             const val = localStorage.getItem(name);
-            return val ? JSON.parse(val) : null;
+            if (!val) return null;
+            const parsed = JSON.parse(val);
+            if (parsed?.state?.verifications && Array.isArray(parsed.state.verifications)) {
+              parsed.state.verifications = parsed.state.verifications
+                .filter((v: any) => v.userId !== 'user-14' && v.userId !== '14' && !v.fullNameOnId?.toLowerCase().includes('jehosue'))
+                .map((v: any) => ({ ...v, faceImageUrl: '', user: v.user ? { ...v.user, avatar: '' } : v.user }));
+            }
+            return parsed;
           } catch {
             return null;
           }

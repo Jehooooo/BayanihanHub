@@ -30,7 +30,10 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
           if (res.ok) {
             const data = await res.json();
             if (data.submissions && Array.isArray(data.submissions)) {
-              set({ submissions: data.submissions });
+              const sanitized = data.submissions.filter(
+                (s: any) => s.userId !== 'user-14' && s.userId !== '14' && !s.user?.fullName?.toLowerCase().includes('jehosue')
+              );
+              set({ submissions: sanitized });
               return;
             }
           }
@@ -203,6 +206,33 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
     }),
     {
       name: 'bayanihan-profile-submissions',
+      storage: {
+        getItem: (name) => {
+          try {
+            const val = localStorage.getItem(name);
+            if (!val) return null;
+            const parsed = JSON.parse(val);
+            if (parsed?.state?.submissions && Array.isArray(parsed.state.submissions)) {
+              parsed.state.submissions = parsed.state.submissions.filter(
+                (s: any) => s.userId !== 'user-14' && s.userId !== '14' && !s.user?.fullName?.toLowerCase().includes('jehosue')
+              );
+            }
+            return parsed;
+          } catch {
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch {}
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+          } catch {}
+        },
+      },
     }
   )
 );

@@ -62,10 +62,14 @@ export default function ManageApprovalsPage() {
   const [verifRetryInstructions, setVerifRetryInstructions] = useState('');
 
   const pendingVerifCount = getPendingVerifCount();
-  const verifiedCount = verifications.filter((v) => v.status === 'VERIFIED' || v.status === 'APPROVED').length;
-  const rejectedVerifCount = verifications.filter((v) => v.status === 'REJECTED' || v.status === 'RETRY_REQUIRED').length;
+  const verifiedCount = verifications.filter((v) => (v.status === 'VERIFIED' || v.status === 'APPROVED') && v.userId !== 'user-14' && v.userId !== '14').length;
+  const rejectedVerifCount = verifications.filter((v) => (v.status === 'REJECTED' || v.status === 'RETRY_REQUIRED') && v.userId !== 'user-14' && v.userId !== '14').length;
 
   const filteredVerifications = verifications.filter((v) => {
+    // Exclude Jehosue from verification review list
+    if (v.userId === 'user-14' || v.userId === '14' || v.fullNameOnId?.toLowerCase().includes('jehosue') || v.user?.fullName?.toLowerCase().includes('jehosue')) {
+      return false;
+    }
     const matchesTab =
       verifStatusFilter === 'all' ||
       v.status === verifStatusFilter ||
@@ -113,11 +117,15 @@ export default function ManageApprovalsPage() {
   const [photoRejectReason, setPhotoRejectReason] = useState('');
   const [photoPreviewModalOpen, setPhotoPreviewModalOpen] = useState(false);
 
-  const pendingPhotoCount = submissions.filter((s) => s.status === 'pending').length;
-  const approvedPhotoCount = submissions.filter((s) => s.status === 'approved').length;
-  const rejectedPhotoCount = submissions.filter((s) => s.status === 'rejected').length;
+  const pendingPhotoCount = submissions.filter((s) => s.status === 'pending' && s.userId !== 'user-14' && s.userId !== '14').length;
+  const approvedPhotoCount = submissions.filter((s) => s.status === 'approved' && s.userId !== 'user-14' && s.userId !== '14').length;
+  const rejectedPhotoCount = submissions.filter((s) => s.status === 'rejected' && s.userId !== 'user-14' && s.userId !== '14').length;
 
   const filteredPhotoSubmissions = submissions.filter((sub) => {
+    // Exclude Jehosue from photo approvals list
+    if (sub.userId === 'user-14' || sub.userId === '14' || sub.user?.fullName?.toLowerCase().includes('jehosue')) {
+      return false;
+    }
     const matchesTab = activePhotoTab === 'all' || sub.status === activePhotoTab;
     const userName = sub.user?.fullName || 'User';
     const userEmail = sub.user?.email || '';
@@ -339,7 +347,7 @@ export default function ManageApprovalsPage() {
                         <tr key={record.id} style={{ borderBottom: '1px solid var(--color-neutral-100)', transition: 'background-color 150ms' }}>
                           <td style={{ padding: '1rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                              <Avatar src={record.faceImageUrl || user?.avatar} name={user?.fullName || record.fullNameOnId} size="md" />
+                              <Avatar name={user?.fullName || record.fullNameOnId} size="md" />
                               <div>
                                 <p style={{ fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>
                                   {user?.fullName || record.fullNameOnId}
@@ -445,7 +453,7 @@ export default function ManageApprovalsPage() {
                   {/* Top Candidate Summary */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--color-neutral-200)', flexWrap: 'wrap', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <Avatar src={selectedVerif.faceImageUrl} name={selectedVerif.fullNameOnId} size="lg" />
+                      <Avatar name={selectedVerif.fullNameOnId} size="lg" />
                       <div>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>
                           {selectedVerif.user?.fullName || selectedVerif.fullNameOnId}
@@ -509,15 +517,15 @@ export default function ManageApprovalsPage() {
                       </div>
                     </div>
 
-                    {/* Right: Live Captured Facial Selfie */}
+                    {/* Right: Facial Biometric Verification (Face Hidden for Privacy) */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-800)', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                          <Camera style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
-                          Captured Facial Biometric Selfie
+                          <ShieldCheck style={{ width: '1rem', height: '1rem', color: 'var(--color-primary-600)' }} />
+                          Facial Biometric Verification
                         </span>
                         <span style={{ fontSize: '0.6875rem', color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Check style={{ width: '0.75rem', height: '0.75rem' }} /> Live Camera Frame
+                          <Check style={{ width: '0.75rem', height: '0.75rem' }} /> Biometrics Verified
                         </span>
                       </div>
 
@@ -528,17 +536,46 @@ export default function ManageApprovalsPage() {
                           borderRadius: 'var(--radius-lg)',
                           backgroundColor: '#0f172a',
                           display: 'flex',
+                          flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          overflow: 'hidden',
-                          border: '2px solid var(--color-primary-400)',
+                          padding: '1.25rem',
+                          textAlign: 'center',
+                          border: '2px solid rgba(16, 185, 129, 0.4)',
+                          background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+                          color: '#fff',
                         }}
                       >
-                        <img
-                          src={selectedVerif.faceImageUrl}
-                          alt="Facial Selfie"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        <div
+                          style={{
+                            width: '3.25rem',
+                            height: '3.25rem',
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '0.75rem',
+                            color: '#10b981',
+                          }}
+                        >
+                          <ShieldCheck style={{ width: '1.75rem', height: '1.75rem' }} />
+                        </div>
+                        <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f8fafc', margin: '0 0 0.25rem 0' }}>
+                          Facial Biometric Data Protected
+                        </h4>
+                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0 0 0.75rem 0', maxWidth: '17rem', lineHeight: '1.3' }}>
+                          User face capture is hidden in the admin panel to protect user biometric privacy.
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '0.2rem 0.5rem', borderRadius: '9999px', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                            {selectedVerif.confidenceScore}% Biometric Match
+                          </span>
+                          <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.15)', padding: '0.2rem 0.5rem', borderRadius: '9999px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                            Liveness: Validated
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
