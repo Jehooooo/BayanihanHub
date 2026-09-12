@@ -25,7 +25,7 @@ export default function TerminalPage() {
   const checkDbHealth = async () => {
     setDbStatus('checking');
     try {
-      const res = await fetch('http://localhost:3001/api/db-health');
+      const res = await fetch('/api/db-health');
       if (res.ok) {
         const data = await res.json();
         setDbStatus(data.status === 'connected' ? 'connected' : 'error');

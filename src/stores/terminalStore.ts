@@ -27,8 +27,10 @@ interface TerminalState {
   _connectSSE: () => void;
 }
 
-const API_BASE = 'http://localhost:3001';
-const WS_BASE = 'ws://localhost:3001';
+const isBrowser = typeof window !== 'undefined';
+const API_BASE = isBrowser ? window.location.origin : '';
+const wsProtocol = isBrowser && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_BASE = isBrowser ? `${wsProtocol}//${window.location.host}` : '';
 
 export const useTerminalStore = create<TerminalState>((set, get) => ({
   logs: [],
