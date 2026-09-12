@@ -1,8 +1,0 @@
-# pyrefly: ignore [missing-import]
-import uvicorn
-from app.config import HOST, PORT
-
-if __name__ == "__main__":
-    print(f"Starting Bayanihan Hub Python FastAPI Backend on http://{HOST}:{PORT}")
-    print(f"Interactive Swagger Documentation: http://localhost:{PORT}/docs")
-    uvicorn.run("app.main:app", host=HOST, port=PORT, reload=True)
