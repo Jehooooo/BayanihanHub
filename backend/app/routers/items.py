@@ -595,7 +595,11 @@ def update_item(item_id: str, dto: UpdateItemDto, db: Session = Depends(get_db))
 
 
 @router.delete("/{item_id}")
-def delete_item(item_id: str, db: Session = Depends(get_db)):
+def delete_item(
+    item_id: str,
+    user_id: Optional[str] = Query(None, alias="userId"),
+    db: Session = Depends(get_db)
+):
     """
     Soft-delete item (set status to 'removed').
     """
@@ -603,6 +607,15 @@ def delete_item(item_id: str, db: Session = Depends(get_db)):
     item = db.query(Item).filter(Item.item_id == num_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found.")
+
+    caller_id = parse_numeric_id(user_id) if user_id else None
+    # STRICT PERMISSION GUARD: Student admins cannot delete Jehosue's posts
+    if item.owner_id == 14:
+        if caller_id and caller_id != 14 and caller_id != 5:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission Denied: Student admins cannot delete or remove Jehosue's posts."
+            )
 
     item.item_status_id = 7  # 'removed'
     db.commit()

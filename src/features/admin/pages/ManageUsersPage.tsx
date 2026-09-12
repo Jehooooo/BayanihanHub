@@ -20,7 +20,9 @@ import {
   ShieldAlert,
   Calendar,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 
 const PREDEFINED_DURATIONS = [
   { id: '1_day', label: '1 Day', days: 1 },
@@ -45,6 +47,7 @@ const SUSPENSION_REASONS = [
 ];
 
 export default function ManageUsersPage() {
+  const { user: currentAdmin } = useAuthStore();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -94,6 +97,15 @@ export default function ManageUsersPage() {
   // Submit suspension
   const handleConfirmSuspend = async () => {
     if (!selectedUser) return;
+
+    const isJehosue = selectedUser.userId === 14 || selectedUser.email?.toLowerCase() === 'jehosuebiscarra@gmail.com' || selectedUser.fullName?.toLowerCase().includes('jehosue');
+    const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+    if (isJehosue && isStudentAdmin) {
+      toast.error("Permission Denied: Student admins cannot suspend Jehosue's account.");
+      setIsSuspendModalOpen(false);
+      return;
+    }
 
     if (selectedDuration === 'custom') {
       const numDays = Number(customDays);
@@ -454,29 +466,60 @@ export default function ManageUsersPage() {
 
                         {/* Actions */}
                         <td style={{ padding: '1rem', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            {isSuspended ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setUnsuspendUserTarget(u);
-                                  setIsUnsuspendModalOpen(true);
-                                }}
-                                style={{ borderColor: 'var(--color-primary-600)', color: 'var(--color-primary-700)' }}
-                              >
-                                Unsuspend
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => handleOpenSuspend(u)}
-                                leftIcon={<Ban className="w-3.5 h-3.5" />}
-                              >
-                                Suspend
-                              </Button>
-                            )}
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {(() => {
+                              const isJehosue = u.userId === 14 || u.email?.toLowerCase() === 'jehosuebiscarra@gmail.com' || u.fullName?.toLowerCase().includes('jehosue');
+                              const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+                              if (isJehosue && isStudentAdmin) {
+                                return (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      fontSize: '0.6875rem',
+                                      fontWeight: 600,
+                                      color: '#15803d',
+                                      backgroundColor: '#dcfce7',
+                                      border: '1px solid #bbf7d0',
+                                      padding: '0.35rem 0.65rem',
+                                      borderRadius: '4px',
+                                    }}
+                                    title="Jehosue's account is protected"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Protected Account
+                                  </span>
+                                );
+                              }
+
+                              if (isSuspended) {
+                                return (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setUnsuspendUserTarget(u);
+                                      setIsUnsuspendModalOpen(true);
+                                    }}
+                                    style={{ borderColor: 'var(--color-primary-600)', color: 'var(--color-primary-700)' }}
+                                  >
+                                    Unsuspend
+                                  </Button>
+                                );
+                              }
+
+                              return (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleOpenSuspend(u)}
+                                  leftIcon={<Ban className="w-3.5 h-3.5" />}
+                                >
+                                  Suspend
+                                </Button>
+                              );
+                            })()}
                           </div>
                         </td>
                       </tr>

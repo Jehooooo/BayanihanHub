@@ -17,7 +17,9 @@ import {
   HandHeart,
   ShieldAlert,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 
 const REQUEST_REMOVAL_REASONS = [
   'Spam',
@@ -30,6 +32,7 @@ const REQUEST_REMOVAL_REASONS = [
 ];
 
 export default function ManageRequestsPage() {
+  const { user: currentAdmin } = useAuthStore();
   const [requests, setRequests] = useState<ItemRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -67,6 +70,16 @@ export default function ManageRequestsPage() {
 
   const handleConfirmRemove = async () => {
     if (!selectedRequest) return;
+
+    const isJehosueReq = selectedRequest.userId === 'user-14' || selectedRequest.userId === '14' || selectedRequest.user?.fullName?.toLowerCase().includes('jehosue');
+    const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+    if (isJehosueReq && isStudentAdmin) {
+      toast.error("Permission Denied: Student admins cannot delete or remove Jehosue's requests.");
+      setIsRemoveModalOpen(false);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -295,20 +308,53 @@ export default function ManageRequestsPage() {
 
                         {/* Actions */}
                         <td style={{ padding: '1rem', textAlign: 'right' }}>
-                          {isCancelled ? (
-                            <span style={{ fontSize: '0.6875rem', color: '#b91c1c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <ShieldAlert className="w-3.5 h-3.5" /> Removed by Admin
-                            </span>
-                          ) : (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleOpenRemoveModal(req)}
-                              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                            >
-                              Remove Request
-                            </Button>
-                          )}
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {(() => {
+                              const isJehosueReq = req.userId === 'user-14' || req.userId === '14' || req.user?.fullName?.toLowerCase().includes('jehosue');
+                              const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+                              if (isJehosueReq && isStudentAdmin) {
+                                return (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      fontSize: '0.6875rem',
+                                      fontWeight: 600,
+                                      color: '#15803d',
+                                      backgroundColor: '#dcfce7',
+                                      border: '1px solid #bbf7d0',
+                                      padding: '0.35rem 0.65rem',
+                                      borderRadius: '4px',
+                                    }}
+                                    title="Jehosue's request is protected from removal"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Protected Request
+                                  </span>
+                                );
+                              }
+
+                              if (isCancelled) {
+                                return (
+                                  <span style={{ fontSize: '0.6875rem', color: '#b91c1c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <ShieldAlert className="w-3.5 h-3.5" /> Removed by Admin
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleOpenRemoveModal(req)}
+                                  leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                                >
+                                  Remove Request
+                                </Button>
+                              );
+                            })()}
+                          </div>
                         </td>
                       </tr>
                     );

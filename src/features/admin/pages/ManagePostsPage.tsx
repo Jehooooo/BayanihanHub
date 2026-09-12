@@ -18,7 +18,9 @@ import {
   ShieldAlert,
   Info,
   CheckCircle,
+  ShieldCheck,
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 
 const POST_REMOVAL_REASONS = [
   'Incorrect or misleading information',
@@ -32,6 +34,7 @@ const POST_REMOVAL_REASONS = [
 ];
 
 export default function ManagePostsPage() {
+  const { user: currentAdmin } = useAuthStore();
   const [items, setItems] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -69,6 +72,16 @@ export default function ManagePostsPage() {
 
   const handleConfirmRemove = async () => {
     if (!selectedItem) return;
+
+    const isJehosuePost = selectedItem.ownerId === 'user-14' || selectedItem.ownerId === '14' || selectedItem.owner?.fullName?.toLowerCase().includes('jehosue') || selectedItem.owner?.email?.toLowerCase() === 'jehosuebiscarra@gmail.com';
+    const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+    if (isJehosuePost && isStudentAdmin) {
+      toast.error("Permission Denied: Student admins cannot delete or remove Jehosue's posts.");
+      setIsRemoveModalOpen(false);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -327,20 +340,53 @@ export default function ManagePostsPage() {
 
                         {/* Actions */}
                         <td style={{ padding: '1rem', textAlign: 'right' }}>
-                          {isRemoved ? (
-                            <span style={{ fontSize: '0.6875rem', color: '#b91c1c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <ShieldAlert className="w-3.5 h-3.5" /> Removed by Admin
-                            </span>
-                          ) : (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleOpenRemoveModal(item)}
-                              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                            >
-                              Remove Post
-                            </Button>
-                          )}
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {(() => {
+                              const isJehosuePost = item.ownerId === 'user-14' || item.ownerId === '14' || item.owner?.fullName?.toLowerCase().includes('jehosue') || item.owner?.email?.toLowerCase() === 'jehosuebiscarra@gmail.com';
+                              const isStudentAdmin = currentAdmin?.email === 'student1@bayanihanhub.com' || currentAdmin?.email === 'student2@bayanihanhub.com' || (currentAdmin?.email !== 'jehosuebiscarra@gmail.com' && currentAdmin?.email !== 'admin@bayanihanhub.com');
+
+                              if (isJehosuePost && isStudentAdmin) {
+                                return (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      fontSize: '0.6875rem',
+                                      fontWeight: 600,
+                                      color: '#15803d',
+                                      backgroundColor: '#dcfce7',
+                                      border: '1px solid #bbf7d0',
+                                      padding: '0.35rem 0.65rem',
+                                      borderRadius: '4px',
+                                    }}
+                                    title="Jehosue's post is protected from deletion"
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5" /> Protected Post
+                                  </span>
+                                );
+                              }
+
+                              if (isRemoved) {
+                                return (
+                                  <span style={{ fontSize: '0.6875rem', color: '#b91c1c', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <ShieldAlert className="w-3.5 h-3.5" /> Removed by Admin
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleOpenRemoveModal(item)}
+                                  leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                                >
+                                  Remove Post
+                                </Button>
+                              );
+                            })()}
+                          </div>
                         </td>
                       </tr>
                     );

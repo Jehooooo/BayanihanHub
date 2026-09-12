@@ -266,6 +266,14 @@ def suspend_user(user_id: str, dto: SuspendUserRequestDto, db: Session = Depends
 
     admin_id = get_admin_id(db, dto.admin_id)
 
+    # STRICT PERMISSION GUARD: Student admins cannot suspend Jehosue's account
+    if target_user.user_id == 14 or target_user.email.lower() == "jehosuebiscarra@gmail.com":
+        if admin_id != 14 and admin_id != 5:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission Denied: Student admins cannot suspend Jehosue's account."
+            )
+
     try:
         # 1. Supersede any existing active suspensions
         db.query(UserSuspension).filter(
@@ -443,6 +451,14 @@ def remove_post(item_id: str, dto: RemovePostRequestDto, db: Session = Depends(g
 
     admin_id = get_admin_id(db, dto.admin_id)
 
+    # STRICT PERMISSION GUARD: Student admins cannot delete or remove Jehosue's posts
+    if item.owner_id == 14 or (item.owner and item.owner.email.lower() == "jehosuebiscarra@gmail.com"):
+        if admin_id != 14 and admin_id != 5:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission Denied: Student admins cannot delete or remove Jehosue's posts."
+            )
+
     try:
         # 1. Update item status to 'removed' (status_id = 7)
         item.item_status_id = 7
@@ -539,6 +555,14 @@ def remove_request(request_id: str, dto: RemoveRequestRequestDto, db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
 
     admin_id = get_admin_id(db, dto.admin_id)
+
+    # STRICT PERMISSION GUARD: Student admins cannot delete or remove Jehosue's requests
+    if req.user_id == 14 or (req.user and req.user.email.lower() == "jehosuebiscarra@gmail.com"):
+        if admin_id != 14 and admin_id != 5:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission Denied: Student admins cannot delete or remove Jehosue's requests."
+            )
 
     try:
         # 1. Update status to 'cancelled' (status_id = 4)
@@ -874,6 +898,19 @@ def resolve_report(report_id: str, dto: ResolveReportRequestDto, db: Session = D
             req_rec = db.query(ItemRequest).filter(ItemRequest.request_id == target_num).first()
             if req_rec:
                 target_uid = req_rec.user_id
+
+        # STRICT PERMISSION GUARD: Student admins cannot moderate Jehosue's account or posts
+        if target_uid == 14 and admin_id != 14 and admin_id != 5:
+            if "suspend" in act_lower:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission Denied: Student admins cannot suspend Jehosue's account."
+                )
+            if "post removed" in act_lower or "remove post" in act_lower or "remove" in act_lower:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission Denied: Student admins cannot delete or remove Jehosue's posts."
+                )
 
         # 1. Execute direct Moderation Actions
         audit_action_name = "REPORT_RESOLVED"
