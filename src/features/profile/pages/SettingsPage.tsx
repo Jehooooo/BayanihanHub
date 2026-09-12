@@ -85,8 +85,8 @@ function SettingsNav({
   return (
     <>
       {/* ── Desktop Sidebar ── */}
-      <nav className="hidden lg:block w-56 flex-shrink-0">
-        <div className="sticky top-6 rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+      <nav className="hidden lg:block w-56 flex-shrink-0 relative">
+        <div className="fixed top-24 w-56 rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/60">
             <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest">Settings</p>
           </div>

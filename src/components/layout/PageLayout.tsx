@@ -16,7 +16,7 @@ export default function PageLayout({ children, showSidebar = true }: PageLayoutP
         {showSidebar && <Sidebar />}
         <main
           className={`flex-1 min-w-0 px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7 ${
-            showSidebar ? 'pb-24 lg:pb-10' : 'pb-8'
+            showSidebar ? 'pb-24 lg:pb-10 lg:ml-64' : 'pb-8'
           }`}
         >
           <div className="max-w-[82rem] w-full min-w-0 mx-auto">

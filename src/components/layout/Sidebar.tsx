@@ -40,7 +40,7 @@ export default function Sidebar() {
           flexDirection: 'column',
           width: '16rem',
           flexShrink: 0,
-          position: 'sticky',
+          position: 'fixed',
           top: '4rem',
           height: 'calc(100vh - 4rem)',
           borderRight: '1px solid var(--color-neutral-200)',
