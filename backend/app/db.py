@@ -5,9 +5,14 @@ from typing import Generator
 import app.config as config
 from app.services.terminal_logger import terminal_logger
 
+connect_args = {}
+if "aivencloud.com" in getattr(config, "DATABASE_URL", "") or "aivencloud.com" in getattr(config, "MYSQL_HOST", ""):
+    connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+
 # Create SQLAlchemy engine with connection pool recycling
 engine = create_engine(
     config.DATABASE_URL,
+    connect_args=connect_args,
     pool_pre_ping=True,
     pool_recycle=3600,
 )

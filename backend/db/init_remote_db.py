@@ -16,8 +16,14 @@ import app.config as config
 from sqlalchemy import create_engine, text
 
 def read_sql_file(file_path: Path) -> list[str]:
-    with open(file_path, "r", encoding="utf-8-sig") as f:
-        content = f.read()
+    raw = file_path.read_bytes()
+    if raw.startswith(b'\xff\xfe') or raw.startswith(b'\xfe\xff'):
+        content = raw.decode('utf-16', errors='replace')
+    else:
+        try:
+            content = raw.decode('utf-8-sig')
+        except UnicodeDecodeError:
+            content = raw.decode('utf-8', errors='replace')
 
     statements = []
     current = []
@@ -56,16 +62,27 @@ def init_remote_db(db_url: str = None):
     statements = read_sql_file(dump_path)
     print(f"Parsed {len(statements)} SQL statements.")
 
+    clean_url = target_url.replace("?ssl_mode=REQUIRED", "").replace("&ssl_mode=REQUIRED", "")
+    if "?" not in clean_url:
+        clean_url += "?charset=utf8mb4"
+
+    connect_args = {}
+    if "aivencloud.com" in clean_url:
+        connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+
     try:
-        engine = create_engine(target_url, echo=False)
+        engine = create_engine(clean_url, connect_args=connect_args, echo=False)
         with engine.begin() as conn:
+            conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
             for idx, stmt in enumerate(statements, 1):
                 try:
                     conn.execute(text(stmt))
                 except Exception as ex:
                     # Ignore harmless drop errors or warnings if table doesn't exist yet
-                    if "Unknown table" not in str(ex) and "already exists" not in str(ex):
-                        print(f"Warning on statement #{idx}: {str(ex)[:100]}")
+                    err_str = str(ex)
+                    if "Unknown table" not in err_str and "already exists" not in err_str and "doesn't exist" not in err_str:
+                        print(f"Warning on statement #{idx}: {err_str[:120]}")
+            conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
         print("\n[SUCCESS] Remote database successfully populated with clean 3NF BayanihanHub schema & data!")
         return True
