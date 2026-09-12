@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://bayanihanhub-api.onrender.com/api/$1"
+      "destination": "https://dsl-unlike-stood-heading.trycloudflare.com/api/$1"
     },
     {
       "source": "/uploads/(.*)",
-      "destination": "https://bayanihanhub-api.onrender.com/uploads/$1"
+      "destination": "https://dsl-unlike-stood-heading.trycloudflare.com/uploads/$1"
     },
     {
       "source": "/(.*)",
