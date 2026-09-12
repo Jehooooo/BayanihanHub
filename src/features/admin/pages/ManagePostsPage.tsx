@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { Item } from '@/types';
+import SEO from '@/components/common/SEO';
 import {
   Trash2,
   AlertTriangle,
@@ -107,6 +108,7 @@ export default function ManagePostsPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Manage Posts" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

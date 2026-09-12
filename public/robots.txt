@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Allow: /browse
+Allow: /items/
+
+# Disallow private user routes
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /pending-verification
+Disallow: /registration-submitted
+Disallow: /dashboard
+Disallow: /post
+Disallow: /saved
+Disallow: /request/
+Disallow: /requests
+Disallow: /exchanges
+Disallow: /messages
+Disallow: /notifications
+Disallow: /rate
+Disallow: /profile
+Disallow: /settings
+
+# Disallow admin routes
+Disallow: /admin
+
+Sitemap: https://bayanihanhub.com/sitemap.xml

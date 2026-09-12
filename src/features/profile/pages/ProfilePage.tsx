@@ -36,6 +36,7 @@ import { itemsService } from '@/services/items.service';
 import { adminService } from '@/services/admin.service';
 import type { User, Item } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 function getBadgeIcon(nameOrIcon?: string) {
   switch (nameOrIcon?.toLowerCase()) {
@@ -242,6 +243,7 @@ export default function ProfilePage() {
 
   return (
     <PageLayout>
+      <SEO title="Profile" noindex={true} />
       <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Navigation Back Button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

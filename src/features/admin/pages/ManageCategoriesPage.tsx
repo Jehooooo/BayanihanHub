@@ -6,6 +6,7 @@ import { categories as initialCategories } from '@/data/categories';
 import { useState } from 'react';
 import type { Category } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function ManageCategoriesPage() {
   const [categoriesList, setCategoriesList] = useState<Category[]>(initialCategories);
@@ -30,6 +31,7 @@ export default function ManageCategoriesPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Manage Categories" noindex={true} />
       <div style={{ maxWidth: '56rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Manage Item Categories</h1>

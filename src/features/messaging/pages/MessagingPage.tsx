@@ -6,6 +6,7 @@ import ChatWindow from '../components/ChatWindow';
 import type { SendMessagePayload } from '../components/MessageInput';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
+import SEO from '@/components/common/SEO';
 
 export default function MessagingPage() {
   const location = useLocation();
@@ -118,6 +119,7 @@ export default function MessagingPage() {
 
   return (
     <PageLayout showSidebar={true}>
+      <SEO title="Messages" noindex={true} />
       {/*
         Negate the <main> padding (1.75rem top/bottom, 2rem left/right) so the
         messaging panel can fill the entire available viewport height without

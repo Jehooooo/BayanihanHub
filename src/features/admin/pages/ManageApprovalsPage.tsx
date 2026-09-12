@@ -32,6 +32,7 @@ import type {
   VerificationStatus,
 } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function ManageApprovalsPage() {
   // Main Section Tab: 'identity' | 'photos'
@@ -143,6 +144,7 @@ export default function ManageApprovalsPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Manage Approvals" noindex={true} />
       <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Page Header & Main Switcher */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>

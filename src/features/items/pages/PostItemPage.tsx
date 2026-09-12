@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { ItemCondition, ItemType } from '@/types';
 import toast from 'react-hot-toast';
 import LiveLocationMap, { type LocationDetails } from '../components/LiveLocationMap';
+import SEO from '@/components/common/SEO';
 
 // ─── Type selector config ───────────────────────────────────────────────────
 const TYPE_OPTIONS = [
@@ -560,6 +561,7 @@ export default function PostItemPage() {
 
   return (
     <PageLayout>
+      <SEO title="Post Item" noindex={true} />
       <div style={{ maxWidth: '48rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <button
           onClick={() => navigate(-1)}

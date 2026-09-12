@@ -22,6 +22,7 @@ import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
+import SEO from '@/components/common/SEO';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import { itemsService } from '@/services/items.service';
 import { exchangeService } from '@/services/exchange.service';
@@ -244,6 +245,14 @@ export default function ItemDetailsPage() {
 
   return (
     <PageLayout>
+      {item && (
+        <SEO 
+          title={item.title} 
+          description={`View details about ${item.title}, including its condition, category, location information, and availability on BayanihanHub.`} 
+          canonicalUrl={`/items/${item.id}`} 
+          image={item.images?.[0]} 
+        />
+      )}
       <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Navigation Back Button — sticky so always visible */}
         <div

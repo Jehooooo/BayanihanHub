@@ -12,6 +12,7 @@ import { itemsService } from '@/services/items.service';
 import { useAuthStore } from '@/stores/authStore';
 import type { Exchange, ExchangeStatus, Item } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function ExchangePage() {
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ export default function ExchangePage() {
 
   return (
     <PageLayout>
+      <SEO title="Exchanges" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>

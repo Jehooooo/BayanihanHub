@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import BetaNoticeModal from '@/components/common/BetaNoticeModal';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Log in to access your donations, exchanges, and messages"
     >
+      <SEO title="Login" noindex={true} />
       <BetaNoticeModal />
       {error && (
         <div style={{ marginBottom: '1.5rem', padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: 'var(--color-danger)', fontSize: '0.875rem', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

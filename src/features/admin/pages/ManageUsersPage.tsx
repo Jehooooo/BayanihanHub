@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { User } from '@/types';
+import SEO from '@/components/common/SEO';
 import {
   Ban,
   CheckCircle2,
@@ -175,6 +176,7 @@ export default function ManageUsersPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Manage Users" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

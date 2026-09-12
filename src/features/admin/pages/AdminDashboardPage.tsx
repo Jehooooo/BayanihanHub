@@ -13,6 +13,7 @@ import { useIdentityVerificationStore } from '@/stores/identityVerificationStore
 import { adminService } from '@/services/admin.service';
 import { ShieldAlert, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import BetaNoticeModal from '@/components/common/BetaNoticeModal';
+import SEO from '@/components/common/SEO';
 
 export default function AdminDashboardPage() {
   const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
@@ -61,6 +62,7 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Admin Dashboard" noindex={true} />
       <BetaNoticeModal />
       <div style={{ maxWidth: '72rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         <div>

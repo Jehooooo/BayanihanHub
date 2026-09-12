@@ -14,6 +14,7 @@ import Button from '@/components/ui/Button';
 import ScrollReveal from '@/components/common/ScrollReveal';
 import { useAuthStore } from '@/stores/authStore';
 import BetaNoticeModal from '@/components/common/BetaNoticeModal';
+import SEO from '@/components/common/SEO';
 
 export default function LandingPage() {
   const { isAuthenticated, user } = useAuthStore();
@@ -22,8 +23,29 @@ export default function LandingPage() {
     return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
   }
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "BayanihanHub",
+    "url": import.meta.env.VITE_SITE_URL || "https://bayanihanhub.com",
+    "description": "BayanihanHub connects communities through donations, item requests, and exchanges, making it easier to share useful items and help people in need.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "BayanihanHub",
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${import.meta.env.VITE_SITE_URL || "https://bayanihanhub.com"}/Logo1Revise.png`
+      }
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-neutral-50)' }}>
+      <SEO 
+        title="BayanihanHub" 
+        canonicalUrl="/" 
+        structuredData={structuredData} 
+      />
       <BetaNoticeModal />
       <Header />
 

@@ -8,6 +8,7 @@ import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import type { Item } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function SavedItemsPage() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ export default function SavedItemsPage() {
 
   return (
     <PageLayout>
+      <SEO title="Saved Items" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>

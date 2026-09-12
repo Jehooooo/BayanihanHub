@@ -15,6 +15,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { categories } from '@/data/categories';
 import type { Item, RequestUrgency } from '@/types';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function RequestItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -113,6 +114,7 @@ export default function RequestItemPage() {
   if (isLoading) {
     return (
       <PageLayout>
+      <SEO title="Request Item" noindex={true} />
         <div style={{ maxWidth: '48rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{ height: '2.5rem', backgroundColor: 'var(--color-neutral-200)', borderRadius: 'var(--radius-md)', width: '8rem' }} />
           <div style={{ height: '6rem', backgroundColor: 'var(--color-neutral-200)', borderRadius: 'var(--radius-lg)' }} />

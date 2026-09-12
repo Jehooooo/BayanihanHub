@@ -7,6 +7,7 @@ import Avatar from '@/components/ui/Avatar';
 import StarRating from '@/components/ui/StarRating';
 import Textarea from '@/components/ui/Textarea';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function RatingPage() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function RatingPage() {
 
   return (
     <PageLayout>
+      <SEO title="Rating" noindex={true} />
       <div className="max-w-md mx-auto py-8">
         <Card className="text-center space-y-6 border border-neutral-200 shadow-card">
           <div className="space-y-1">

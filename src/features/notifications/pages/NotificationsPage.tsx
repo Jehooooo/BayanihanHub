@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { Notification, NotificationType } from '@/types';
 import NotificationDetailModal from '../components/NotificationDetailModal';
+import SEO from '@/components/common/SEO';
 
 function getNotificationIcon(type: NotificationType) {
   switch (type) {
@@ -75,6 +76,7 @@ export default function NotificationsPage() {
 
   return (
     <PageLayout>
+      <SEO title="Notifications" noindex={true} />
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">

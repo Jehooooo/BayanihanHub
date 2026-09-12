@@ -4,6 +4,7 @@ import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import AuthLayout from '@/components/layout/AuthLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import SEO from '@/components/common/SEO';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -30,6 +31,7 @@ export default function ForgotPasswordPage() {
           : 'Enter your account email to receive a password reset link.'
       }
     >
+      <SEO title="Forgot Password" noindex={true} />
       {isSubmitted ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'center' }}>
           <div style={{ width: '3rem', height: '3rem', borderRadius: '9999px', backgroundColor: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>

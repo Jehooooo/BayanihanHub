@@ -38,6 +38,7 @@ import IdDocumentUploader from '../components/IdDocumentUploader';
 import FacialVerificationCamera from '../components/FacialVerificationCamera';
 import { compressImageDataUrl } from '@/utils/imageCompression';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -276,6 +277,7 @@ export default function RegisterPage() {
       subtitle="Verify your identity with a valid Philippine ID to keep our community safe"
       wide
     >
+      <SEO title="Create an Account" noindex={true} />
       {/* 5-Step Progress Stepper */}
       <RegistrationStepper
         currentStep={currentStep}

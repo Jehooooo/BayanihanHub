@@ -5,6 +5,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, ShieldAlert, ArrowRight, Home, CheckCircle2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import SEO from '@/components/common/SEO';
 
 export default function PendingVerificationPage() {
   return (
@@ -19,6 +20,7 @@ export default function PendingVerificationPage() {
         padding: '2rem 1rem',
       }}
     >
+      <SEO title="Verification" noindex={true} />
       <div
         style={{
           width: '100%',

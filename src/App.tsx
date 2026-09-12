@@ -27,6 +27,7 @@ import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
 import { useAuthStore } from '@/stores/authStore';
 import AiChatbotModal from '@/components/AiChatbotModal';
+import NotFoundPage from '@/features/error/NotFoundPage';
 import ScrollToTopButton from '@/components/common/ScrollToTopButton';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -49,16 +50,6 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     <>{children}</>
   ) : (
     <Navigate to="/dashboard" replace />
-  );
-}
-
-function CatchAllRoute() {
-  const { isAuthenticated, user } = useAuthStore();
-  return (
-    <Navigate
-      to={isAuthenticated ? (user?.role === 'admin' ? '/admin' : '/dashboard') : '/'}
-      replace
-    />
   );
 }
 
@@ -286,7 +277,7 @@ export default function App() {
         />
 
         {/* Catch-all fallback */}
-        <Route path="*" element={<CatchAllRoute />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Router>
   );

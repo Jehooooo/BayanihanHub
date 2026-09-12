@@ -9,6 +9,7 @@ import type { Item, SearchFilters } from '@/types';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function BrowsePage() {
   const [searchParams] = useSearchParams();
@@ -68,6 +69,11 @@ export default function BrowsePage() {
 
   return (
     <PageLayout>
+      <SEO 
+        title="Browse Donations and Exchanges" 
+        description="Browse available donated items, community requests, and exchange opportunities on BayanihanHub." 
+        canonicalUrl="/browse" 
+      />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4.5rem' }}>
         <ScrollReveal direction="down" duration={500}>
           <div>

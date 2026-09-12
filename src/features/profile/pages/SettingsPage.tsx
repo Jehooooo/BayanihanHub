@@ -17,6 +17,7 @@ import AccountSecuritySection from '../components/settings/AccountSecuritySectio
 import AppearanceSection from '../components/settings/AppearanceSection';
 import DataPrivacySection from '../components/settings/DataPrivacySection';
 import DangerZoneSection from '../components/settings/DangerZoneSection';
+import SEO from '@/components/common/SEO';
 
 // ── Nav Definitions ───────────────────────────────────────────
 
@@ -214,6 +215,7 @@ export default function SettingsPage() {
 
   return (
     <PageLayout>
+      <SEO title="Settings" noindex={true} />
       {/* Page Header */}
       <div className="mb-5">
         <h1 className="text-2xl font-extrabold text-neutral-900 tracking-tight">Settings</h1>

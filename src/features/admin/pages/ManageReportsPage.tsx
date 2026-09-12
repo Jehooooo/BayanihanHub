@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { Report, ReportStatus, ReportSeverity } from '@/types';
+import SEO from '@/components/common/SEO';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -279,6 +280,7 @@ export default function ManageReportsPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Manage Reports" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Header Title + Stats Strip */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

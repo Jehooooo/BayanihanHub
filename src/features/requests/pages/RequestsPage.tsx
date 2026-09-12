@@ -18,6 +18,7 @@ import type { ItemRequest, RequestUrgency } from '@/types';
 import FulfillRequestModal from '../components/FulfillRequestModal';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import toast from 'react-hot-toast';
+import SEO from '@/components/common/SEO';
 
 export default function RequestsPage() {
   const { user } = useAuthStore();
@@ -101,6 +102,7 @@ export default function RequestsPage() {
 
   return (
     <PageLayout>
+      <SEO title="Community Requests" noindex={true} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '4.5rem' }}>
         <ScrollReveal direction="down" duration={500}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
