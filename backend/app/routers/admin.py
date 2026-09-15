@@ -631,7 +631,7 @@ def get_reports_stats(db: Session = Depends(get_db)):
     """
     total = db.query(Report).count()
     pending = db.query(Report).filter(Report.status_id == 1).count()
-    under_review = db.query(Report).filter(Report.status_id == 2).count()
+    under_review = db.query(Report).filter(or_(Report.status_id == 2, Report.status_id == 6)).count()
     resolved = db.query(Report).filter(Report.status_id == 3).count()
     dismissed = db.query(Report).filter(Report.status_id == 4).count()
 
