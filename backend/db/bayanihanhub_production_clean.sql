@@ -690,7 +690,7 @@ CREATE TABLE `profiles` (
   UNIQUE KEY `uq_profiles_username` (`username`),
   KEY `idx_profiles_location` (`municipality`,`barangay`),
   CONSTRAINT `fk_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `profiles` (`profile_id`, `user_id`, `username`, `first_name`, `middle_name`, `last_name`, `phone`, `bio`, `address_line`, `barangay`, `municipality`, `province`, `latitude`, `longitude`, `created_at`, `updated_at`) VALUES (2, 5, 'admin', 'Admin', NULL, 'User', '09170000000', NULL, 'Municipal Hall', 'Poblacion', 'San Fernando', 'La Union', NULL, NULL, '2026-09-06 00:51:42', '2026-09-06 13:43:19');
 INSERT INTO `profiles` (`profile_id`, `user_id`, `username`, `first_name`, `middle_name`, `last_name`, `phone`, `bio`, `address_line`, `barangay`, `municipality`, `province`, `latitude`, `longitude`, `created_at`, `updated_at`) VALUES (11, 14, 'jeho', 'Jehosue', NULL, 'Biscarra', '+639923314755', 'Community Member', 'Dangdangla', 'Poblacion', 'San Fernando', 'La Union', NULL, NULL, '2026-09-06 01:26:45', '2026-09-06 01:26:45');
