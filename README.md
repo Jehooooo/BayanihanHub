@@ -52,3 +52,7 @@ npm run dev
 ```
 
 The key is loaded through Vite's environment-variable system rather than being hard-coded in the React source. Because the Maps JavaScript API runs in the browser, a browser key is necessarily delivered to the client at runtime; restricting the key by allowed referrers/APIs is therefore important.
+
+## Changelog
+
+- **2026-09-16** — Internal maintenance: minor documentation update.
