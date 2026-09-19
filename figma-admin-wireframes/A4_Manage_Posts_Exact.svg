@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960" width="1440" height="960">
+    <defs>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&amp;display=swap');
+            text { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif; }
+        </style>
+    </defs>
+    <rect width="1440" height="960" fill="#f1f5f3" />
+    
+    <!-- Desktop Sidebar (256px, bg-[#0f172a], border-r border-[#1e293b]) -->
+    <rect x="0" y="0" width="256" height="960" fill="#0f172a" />
+    <line x1="256" y1="0" x2="256" y2="960" stroke="#1e293b" stroke-width="1"/>
+    
+    <!-- Brand Logo Header -->
+    <g transform="translate(20, 20)">
+        <rect x="0" y="0" width="32" height="32" rx="6" fill="#2e7d32" />
+        <path d="M16 6 L6 16 L10 16 L10 26 L22 26 L22 16 L26 16 Z" fill="#ffffff"/>
+        <text x="42" y="16" fill="#ffffff" font-size="14" font-weight="700">Bayanihan Hub</text>
+        <text x="42" y="29" fill="#66bb6a" font-size="10" font-weight="700" letter-spacing="1">ADMIN PANEL</text>
+    </g>
+    <line x1="0" y1="68" x2="256" y2="68" stroke="#1e293b" stroke-width="1"/>
+    
+    <!-- Nav Items -->
+    
+        <g transform="translate(16, 80)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Dashboard</text>
+        </g>
+        
+        
+        <g transform="translate(16, 124)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Identity & Approvals</text>
+        </g>
+        <rect x="186" y="133" width="24" height="18" rx="9" fill="#d97706"/><text x="198" y="146" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">14</text>
+        
+        <g transform="translate(16, 168)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Users</text>
+        </g>
+        
+        
+        <g transform="translate(16, 212)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="#27692a" />
+            <circle cx="18" cy="19" r="6" fill="#ffffff" opacity="0.7"/>
+            <text x="34" y="24" fill="#ffffff" font-size="12" font-weight="700">Posts</text>
+        </g>
+        
+        
+        <g transform="translate(16, 256)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Requests</text>
+        </g>
+        
+        
+        <g transform="translate(16, 300)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Reports</text>
+        </g>
+        <rect x="190" y="309" width="20" height="18" rx="9" fill="#ef4444"/><text x="200" y="322" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">3</text>
+        
+        <g transform="translate(16, 344)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Categories</text>
+        </g>
+        
+        
+        <g transform="translate(16, 388)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Ratings</text>
+        </g>
+        
+        
+        <g transform="translate(16, 432)">
+            <rect x="0" y="0" width="224" height="38" rx="8" fill="transparent" />
+            <circle cx="18" cy="19" r="6" fill="#94a3b8" opacity="0.7"/>
+            <text x="34" y="24" fill="#94a3b8" font-size="12" font-weight="600">Settings</text>
+        </g>
+        
+        
+    
+    <!-- Sidebar Footer (p-4 border-t border-[#1e293b] bg-slate-950/40) -->
+    <g transform="translate(0, 860)">
+        <rect x="0" y="0" width="256" height="100" fill="#020617" opacity="0.4"/>
+        <line x1="0" y1="0" x2="256" y2="0" stroke="#1e293b" stroke-width="1"/>
+        <text x="40" y="32" fill="#94a3b8" font-size="12" font-weight="500">← Back to Main App</text>
+        <text x="40" y="68" fill="#f87171" font-size="12" font-weight="600">⎋ Logout (Admin)</text>
+    </g>
+    
+    
+    <g transform="translate(288, 36)">
+        <text x="0" y="28" fill="#0f172a" font-size="28" font-weight="800">Manage Posts &amp; Item Listings</text>
+        <text x="0" y="52" fill="#64748b" font-size="14" font-weight="400">Review, moderate, and manage community item listings with notification dispatches</text>
+        
+        <g transform="translate(980, 10)">
+            <rect x="0" y="0" width="140" height="36" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <text x="70" y="23" fill="#334155" font-size="12" font-weight="600" text-anchor="middle">↻ Refresh Posts</text>
+        </g>
+        
+        <g transform="translate(0, 72)">
+            <rect x="0" y="0" width="130" height="32" rx="16" fill="#0f172a"/>
+            <text x="65" y="21" fill="#ffffff" font-size="12" font-weight="600" text-anchor="middle">All Posts (342)</text>
+            
+            <rect x="140" y="0" width="150" height="32" rx="16" fill="#f1f5f9"/>
+            <text x="215" y="21" fill="#475569" font-size="12" font-weight="600" text-anchor="middle">Available Listings (330)</text>
+            
+            <rect x="300" y="0" width="150" height="32" rx="16" fill="#fee2e2"/>
+            <text x="375" y="21" fill="#991b1b" font-size="12" font-weight="600" text-anchor="middle">Removed Listings (12)</text>
+            
+            <rect x="740" y="0" width="380" height="36" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <text x="756" y="22" fill="#94a3b8" font-size="12">🔍 Search listings by title, category, or owner...</text>
+        </g>
+        
+        <g transform="translate(0, 126)">
+            <rect x="0" y="0" width="1120" height="520" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <rect x="16" y="16" width="1088" height="40" rx="6" fill="#f8fafc"/>
+            <text x="32" y="41" fill="#64748b" font-size="11" font-weight="700">LISTING TITLE</text>
+            <text x="320" y="41" fill="#64748b" font-size="11" font-weight="700">CATEGORY</text>
+            <text x="470" y="41" fill="#64748b" font-size="11" font-weight="700">POST TYPE</text>
+            <text x="640" y="41" fill="#64748b" font-size="11" font-weight="700">OWNER</text>
+            <text x="800" y="41" fill="#64748b" font-size="11" font-weight="700">STATUS</text>
+            <text x="960" y="41" fill="#64748b" font-size="11" font-weight="700">ACTIONS</text>
+            
+            <!-- Row 1 -->
+            <line x1="16" y1="116" x2="1104" y2="116" stroke="#f1f5f9" stroke-width="1"/>
+            <rect x="32" y="74" width="48" height="48" rx="6" fill="#e2e8f0"/>
+            <text x="92" y="92" fill="#0f172a" font-size="13" font-weight="700">Stand Fan 16-inch (In Good Condition)</text>
+            <text x="92" y="108" fill="#94a3b8" font-size="11">Posted 2 hours ago • Condition: Good</text>
+            
+            <text x="320" y="100" fill="#334155" font-size="12">Appliances</text>
+            
+            <rect x="470" y="88" width="90" height="22" rx="4" fill="#eff6ff"/>
+            <text x="515" y="103" fill="#1e40af" font-size="11" font-weight="600" text-anchor="middle">For Exchange</text>
+            
+            <text x="640" y="100" fill="#334155" font-size="12">Juan Dela Cruz</text>
+            
+            <rect x="800" y="88" width="70" height="22" rx="11" fill="#dcfce7"/>
+            <text x="835" y="103" fill="#166534" font-size="11" font-weight="700" text-anchor="middle">Available</text>
+            
+            <rect x="960" y="84" width="94" height="28" rx="6" fill="#ffffff" stroke="#dc2626" stroke-width="1"/>
+            <text x="1007" y="102" fill="#dc2626" font-size="11" font-weight="700" text-anchor="middle">Remove Post</text>
+            
+            <!-- Row 2 -->
+            <line x1="16" y1="172" x2="1104" y2="172" stroke="#f1f5f9" stroke-width="1"/>
+            <rect x="32" y="130" width="48" height="48" rx="6" fill="#fee2e2"/>
+            <text x="92" y="148" fill="#dc2626" font-size="13" font-weight="700">Commercial Vape Pods 10x Disposable (Flagged)</text>
+            <text x="92" y="164" fill="#991b1b" font-size="11">Prohibited tobacco/nicotine product rule violation</text>
+            
+            <text x="320" y="156" fill="#334155" font-size="12">Electronics</text>
+            
+            <rect x="470" y="144" width="90" height="22" rx="4" fill="#fef3c7"/>
+            <text x="515" y="159" fill="#92400e" font-size="11" font-weight="600" text-anchor="middle">Donation (?)</text>
+            
+            <text x="640" y="156" fill="#dc2626" font-size="12" font-weight="700">BadActor101</text>
+            
+            <rect x="800" y="144" width="70" height="22" rx="11" fill="#fee2e2"/>
+            <text x="835" y="159" fill="#991b1b" font-size="11" font-weight="700" text-anchor="middle">3 Flags</text>
+            
+            <rect x="960" y="140" width="94" height="28" rx="6" fill="#dc2626"/>
+            <text x="1007" y="158" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">Takedown Now</text>
+        </g>
+    </g>
+    
+</svg>

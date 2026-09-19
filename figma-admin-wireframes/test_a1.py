@@ -1,0 +1,286 @@
+import os
+import json
+
+output_dir = r"c:\Users\Jeho\Downloads\BayanihanHubAfter\figma-admin-wireframes"
+os.makedirs(output_dir, exist_ok=True)
+
+# Common SVG elements & sidebar
+def get_sidebar_svg(active_index=0):
+    nav_items = [
+        ("Dashboard", "LayoutDashboard"),
+        ("Identity Approvals", "ShieldCheck"),
+        ("Users Directory", "Users"),
+        ("Post Moderation", "Package"),
+        ("Community Requests", "HandHeart"),
+        ("Reports & Logs", "AlertOctagon"),
+        ("Categories", "FolderTree"),
+        ("System Terminal", "Terminal")
+    ]
+    
+    items_svg = ""
+    y = 120
+    for idx, (label, icon) in enumerate(nav_items):
+        is_active = (idx == active_index)
+        bg = "fill=\"#2E7D32\"" if is_active else "fill=\"transparent\""
+        text_color = "#FFFFFF" if is_active else "#94A3B8"
+        font_weight = "bold" if is_active else "500"
+        badge = ""
+        if idx == 1:
+            badge = '<rect x="200" y="' + str(y+8) + '" width="24" height="18" rx="9" fill="#E11D48"/><text x="212" y="' + str(y+20) + '" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">14</text>'
+        elif idx == 5:
+            badge = '<rect x="200" y="' + str(y+8) + '" width="20" height="18" rx="9" fill="#F59E0B"/><text x="210" y="' + str(y+20) + '" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">3</text>'
+            
+        items_svg += f'''
+        <g transform="translate(16, {y})">
+            <rect x="0" y="0" width="228" height="38" rx="8" {bg} />
+            <circle cx="20" cy="19" r="6" fill="{text_color}" opacity="0.6"/>
+            <text x="36" y="24" fill="{text_color}" font-size="13" font-weight="{font_weight}" font-family="Inter, sans-serif">{label}</text>
+        </g>
+        {badge}
+        '''
+        y += 46
+
+    return f'''
+    <!-- Left Sticky Sidebar -->
+    <rect x="0" y="0" width="260" height="960" fill="#0F172A" />
+    <g transform="translate(24, 28)">
+        <rect x="0" y="0" width="36" height="36" rx="8" fill="#2E7D32" />
+        <path d="M18 8 L8 18 L12 18 L12 28 L24 28 L24 18 L28 18 Z" fill="#FFFFFF"/>
+        <text x="48" y="20" fill="#FFFFFF" font-size="16" font-weight="bold" font-family="Inter, sans-serif">Bayanihan Hub</text>
+        <text x="48" y="34" fill="#2E7D32" font-size="10" font-weight="bold" letter-spacing="1.5" font-family="Inter, sans-serif">ADMIN PORTAL</text>
+    </g>
+    <line x1="20" y1="88" x2="240" y2="88" stroke="#1E293B" stroke-width="1"/>
+    {items_svg}
+    
+    <!-- Admin User Badge at Bottom -->
+    <g transform="translate(16, 880)">
+        <rect x="0" y="0" width="228" height="60" rx="10" fill="#1E293B" />
+        <circle cx="28" cy="30" r="16" fill="#2E7D32" />
+        <text x="28" y="34" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">JB</text>
+        <text x="54" y="26" fill="#FFFFFF" font-size="13" font-weight="bold" font-family="Inter, sans-serif">Jehosue Biscarra</text>
+        <text x="54" y="42" fill="#94A3B8" font-size="11" font-family="Inter, sans-serif">Lead Admin • DMMMSU</text>
+    </g>
+    '''
+
+def get_header_svg(breadcrumb="Admin / Overview"):
+    return f'''
+    <!-- Top App Bar -->
+    <rect x="260" y="0" width="1180" height="68" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="290" y="38" fill="#64748B" font-size="13" font-family="Inter, sans-serif">{breadcrumb}</text>
+    
+    <!-- Search Bar -->
+    <g transform="translate(780, 16)">
+        <rect x="0" y="0" width="280" height="36" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <circle cx="16" cy="18" r="5" stroke="#94A3B8" stroke-width="1.5" fill="none"/>
+        <line x1="20" y1="22" x2="25" y2="27" stroke="#94A3B8" stroke-width="1.5"/>
+        <text x="34" y="22" fill="#94A3B8" font-size="12" font-family="Inter, sans-serif">Quick search...</text>
+    </g>
+    
+    <!-- Status / Notification -->
+    <g transform="translate(1080, 18)">
+        <rect x="0" y="0" width="120" height="32" rx="16" fill="#DCFCE7" stroke="#86EFAC" stroke-width="1"/>
+        <circle cx="14" cy="16" r="4" fill="#16A34A"/>
+        <text x="26" y="20" fill="#166534" font-size="11" font-weight="bold" font-family="Inter, sans-serif">System Live</text>
+        <circle cx="100" cy="16" r="10" fill="#F1F5F9"/>
+        <circle cx="106" cy="10" r="4" fill="#EF4444"/>
+    </g>
+    '''
+
+# Generate Screen A1: Admin Dashboard Overview
+def generate_a1_svg():
+    sidebar = get_sidebar_svg(0)
+    header = get_header_svg("Admin / Dashboard Overview")
+    
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960" width="1440" height="960">
+    <rect width="1440" height="960" fill="#F1F5F3" />
+    {sidebar}
+    {header}
+    
+    <!-- Main Content Body -->
+    <g transform="translate(290, 96)">
+        <!-- Title -->
+        <text x="0" y="24" fill="#0F172A" font-size="24" font-weight="bold" font-family="Inter, sans-serif">System Overview &amp; Command Center</text>
+        <text x="0" y="44" fill="#64748B" font-size="13" font-family="Inter, sans-serif">Bayanihan Hub live operational community stats, reports, and moderation queue.</text>
+        
+        <!-- Urgent Alert Banner -->
+        <g transform="translate(0, 60)">
+            <rect x="0" y="0" width="1110" height="52" rx="8" fill="#FFFBEB" stroke="#FDE68A" stroke-width="1"/>
+            <circle cx="28" cy="26" r="12" fill="#F59E0B"/>
+            <text x="28" y="30" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">!</text>
+            <text x="52" y="26" fill="#92400E" font-size="13" font-weight="bold" font-family="Inter, sans-serif">Action Required: 14 Identity Verifications and 3 Community Reports Awaiting Review</text>
+            <text x="52" y="42" fill="#B45309" font-size="11" font-family="Inter, sans-serif">High-priority items submitted by neighbors in San Nicolas &amp; San Antonio.</text>
+            <rect x="960" y="10" width="130" height="32" rx="6" fill="#D97706"/>
+            <text x="1025" y="30" fill="#FFFFFF" font-size="12" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Review Approvals →</text>
+        </g>
+        
+        <!-- 5 KPI Metric Cards -->
+        <!-- Card 1 -->
+        <g transform="translate(0, 130)">
+            <rect x="0" y="0" width="206" height="110" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="16" y="28" fill="#64748B" font-size="12" font-weight="600" font-family="Inter, sans-serif">TOTAL RESIDENTS</text>
+            <text x="16" y="66" fill="#0F172A" font-size="28" font-weight="bold" font-family="Inter, sans-serif">1,248</text>
+            <rect x="16" y="80" width="60" height="18" rx="4" fill="#DCFCE7"/>
+            <text x="46" y="93" fill="#166534" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">+14% wk</text>
+            <circle cx="174" cy="32" r="16" fill="#ECFDF5"/>
+            <rect x="168" y="26" width="12" height="12" fill="#059669" rx="2"/>
+        </g>
+        
+        <!-- Card 2 -->
+        <g transform="translate(226, 130)">
+            <rect x="0" y="0" width="206" height="110" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="16" y="28" fill="#64748B" font-size="12" font-weight="600" font-family="Inter, sans-serif">ACTIVE LISTINGS</text>
+            <text x="16" y="66" fill="#0F172A" font-size="28" font-weight="bold" font-family="Inter, sans-serif">342</text>
+            <text x="16" y="92" fill="#64748B" font-size="11" font-family="Inter, sans-serif">210 Donated • 132 Barter</text>
+            <circle cx="174" cy="32" r="16" fill="#EFF6FF"/>
+            <rect x="168" y="26" width="12" height="12" fill="#2563EB" rx="2"/>
+        </g>
+        
+        <!-- Card 3 -->
+        <g transform="translate(452, 130)">
+            <rect x="0" y="0" width="206" height="110" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="16" y="28" fill="#64748B" font-size="12" font-weight="600" font-family="Inter, sans-serif">COMMUNITY REQUESTS</text>
+            <text x="16" y="66" fill="#0F172A" font-size="28" font-weight="bold" font-family="Inter, sans-serif">28</text>
+            <rect x="16" y="80" width="70" height="18" rx="4" fill="#FEE2E2"/>
+            <text x="51" y="93" fill="#991B1B" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">4 Critical Need</text>
+            <circle cx="174" cy="32" r="16" fill="#FEF2F2"/>
+            <rect x="168" y="26" width="12" height="12" fill="#DC2626" rx="2"/>
+        </g>
+        
+        <!-- Card 4 -->
+        <g transform="translate(678, 130)">
+            <rect x="0" y="0" width="206" height="110" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="16" y="28" fill="#64748B" font-size="12" font-weight="600" font-family="Inter, sans-serif">PENDING APPROVALS</text>
+            <text x="16" y="66" fill="#0F172A" font-size="28" font-weight="bold" font-family="Inter, sans-serif">14</text>
+            <rect x="16" y="80" width="80" height="18" rx="4" fill="#FEF3C7"/>
+            <text x="56" y="93" fill="#92400E" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Privacy Shield ON</text>
+            <circle cx="174" cy="32" r="16" fill="#FFFBEB"/>
+            <rect x="168" y="26" width="12" height="12" fill="#D97706" rx="2"/>
+        </g>
+        
+        <!-- Card 5 -->
+        <g transform="translate(904, 130)">
+            <rect x="0" y="0" width="206" height="110" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="16" y="28" fill="#64748B" font-size="12" font-weight="600" font-family="Inter, sans-serif">COMPLETED TRADES</text>
+            <text x="16" y="66" fill="#0F172A" font-size="28" font-weight="bold" font-family="Inter, sans-serif">189</text>
+            <text x="16" y="92" fill="#059669" font-size="11" font-weight="bold" font-family="Inter, sans-serif">94.2% Trust Satisfaction</text>
+            <circle cx="174" cy="32" r="16" fill="#ECFDF5"/>
+            <rect x="168" y="26" width="12" height="12" fill="#10B981" rx="2"/>
+        </g>
+        
+        <!-- Bottom Layout: Recent System Activity (Left 740px) + Quick Actions (Right 350px) -->
+        <g transform="translate(0, 260)">
+            <!-- Left Table Container -->
+            <rect x="0" y="0" width="730" height="480" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="24" y="32" fill="#0F172A" font-size="15" font-weight="bold" font-family="Inter, sans-serif">Recent System Activity &amp; Audit Trail</text>
+            <text x="24" y="50" fill="#64748B" font-size="12" font-family="Inter, sans-serif">Live moderation and authentication events across barangays</text>
+            
+            <!-- Table Header -->
+            <rect x="16" y="68" width="698" height="34" rx="6" fill="#F8FAFC"/>
+            <text x="32" y="90" fill="#64748B" font-size="11" font-weight="bold" font-family="Inter, sans-serif">RESIDENT</text>
+            <text x="180" y="90" fill="#64748B" font-size="11" font-weight="bold" font-family="Inter, sans-serif">EVENT TYPE</text>
+            <text x="340" y="90" fill="#64748B" font-size="11" font-weight="bold" font-family="Inter, sans-serif">BARANGAY</text>
+            <text x="490" y="90" fill="#64748B" font-size="11" font-weight="bold" font-family="Inter, sans-serif">TIMESTAMP</text>
+            <text x="620" y="90" fill="#64748B" font-size="11" font-weight="bold" font-family="Inter, sans-serif">STATUS</text>
+            
+            <!-- Row 1 -->
+            <line x1="16" y1="140" x2="714" y2="140" stroke="#F1F5F9" stroke-width="1"/>
+            <circle cx="42" cy="120" r="12" fill="#2E7D32"/>
+            <text x="42" y="124" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">JD</text>
+            <text x="62" y="124" fill="#0F172A" font-size="12" font-weight="600" font-family="Inter, sans-serif">Juan Dela Cruz</text>
+            <text x="180" y="124" fill="#0F172A" font-size="12" font-family="Inter, sans-serif">Identity Submitted (PhilID)</text>
+            <text x="340" y="124" fill="#64748B" font-size="12" font-family="Inter, sans-serif">San Nicolas, Agoo</text>
+            <text x="490" y="124" fill="#64748B" font-size="11" font-family="Inter, sans-serif">2 mins ago</text>
+            <rect x="615" y="112" width="76" height="20" rx="10" fill="#FEF3C7"/>
+            <text x="653" y="126" fill="#92400E" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Under Review</text>
+            
+            <!-- Row 2 -->
+            <line x1="16" y1="186" x2="714" y2="186" stroke="#F1F5F9" stroke-width="1"/>
+            <circle cx="42" cy="166" r="12" fill="#2563EB"/>
+            <text x="42" y="170" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">MS</text>
+            <text x="62" y="170" fill="#0F172A" font-size="12" font-weight="600" font-family="Inter, sans-serif">Maria Santos</text>
+            <text x="180" y="170" fill="#0F172A" font-size="12" font-family="Inter, sans-serif">Posted Donation "Electric Fan"</text>
+            <text x="340" y="170" fill="#64748B" font-size="12" font-family="Inter, sans-serif">San Antonio, Agoo</text>
+            <text x="490" y="170" fill="#64748B" font-size="11" font-family="Inter, sans-serif">14 mins ago</text>
+            <rect x="615" y="158" width="76" height="20" rx="10" fill="#DCFCE7"/>
+            <text x="653" y="172" fill="#166534" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Live Active</text>
+            
+            <!-- Row 3 -->
+            <line x1="16" y1="232" x2="714" y2="232" stroke="#F1F5F9" stroke-width="1"/>
+            <circle cx="42" cy="212" r="12" fill="#DC2626"/>
+            <text x="42" y="216" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">BA</text>
+            <text x="62" y="216" fill="#0F172A" font-size="12" font-weight="600" font-family="Inter, sans-serif">BadActor101</text>
+            <text x="180" y="216" fill="#DC2626" font-size="12" font-weight="600" font-family="Inter, sans-serif">Flagged: "Commercial Vapes"</text>
+            <text x="340" y="216" fill="#64748B" font-size="12" font-family="Inter, sans-serif">Santa Barbara</text>
+            <text x="490" y="216" fill="#64748B" font-size="11" font-family="Inter, sans-serif">32 mins ago</text>
+            <rect x="615" y="204" width="76" height="20" rx="10" fill="#FEE2E2"/>
+            <text x="653" y="218" fill="#991B1B" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">3 Flags</text>
+            
+            <!-- Row 4 -->
+            <line x1="16" y1="278" x2="714" y2="278" stroke="#F1F5F9" stroke-width="1"/>
+            <circle cx="42" cy="258" r="12" fill="#16A34A"/>
+            <text x="42" y="262" fill="#FFF" font-size="10" font-weight="bold" text-anchor="middle">CR</text>
+            <text x="62" y="262" fill="#0F172A" font-size="12" font-weight="600" font-family="Inter, sans-serif">Calamity Relief Committee</text>
+            <text x="180" y="262" fill="#0F172A" font-size="12" font-family="Inter, sans-serif">Urgent Request: Roofing Aid</text>
+            <text x="340" y="262" fill="#64748B" font-size="12" font-family="Inter, sans-serif">San Nicolas</text>
+            <text x="490" y="262" fill="#64748B" font-size="11" font-family="Inter, sans-serif">1 hour ago</text>
+            <rect x="615" y="250" width="76" height="20" rx="10" fill="#E0E7FF"/>
+            <text x="653" y="264" fill="#3730A3" font-size="10" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Official Aid</text>
+        </g>
+        
+        <!-- Right Quick Actions Container -->
+        <g transform="translate(750, 260)">
+            <rect x="0" y="0" width="360" height="480" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+            <text x="24" y="32" fill="#0F172A" font-size="15" font-weight="bold" font-family="Inter, sans-serif">Administrative Quick Actions</text>
+            <text x="24" y="50" fill="#64748B" font-size="12" font-family="Inter, sans-serif">Standard operational shortcuts</text>
+            
+            <!-- Action Item 1 -->
+            <g transform="translate(20, 76)">
+                <rect x="0" y="0" width="320" height="64" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+                <circle cx="28" cy="32" r="14" fill="#ECFDF5"/>
+                <rect x="22" y="26" width="12" height="12" fill="#059669" rx="2"/>
+                <text x="52" y="28" fill="#0F172A" font-size="13" font-weight="bold" font-family="Inter, sans-serif">Review ID Queue</text>
+                <text x="52" y="46" fill="#64748B" font-size="11" font-family="Inter, sans-serif">14 residents awaiting verification</text>
+                <rect x="250" y="20" width="56" height="24" rx="6" fill="#2E7D32"/>
+                <text x="278" y="36" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Open</text>
+            </g>
+            
+            <!-- Action Item 2 -->
+            <g transform="translate(20, 152)">
+                <rect x="0" y="0" width="320" height="64" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+                <circle cx="28" cy="32" r="14" fill="#FEF2F2"/>
+                <rect x="22" y="26" width="12" height="12" fill="#DC2626" rx="2"/>
+                <text x="52" y="28" fill="#0F172A" font-size="13" font-weight="bold" font-family="Inter, sans-serif">Manage Incident Reports</text>
+                <text x="52" y="46" fill="#64748B" font-size="11" font-family="Inter, sans-serif">3 open flags requiring attention</text>
+                <rect x="250" y="20" width="56" height="24" rx="6" fill="#DC2626"/>
+                <text x="278" y="36" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Open</text>
+            </g>
+            
+            <!-- Action Item 3 -->
+            <g transform="translate(20, 228)">
+                <rect x="0" y="0" width="320" height="64" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+                <circle cx="28" cy="32" r="14" fill="#EFF6FF"/>
+                <rect x="22" y="26" width="12" height="12" fill="#2563EB" rx="2"/>
+                <text x="52" y="28" fill="#0F172A" font-size="13" font-weight="bold" font-family="Inter, sans-serif">User Directory &amp; Bans</text>
+                <text x="52" y="46" fill="#64748B" font-size="11" font-family="Inter, sans-serif">Search 1,248 registered accounts</text>
+                <rect x="250" y="20" width="56" height="24" rx="6" fill="#0F172A"/>
+                <text x="278" y="36" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Browse</text>
+            </g>
+            
+            <!-- Action Item 4: Database & Terminal -->
+            <g transform="translate(20, 304)">
+                <rect x="0" y="0" width="320" height="64" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+                <circle cx="28" cy="32" r="14" fill="#F1F5F9"/>
+                <rect x="22" y="26" width="12" height="12" fill="#475569" rx="2"/>
+                <text x="52" y="28" fill="#0F172A" font-size="13" font-weight="bold" font-family="Inter, sans-serif">System Logs &amp; Terminal</text>
+                <text x="52" y="46" fill="#64748B" font-size="11" font-family="Inter, sans-serif">Aiven MySQL SSL &amp; audit trails</text>
+                <rect x="250" y="20" width="56" height="24" rx="6" fill="#334155"/>
+                <text x="278" y="36" fill="#FFFFFF" font-size="11" font-weight="bold" text-anchor="middle" font-family="Inter, sans-serif">Logs</text>
+            </g>
+        </g>
+    </g>
+</svg>'''
+
+with open(os.path.join(output_dir, "A1_Admin_Dashboard_Overview.svg"), "w", encoding="utf-8") as f:
+    f.write(generate_a1_svg())
+
+print("A1 generated successfully.")

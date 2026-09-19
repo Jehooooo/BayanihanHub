@@ -1,0 +1,233 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960" width="1440" height="960">
+    
+    <defs>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&amp;display=swap');
+            text { font-family: 'Poppins', sans-serif; }
+        </style>
+        <linearGradient id="modalGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="50%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#10b981"/>
+        </linearGradient>
+        <linearGradient id="btnGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+        </linearGradient>
+    </defs>
+
+    <rect width="1440" height="960" fill="#f1f5f3" />
+    
+    <!-- Desktop Sidebar (256px, #0f172a, border #1e293b) -->
+    <rect x="0" y="0" width="256" height="100%" fill="#0f172a" />
+    <line x1="256" y1="0" x2="256" y2="100%" stroke="#1e293b" stroke-width="1"/>
+    
+    <!-- Logo Brand Header -->
+    <g transform="translate(20, 20)">
+        <circle cx="16" cy="16" r="16" fill="#1b4332" />
+        <path d="M16 8 L8 15 L11 15 L11 23 L21 23 L21 15 L24 15 Z" fill="#48bb78"/>
+        <text x="40" y="16" fill="#ffffff" font-size="13" font-weight="700">Bayanihan Hub</text>
+        <text x="40" y="28" fill="#48bb78" font-size="9" font-weight="700" letter-spacing="0.8">ADMIN PANEL</text>
+    </g>
+    <line x1="0" y1="64" x2="256" y2="64" stroke="#1e293b" stroke-width="1"/>
+    
+    <!-- Navigation Items -->
+    
+        <g transform="translate(12, 76)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <rect x="0" y="0" width="6" height="6" rx="1"/><rect x="8" y="0" width="6" height="6" rx="1"/><rect x="0" y="8" width="6" height="6" rx="1"/><rect x="8" y="8" width="6" height="6" rx="1"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Dashboard</text>
+        </g>
+        
+        <g transform="translate(12, 118)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <path d="M7 1 L13 3.5 V7 C13 10.5 7 13 7 13 C7 13 1 10.5 1 7 V3.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 7 L6 8.5 L9.5 5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Identity & Approvals</text>
+        </g>
+        
+        <g transform="translate(12, 160)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <circle cx="6" cy="4" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1 13 C1 10 3 9 6 9 C9 9 11 10 11 13" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="11" cy="4" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M11 9 C12.5 9.5 13.5 10.5 13.5 12" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Users</text>
+        </g>
+        
+        <g transform="translate(12, 202)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <path d="M7 1 L13 4 V10 L7 13 L1 10 V4 Z" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.5"/><line x1="13" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="7" x2="7" y2="13" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Posts</text>
+        </g>
+        
+        <g transform="translate(12, 244)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <path d="M7 2.5 C6 -0.5 2 0.5 2 3.5 C2 6 7 9 7 9 C7 9 12 6 12 3.5 C12 0.5 8 -0.5 7 2.5 Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1 10 L4 12 L7 11 L10 12 L13 10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Requests</text>
+        </g>
+        
+        <g transform="translate(12, 286)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <polygon points="4,1 10,1 13,4 13,10 10,13 4,13 1,10 1,4" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="7" y1="4" x2="7" y2="7" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="10" r="0.75" fill="currentColor"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Reports</text>
+        </g>
+        
+        <g transform="translate(12, 328)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="#27692a" />
+            <g transform="translate(14, 12)" stroke="#ffffff" fill="#ffffff">
+                <path d="M1 3 H5 L7 5 H13 V11 H1 Z" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="4" y1="11" x2="4" y2="14" stroke="currentColor" stroke-width="1.5"/><line x1="4" y1="14" x2="7" y2="14" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#ffffff" font-size="12" font-weight="700">Categories</text>
+        </g>
+        
+        <g transform="translate(12, 370)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <polygon points="7,1 8.8,5.2 13.3,5.5 9.8,8.4 10.9,12.8 7,10.4 3.1,12.8 4.2,8.4 0.7,5.5 5.2,5.2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Ratings</text>
+        </g>
+        
+        <g transform="translate(12, 412)">
+            <rect x="0" y="0" width="232" height="38" rx="8" fill="transparent" />
+            <g transform="translate(14, 12)" stroke="#94a3b8" fill="#94a3b8">
+                <circle cx="7" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 1 V2.5 M7 11.5 V13 M1 7 H2.5 M11.5 7 H13" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+            <text x="38" y="24" fill="#94a3b8" font-size="12" font-weight="500">Settings</text>
+        </g>
+        
+    
+    <!-- Sidebar Footer -->
+    <g transform="translate(0, 870)">
+        <line x1="0" y1="0" x2="256" y2="0" stroke="#1e293b" stroke-width="1"/>
+        <g transform="translate(16, 16)">
+            <text x="24" y="16" fill="#94a3b8" font-size="12" font-weight="500">Back to Main App</text>
+            <path d="M14 12 L8 12 M8 12 L11 9 M8 12 L11 15" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+        </g>
+        <g transform="translate(16, 52)">
+            <text x="24" y="16" fill="#f87171" font-size="12" font-weight="600">Logout (Admin)</text>
+            <path d="M8 12 H14 M14 12 L11 9 M14 12 L11 15 M8 7 V5 H3 V19 H8 V17" fill="none" stroke="#f87171" stroke-width="1.5"/>
+        </g>
+    </g>
+    
+    
+    <g transform="translate(288, 32)">
+        <text x="0" y="26" fill="#0f172a" font-size="28" font-weight="800">Manage Item Categories</text>
+        <text x="0" y="48" fill="#64748b" font-size="13" font-weight="400">Create and update item classification categories</text>
+        
+        <!-- Add Category Card -->
+        <g transform="translate(0, 72)">
+            <rect x="0" y="0" width="800" height="96" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            <text x="24" y="30" fill="#0f172a" font-size="12" font-weight="700">New Category Name <tspan fill="#dc2626">*</tspan></text>
+            
+            <!-- Input -->
+            <rect x="24" y="42" width="600" height="38" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+            <text x="38" y="66" fill="#94a3b8" font-size="13">e.g. Sports &amp; Fitness</text>
+            
+            <!-- Add Button -->
+            <rect x="638" y="42" width="138" height="38" rx="6" fill="#1e4620"/>
+            <text x="707" y="66" fill="#ffffff" font-size="13" font-weight="700" text-anchor="middle">Add Category</text>
+        </g>
+        
+        <!-- Table Card -->
+        <g transform="translate(0, 188)">
+            <rect x="0" y="0" width="800" height="520" rx="10" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+            
+            <!-- Header -->
+            <rect x="0" y="0" width="800" height="42" rx="10" fill="#f8fafc"/>
+            <text x="24" y="26" fill="#64748b" font-size="11" font-weight="700">CATEGORY NAME</text>
+            <text x="360" y="26" fill="#64748b" font-size="11" font-weight="700">SLUG ID</text>
+            <text x="620" y="26" fill="#64748b" font-size="11" font-weight="700">ACTIVE ITEMS</text>
+            <line x1="0" y1="42" x2="800" y2="42" stroke="#e2e8f0" stroke-width="1"/>
+            
+            
+        <g transform="translate(0, 42)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Clothing</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">clothing</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="92" x2="800" y2="92" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 92)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Electronics</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">electronics</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="142" x2="800" y2="142" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 142)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Books</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">books</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="192" x2="800" y2="192" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 192)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Furniture</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">furniture</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="242" x2="800" y2="242" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 242)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">School Supplies</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">school-supplies</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="292" x2="800" y2="292" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 292)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Food</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">food</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="342" x2="800" y2="342" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 342)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Toys &amp; Games</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">toys</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="392" x2="800" y2="392" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 392)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Appliances</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">appliances</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="442" x2="800" y2="442" stroke="#f1f5f9" stroke-width="1"/>
+        
+        <g transform="translate(0, 442)">
+            <text x="24" y="32" fill="#0f172a" font-size="13" font-weight="700">Sports</text>
+            <text x="360" y="32" fill="#64748b" font-size="12" font-family="monospace">sports</text>
+            <text x="620" y="32" fill="#334155" font-size="12">12 items</text>
+        </g>
+        <line x1="0" y1="492" x2="800" y2="492" stroke="#f1f5f9" stroke-width="1"/>
+        
+        </g>
+    </g>
+    
+    <!-- Floating AI Assistant Button (Bottom Right) -->
+    <g transform="translate(1230, 890)">
+        <rect x="0" y="0" width="146" height="46" rx="23" fill="#1e4620" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.15))"/>
+        <g transform="translate(16, 15)">
+            <rect x="0" y="0" width="16" height="13" rx="3" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+            <circle cx="5" cy="6" r="1" fill="#ffffff"/>
+            <circle cx="11" cy="6" r="1" fill="#ffffff"/>
+            <line x1="8" y1="-3" x2="8" y2="0" stroke="#ffffff" stroke-width="1.5"/>
+        </g>
+        <text x="44" y="28" fill="#ffffff" font-size="13" font-weight="700">AI Assistant</text>
+        <path d="M126 18 L128 22 L132 24 L128 26 L126 30 L124 26 L120 24 L124 22 Z" fill="#a7f3d0"/>
+    </g>
+    
+    
+</svg>
