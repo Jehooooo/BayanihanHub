@@ -230,4 +230,32 @@ export const adminService = {
     }
     return res.json();
   },
+  async getRatings(): Promise<any[]> {
+    const { user } = useAuthStore.getState();
+    const adminId = user?.id;
+    try {
+      const res = await fetch(`/api/admin/ratings?adminId=${adminId}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.ratings || [];
+      }
+    } catch (err) {
+      console.error('[adminService.getRatings] Error:', err);
+    }
+    return [];
+  },
+
+  async deleteRating(ratingId: string): Promise<boolean> {
+    const { user } = useAuthStore.getState();
+    const adminId = user?.id;
+    try {
+      const res = await fetch(`/api/admin/ratings/${encodeURIComponent(ratingId)}?adminId=${adminId}`, {
+        method: 'DELETE',
+      });
+      return res.ok;
+    } catch (err) {
+      console.error(`[adminService.deleteRating] Error:`, err);
+    }
+    return false;
+  }
 };

@@ -1,12 +1,17 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles, MoreVertical, Flag } from 'lucide-react';
+import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles, MoreVertical, Flag, Trash2 } from 'lucide-react';
 import type { Item } from '@/types';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
 import ReportModal from '@/features/moderation/components/ReportModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { getCategoryName } from '@/data/categories';
 import { useAuthStore } from '@/stores/authStore';
+import { itemsService } from '@/services/items.service';
+import toast from 'react-hot-toast';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 interface ItemCardProps {
   item: Item;
@@ -20,17 +25,86 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
   const { user } = useAuthStore();
   const isDonation = item.type === 'donation';
   const [reportOpen, setReportOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
+  
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [imageError, setImageError] = useState(false);
+  
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const isOwner = (currentUserId || user?.id) === item.ownerId ||
     (currentUserId || user?.id) === item.owner?.id;
   const canReport = user && !isOwner;
+  const showMenu = canReport || isOwner;
 
   const handleCardClick = () => {
     sessionStorage.setItem('browse-scroll-pos', String(window.scrollY));
     navigate(`/items/${item.id}`);
   };
+
+  const openMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    let top = rect.bottom + window.scrollY;
+    let left = rect.right - 144 + window.scrollX; // 144px is minWidth of 9rem
+
+    // Viewport edge detection
+    if (rect.bottom + 100 > window.innerHeight) {
+       top = rect.top - 50 + window.scrollY; // Open upward
+    }
+    if (rect.right - 144 < 0) {
+       left = rect.left + window.scrollX; // Open rightward if clipped on left
+    }
+
+    setMenuPosition({ top, left });
+    setMenuOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node) && 
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+      const success = await itemsService.deleteItem(item.id, user.id);
+      if (success) {
+        toast.success('Post deleted successfully');
+        setIsDeleted(true);
+      } else {
+        toast.error('Failed to delete post');
+      }
+    } catch {
+      toast.error('Error deleting post');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  if (isDeleted) return null;
 
   return (<>
     <div
@@ -70,7 +144,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
             borderTopRightRadius: 'calc(var(--radius-lg) - 1px)',
           }}
         >
-          {item.images && item.images.length > 0 ? (
+          {item.images && item.images.length > 0 && !imageError ? (
             <img
               src={item.images[0]}
               alt={item.title}
@@ -81,11 +155,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
                 borderTopLeftRadius: 'inherit',
                 borderTopRightRadius: 'inherit',
               }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                const nextEl = e.currentTarget.nextElementSibling as HTMLElement | null;
-                if (nextEl) nextEl.style.display = 'flex';
-              }}
+              onError={() => setImageError(true)}
             />
           ) : null}
 
@@ -93,7 +163,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
             style={{
               width: '100%',
               height: '100%',
-              display: item.images?.length ? 'none' : 'flex',
+              display: (item.images?.length && !imageError) ? 'none' : 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
@@ -213,16 +283,16 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
             </button>
           )}
 
-          {/* ⋮ Report button — only for authenticated non-owners */}
-          {canReport && (
+          {/* ⋮ Context menu — for reporting or deleting */}
+          {showMenu && (
             <div
-              ref={menuRef}
               style={{ position: 'absolute', top: '0.625rem', right: onFavoriteToggle ? '2.5rem' : '0.625rem', zIndex: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                ref={buttonRef}
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
+                onClick={openMenu}
                 style={{
                   padding: '0.4rem',
                   borderRadius: '9999px',
@@ -240,44 +310,72 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
                 <MoreVertical style={{ width: '0.875rem', height: '0.875rem' }} />
               </button>
 
-              {menuOpen && (
+              {menuOpen && createPortal(
                 <div
+                  ref={menuRef}
                   style={{
                     position: 'absolute',
-                    top: '110%',
-                    right: 0,
+                    top: menuPosition.top,
+                    left: menuPosition.left,
                     backgroundColor: '#fff',
                     border: '1px solid var(--color-neutral-200)',
                     borderRadius: 'var(--radius-lg)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                    zIndex: 50,
+                    zIndex: 99999,
                     minWidth: '9rem',
                     overflow: 'hidden',
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setReportOpen(true); }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.625rem 0.875rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: '#dc2626',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                  >
-                    <Flag style={{ width: '0.75rem', height: '0.75rem' }} /> Report Post
-                  </button>
-                </div>
+                  {canReport && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setReportOpen(true); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 0.875rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#dc2626',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <Flag style={{ width: '0.75rem', height: '0.75rem' }} /> Report Post
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setIsDeleteModalOpen(true); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 0.875rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: '#dc2626',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <Trash2 style={{ width: '0.75rem', height: '0.75rem' }} /> Delete Post
+                    </button>
+                  )}
+                </div>,
+                document.body
               )}
             </div>
           )}
@@ -309,9 +407,16 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
             {item.owner && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
                 <Avatar src={item.owner.avatar} name={item.owner.fullName} size="xs" />
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-700)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.owner.fullName}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-700)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.owner.fullName}
+                  </span>
+                  {item.createdAt && (
+                    <span style={{ fontSize: '0.65rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>
+                      {formatDistanceToNowStrict(new Date(item.createdAt))} ago
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -323,7 +428,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
       </Card>
     </div>
 
-    {/* Report Modal — portal outside the card click handler */}
+    {/* Report Modal */}
     <ReportModal
       isOpen={reportOpen}
       onClose={() => setReportOpen(false)}
@@ -331,6 +436,20 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
       targetId={item.id}
       targetTitle={item.title}
     />
+    
+    {/* Delete Confirmation Modal */}
+    {isOwner && (
+      <ConfirmDialog
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Item"
+        message={`Are you sure you want to delete "${item.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={isDeleting}
+      />
+    )}
   </>);
 }
-

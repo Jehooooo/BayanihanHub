@@ -66,58 +66,6 @@ export default function DashboardPage() {
           </div>
         </ScrollReveal>
 
-        {/* Quick Stats Grid with Staggered Scroll Animation */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <ScrollReveal delay={0} direction="up">
-            <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-              <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: '#ecfdf5', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Package style={{ width: '1.25rem', height: '1.25rem' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Posts</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{totalItemsCount}</p>
-              </div>
-            </Card>
-          </ScrollReveal>
-
-          <ScrollReveal delay={80} direction="up">
-            <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-              <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ArrowLeftRight style={{ width: '1.25rem', height: '1.25rem' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exchanges</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalExchanges ?? 0}</p>
-              </div>
-            </Card>
-          </ScrollReveal>
-
-          <ScrollReveal delay={160} direction="up">
-            <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-              <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: '#fffbeb', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <HandHeart style={{ width: '1.25rem', height: '1.25rem' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Donations</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)' }}>{user?.totalDonations ?? 0}</p>
-              </div>
-            </Card>
-          </ScrollReveal>
-
-          <ScrollReveal delay={240} direction="up">
-            <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-              <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: 'var(--radius-md)', backgroundColor: '#faf5ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <TrendingUp style={{ width: '1.25rem', height: '1.25rem' }} />
-              </div>
-              <div>
-                <p style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rating</p>
-                <p style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Star style={{ width: '1rem', height: '1rem', fill: '#f59e0b', color: '#f59e0b' }} /> {user?.rating != null ? Number(user.rating).toFixed(1) : '5.0'}
-                </p>
-              </div>
-            </Card>
-          </ScrollReveal>
-        </div>
 
         {/* Section: Nearby Donations & Exchanges */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

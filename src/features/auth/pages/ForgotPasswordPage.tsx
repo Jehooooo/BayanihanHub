@@ -4,6 +4,7 @@ import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import AuthLayout from '@/components/layout/AuthLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
 
 export default function ForgotPasswordPage() {
@@ -11,14 +12,29 @@ export default function ForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
+    if (!email) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      // Even if 404, the backend returns success to prevent enumeration
+      const data = await response.json();
+      if (data.success) {
         setIsSubmitted(true);
-      }, 500);
+      } else {
+        toast.error(data.message || 'An error occurred.');
+      }
+    } catch (error) {
+      toast.error('Network error. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

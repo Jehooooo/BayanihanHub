@@ -5,6 +5,7 @@ import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
 import PendingVerificationPage from '@/features/auth/pages/PendingVerificationPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
 import BrowsePage from '@/features/items/pages/BrowsePage';
 import ItemDetailsPage from '@/features/items/pages/ItemDetailsPage';
@@ -25,6 +26,7 @@ import ManageRequestsPage from '@/features/admin/pages/ManageRequestsPage';
 import ManageReportsPage from '@/features/admin/pages/ManageReportsPage';
 import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
+import ManageRatingsPage from '@/features/admin/pages/ManageRatingsPage';
 import { useAuthStore } from '@/stores/authStore';
 import AiChatbotModal from '@/components/AiChatbotModal';
 import NotFoundPage from '@/features/error/NotFoundPage';
@@ -106,6 +108,14 @@ export default function App() {
           element={
             <PublicOnlyRoute>
               <ForgotPasswordPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicOnlyRoute>
+              <ResetPasswordPage />
             </PublicOnlyRoute>
           }
         />
@@ -272,6 +282,14 @@ export default function App() {
           element={
             <AdminRoute>
               <ManageApprovalsPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/ratings"
+          element={
+            <AdminRoute>
+              <ManageRatingsPage />
             </AdminRoute>
           }
         />

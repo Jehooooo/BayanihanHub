@@ -28,7 +28,11 @@ export function getPresenceInfo(
   }
 
   try {
-    const d = new Date(lastActive);
+    let dateStr = lastActive;
+    if (dateStr && !dateStr.endsWith('Z') && !/([+-]\d{2}:\d{2})$/.test(dateStr)) {
+      dateStr += 'Z';
+    }
+    const d = new Date(dateStr);
     if (isNaN(d.getTime())) {
       return { isOnline: false, statusText: 'Offline' };
     }

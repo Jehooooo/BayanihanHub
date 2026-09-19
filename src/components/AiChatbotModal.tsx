@@ -127,8 +127,9 @@ export default function AiChatbotModal() {
             zIndex: 45,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.625rem',
-            padding: '0.75rem 1.125rem',
+            justifyContent: 'center',
+            width: '3.5rem',
+            height: '3.5rem',
             backgroundColor: 'var(--color-primary-700)',
             color: '#ffffff',
             borderRadius: '9999px',
@@ -147,23 +148,7 @@ export default function AiChatbotModal() {
           }}
           aria-label="Open Bayanihan AI Assistant"
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '1.75rem',
-              height: '1.75rem',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            }}
-          >
-            <Bot style={{ width: '1.125rem', height: '1.125rem' }} />
-          </div>
-          <span style={{ fontSize: '0.875rem', fontWeight: 700, letterSpacing: '-0.01em' }}>
-            AI Assistant
-          </span>
-          <Sparkles style={{ width: '0.875rem', height: '0.875rem', color: '#bbf7d0' }} />
+          <Bot style={{ width: '1.5rem', height: '1.5rem' }} />
         </button>
       )}
 

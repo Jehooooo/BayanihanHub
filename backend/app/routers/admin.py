@@ -9,9 +9,11 @@ from sqlalchemy import or_, desc
 from app.db import get_db
 from app.models.user import User, Profile, AccountStatus, Role, UserRole
 from app.models.item import Item, ItemImage, ItemStatus, ItemCategory, ItemCondition, ItemType
+from app.services.email import EmailService
 from app.models.request import ItemRequest, RequestStatus, RequestUrgency
 from app.models.moderation import Report, ReportStatus, ReportReason, ReportTargetType, AuditLog, AuditAction, UserSuspension
 from app.models.notification import Notification, NotificationType
+from app.models.exchange import Rating
 
 router = APIRouter(prefix="/api/admin", tags=["Admin & Moderation"])
 
@@ -325,6 +327,10 @@ def suspend_user(user_id: str, dto: SuspendUserRequestDto, db: Session = Depends
             is_read=False
         )
         db.add(user_notif)
+        
+        prof = target_user.profile
+        username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
+        EmailService.send_suspension_email(target_user.email, username, dto.reason.strip(), duration_label)
 
         db.commit()
         return {
@@ -1009,6 +1015,10 @@ def resolve_report(report_id: str, dto: ResolveReportRequestDto, db: Session = D
                         link="/help/support",
                         is_read=False
                     ))
+                    
+                    prof = target_user.profile
+                    username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
+                    EmailService.send_suspension_email(target_user.email, username, dto.message or 'Policy violation.', "Temporary")
 
         # Action E: Request Removed
         elif "request removed" in act_lower or "remove request" in act_lower:
@@ -1161,3 +1171,86 @@ def get_user_moderation_history(user_id: str, db: Session = Depends(get_db)):
         "history": history,
     }
 
+# ============================================================================
+# Admin Ratings Management
+# ============================================================================
+
+@router.get("/ratings")
+def get_all_ratings(
+    adminId: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Fetch all user ratings and reviews for admin moderation."""
+    admin_id = get_admin_id(db, adminId)
+    ratings = db.query(Rating).options(
+        joinedload(Rating.rater),
+        joinedload(Rating.rated_user)
+    ).order_by(desc(Rating.created_at)).all()
+    
+    results = []
+    for r in ratings:
+        results.append({
+            "id": str(r.rating_id),
+            "exchangeId": str(r.exchange_id),
+            "rater": {
+                "id": str(r.rater.user_id) if r.rater else "",
+                "fullName": r.rater.full_name if r.rater else "Unknown User",
+                "username": r.rater.username if r.rater else "unknown",
+            },
+            "ratedUser": {
+                "id": str(r.rated_user.user_id) if r.rated_user else "",
+                "fullName": r.rated_user.full_name if r.rated_user else "Unknown User",
+                "username": r.rated_user.username if r.rated_user else "unknown",
+            },
+            "score": r.score,
+            "review": r.review,
+            "createdAt": r.created_at.isoformat() + "Z"
+        })
+    
+    return {"ratings": results}
+
+
+@router.delete("/ratings/{rating_id}")
+def delete_rating(
+    rating_id: str,
+    adminId: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Delete an inappropriate rating and recalculate the user's score."""
+    admin_user_id = get_admin_id(db, adminId)
+    r_id = parse_numeric_id(rating_id)
+    if not r_id:
+        raise HTTPException(status_code=400, detail="Invalid rating ID")
+        
+    rating = db.query(Rating).filter(Rating.rating_id == r_id).first()
+    if not rating:
+        raise HTTPException(status_code=404, detail="Rating not found")
+        
+    rated_user = db.query(User).filter(User.user_id == rating.rated_user_id).first()
+    
+    db.delete(rating)
+    db.commit()
+    
+    # Recalculate
+    if rated_user:
+        all_other_ratings = db.query(Rating).filter(Rating.rated_user_id == rated_user.user_id).all()
+        if all_other_ratings:
+            total_score = sum(r.score for r in all_other_ratings)
+            rated_user.rating = float(total_score) / len(all_other_ratings)
+            rated_user.total_ratings = len(all_other_ratings)
+        else:
+            rated_user.rating = 0.0
+            rated_user.total_ratings = 0
+            
+        # Log the action
+        log = AuditLog(
+            admin_id=admin_user_id,
+            action=AuditAction.UPDATE,
+            target_type=ReportTargetType.USER,
+            target_id=rated_user.user_id,
+            details=f"Admin deleted rating {r_id} (score {rating.score}) written by user {rating.rater_id} due to moderation."
+        )
+        db.add(log)
+        db.commit()
+        
+    return {"message": "Rating deleted successfully"}

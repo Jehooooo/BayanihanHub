@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/ui/Avatar';
 import MessageInput, { type SendMessagePayload } from './MessageInput';
@@ -12,7 +13,11 @@ import { getPresenceInfo } from '@/utils/presence';
 
 function formatMessageTime(iso: string): string {
   try {
-    const d = new Date(iso);
+    let dateStr = iso;
+    if (dateStr && !dateStr.endsWith('Z') && !/([+-]\d{2}:\d{2})$/.test(dateStr)) {
+      dateStr += 'Z';
+    }
+    const d = new Date(dateStr);
     if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
@@ -356,8 +361,8 @@ function MessageBubble({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-end',
-              gap: '0.375rem',
-              padding: '0 0.75rem 0.4rem',
+              gap: '0.25rem',
+              padding: '0 0.5rem 0.375rem',
             }}
           >
             {msg.isEdited && !isUnsent && (
@@ -470,6 +475,7 @@ export default function ChatWindow({
   isLoading = false,
 }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   // Message Actions state
@@ -591,6 +597,7 @@ export default function ChatWindow({
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
+          width: '100%',
           backgroundColor: '#fff',
           overflow: 'hidden',
         }}
@@ -611,11 +618,20 @@ export default function ChatWindow({
             zIndex: 10,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link
+            to={effectivePartner.id !== 'user-unknown' ? `/profile/${effectivePartner.id.replace('user-', '')}` : '#'}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}
+            className="hover:opacity-80 transition-opacity"
+            onClick={(e) => {
+              if (effectivePartner.id === 'user-unknown') {
+                e.preventDefault();
+              }
+            }}
+          >
             {onBack && (
               <button
                 type="button"
-                onClick={onBack}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); onBack(); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -626,7 +642,9 @@ export default function ChatWindow({
                   borderRadius: 'var(--radius-md)',
                   color: 'var(--color-neutral-600)',
                   cursor: 'pointer',
+                  marginRight: '-0.25rem',
                 }}
+                className="hover:bg-neutral-100 transition-colors md:hidden"
                 aria-label="Back to conversations"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -643,7 +661,7 @@ export default function ChatWindow({
             />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <h3 style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem', margin: 0 }}>{effectivePartner.fullName}</h3>
+                <h3 className="hover:underline" style={{ fontWeight: 700, color: 'var(--color-neutral-900)', fontSize: '0.875rem', margin: 0 }}>{effectivePartner.fullName}</h3>
               </div>
               <span
                 style={{
@@ -671,7 +689,7 @@ export default function ChatWindow({
                 {presence.statusText}
               </span>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Message List */}

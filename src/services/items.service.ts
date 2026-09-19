@@ -119,7 +119,16 @@ export const itemsService = {
       });
       if (res.ok) {
         const data = await res.json();
-        return Boolean(data.isSaved);
+        const isFav = Boolean(data.isSaved);
+        
+        // Dispatch global event for optimistic updates across components
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('bayanihan-favorite-toggled', {
+            detail: { itemId, isFavorited: isFav }
+          }));
+        }
+        
+        return isFav;
       }
     } catch (err) {
       console.error(`[itemsService.toggleFavorite] Error saving item ${itemId}:`, err);

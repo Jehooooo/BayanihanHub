@@ -36,7 +36,6 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <aside
         style={{
-          display: 'none',
           flexDirection: 'column',
           width: '16rem',
           flexShrink: 0,
@@ -47,7 +46,7 @@ export default function Sidebar() {
           backgroundColor: '#fff',
           boxShadow: '1px 0 3px rgba(0,0,0,0.03)',
         }}
-        className="lg:!flex"
+        className="hidden lg:flex"
       >
         <nav style={{ flex: 1, padding: '1.25rem 1rem', overflowY: 'auto' }}>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', listStyle: 'none', margin: 0, padding: 0 }}>

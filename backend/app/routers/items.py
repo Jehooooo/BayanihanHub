@@ -138,7 +138,17 @@ def format_item(item: Item, db: Session, current_user_id: Optional[int] = None) 
 
     # Images
     sorted_images = sorted(item.images, key=lambda x: x.display_order) if item.images else []
-    images = [img.image_url for img in sorted_images] if sorted_images else [
+    
+    # Use environment variable or fallback to Render URL
+    API_BASE_URL = os.environ.get("RENDER_EXTERNAL_URL", "https://bayanihanhub-api.onrender.com")
+    
+    def process_url(url: str) -> str:
+        if not url: return "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80"
+        if url.startswith("/uploads/"):
+            return f"{API_BASE_URL}{url}"
+        return url
+        
+    images = [process_url(img.image_url) for img in sorted_images] if sorted_images else [
         "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80"
     ]
 
@@ -523,8 +533,13 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
                         clean_url = f"/uploads/items/{img_filename}"
                     except Exception:
                         clean_url = default_img
-                # If it's an invalid or temporary blob URL or not starting with / or http, fallback to default_img
-                elif clean_url.startswith("blob:") or len(clean_url) > 490 or not (clean_url.startswith("http") or clean_url.startswith("/")):
+                # If it's an invalid or temporary blob URL
+                elif clean_url.startswith("blob:"):
+                    # Blob URLs are local to the client browser, cannot be used by the server
+                    # Ignore this image instead of saving a default image
+                    continue
+                # If not starting with / or http
+                elif len(clean_url) > 490 or not (clean_url.startswith("http") or clean_url.startswith("/")):
                     clean_url = default_img
 
                 db.add(ItemImage(item_id=new_item.item_id, image_url=clean_url[:500], display_order=idx))

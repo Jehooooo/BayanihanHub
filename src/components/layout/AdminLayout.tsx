@@ -31,7 +31,7 @@ const adminNavItems = [
   { to: '/admin/requests', icon: HandHeart, label: 'Requests' },
   { to: '/admin/reports', icon: AlertOctagon, label: 'Reports' },
   { to: '/admin/categories', icon: FolderTree, label: 'Categories' },
-  { to: '/rate', icon: Star, label: 'Ratings' },
+  { to: '/admin/ratings', icon: Star, label: 'Ratings' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

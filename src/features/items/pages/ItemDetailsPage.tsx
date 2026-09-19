@@ -12,8 +12,8 @@ import {
   Truck,
   Star,
   MoreVertical,
-  Flag,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ImageGallery from '../components/ImageGallery';
@@ -22,6 +22,7 @@ import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SEO from '@/components/common/SEO';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import { itemsService } from '@/services/items.service';
@@ -31,6 +32,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { useSavedItemsStore } from '@/stores/savedItemsStore';
 import type { Item } from '@/types';
 import toast from 'react-hot-toast';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 export default function ItemDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +49,7 @@ export default function ItemDetailsPage() {
   const [userItems, setUserItems] = useState<Item[]>([]);
   const [isRequestingDonation, setIsRequestingDonation] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [overflowMenuOpen, setOverflowMenuOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +81,21 @@ export default function ItemDetailsPage() {
   }, [id]);
 
   useEffect(() => {
+    const handleFavEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ itemId: string; isFavorited: boolean }>;
+      const { itemId, isFavorited } = customEvent.detail;
+      setItem((prev) => {
+        if (prev && prev.id === itemId) {
+          return { ...prev, isFavorited };
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('bayanihan-favorite-toggled', handleFavEvent);
+    return () => window.removeEventListener('bayanihan-favorite-toggled', handleFavEvent);
+  }, []);
+
+  useEffect(() => {
     if (user?.role === 'admin' && id) {
       fetch(`/api/reports/target-status/item/${encodeURIComponent(id)}`)
         .then((res) => (res.ok ? res.json() : null))
@@ -95,6 +113,36 @@ export default function ItemDetailsPage() {
       });
     }
   }, [user]);
+
+  const toggleFavorite = async () => {
+    if (!item || !user) return;
+    
+    // Optimistic UI update locally first
+    const newFavStatus = !item.isFavorited;
+    setItem(prev => prev ? { ...prev, isFavorited: newFavStatus } : prev);
+    
+    // the toggleFavorite in service will trigger the event for everyone else
+    const isFav = await itemsService.toggleFavorite(item.id, user.id);
+    if (isFav) {
+      saveItem(item.id, user.id);
+      toast.success('Added to favorites');
+    } else {
+      unsaveItem(item.id, user.id);
+      toast.success('Removed from favorites');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!item || !user) return;
+    const success = await itemsService.deleteItem(item.id); // ItemsService.deleteItem takes one param usually
+    if (success) {
+      toast.success('Post deleted successfully');
+      navigate('/browse');
+    } else {
+      toast.error('Failed to delete post');
+    }
+    setIsDeleteModalOpen(false);
+  };
 
   if (isLoading) {
     return (
@@ -392,6 +440,7 @@ export default function ItemDetailsPage() {
                   <span>
                     {item.location.barangay}, {item.location.municipality}
                     {item.distance !== undefined && item.distance !== null ? ` • ${item.distance} km away` : ''}
+                    {item.createdAt ? ` • Posted ${formatDistanceToNowStrict(new Date(item.createdAt))} ago` : ''}
                   </span>
                 </p>
               </div>
@@ -491,20 +540,7 @@ export default function ItemDetailsPage() {
               <div style={{ paddingTop: '1.25rem', borderTop: '1px solid var(--color-neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-neutral-500)' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      toast.error('Please log in to save items.');
-                      navigate('/login');
-                      return;
-                    }
-                    if (isSaved(item.id)) {
-                      unsaveItem(item.id);
-                      toast.success('Removed from saved items');
-                    } else {
-                      saveItem(item.id);
-                      toast.success('Saved! View in Saved Items.');
-                    }
-                  }}
+                  onClick={toggleFavorite}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -569,8 +605,8 @@ export default function ItemDetailsPage() {
                   <Share2 style={{ width: '1.125rem', height: '1.125rem' }} /> <span>Share Link</span>
                 </button>
 
-                {/* ⋮ Overflow menu — shown only to authenticated non-owners */}
-                {isAuthenticated && !isOwner && (
+                {/* ⋮ Overflow menu — shown only to authenticated users */}
+                {isAuthenticated && (
                   <div ref={overflowRef} style={{ position: 'relative' }}>
                     <button
                       type="button"
@@ -604,38 +640,68 @@ export default function ItemDetailsPage() {
                           border: '1px solid var(--color-neutral-200)',
                           borderRadius: 'var(--radius-lg)',
                           boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                          zIndex: 50,
+                          zIndex: 99999,
                           minWidth: '10rem',
                           overflow: 'hidden',
                         }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOverflowMenuOpen(false);
-                            setReportModalOpen(true);
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.625rem',
-                            padding: '0.75rem 1rem',
-                            fontSize: '0.8125rem',
-                            fontWeight: 600,
-                            color: '#dc2626',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'background 120ms',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <Flag style={{ width: '0.875rem', height: '0.875rem' }} />
-                          Report Post
-                        </button>
+                        {isOwner ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOverflowMenuOpen(false);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.625rem',
+                              padding: '0.75rem 1rem',
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
+                              color: '#dc2626',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'background 120ms',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <Trash2 style={{ width: '0.875rem', height: '0.875rem' }} />
+                            Delete Post
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOverflowMenuOpen(false);
+                              setReportModalOpen(true);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.625rem',
+                              padding: '0.75rem 1rem',
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
+                              color: '#dc2626',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'background 120ms',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fef2f2'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            <Flag style={{ width: '0.875rem', height: '0.875rem' }} />
+                            Report Post
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

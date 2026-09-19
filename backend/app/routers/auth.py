@@ -1,12 +1,13 @@
 import hashlib
-from datetime import datetime, date, timezone
+import secrets
+from datetime import datetime, date, timezone, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
 
 from app.db import get_db
-from app.models.user import User, Profile, UserRole, Role, AccountStatus, ProfilePicture
+from app.models.user import User, Profile, UserRole, Role, AccountStatus, ProfilePicture, PasswordReset
 from app.models.verification import (
     IdentityVerification,
     IdType,
@@ -14,7 +15,15 @@ from app.models.verification import (
     FacialVerificationStatus,
 )
 from app.models.moderation import UserSuspension
-from app.schemas.auth import RegisterRequestDto, LoginRequestDto, AuthResponseDto
+from app.schemas.auth import (
+    RegisterRequestDto,
+    LoginRequestDto,
+    AuthResponseDto,
+    ForgotPasswordRequestDto,
+    ResetPasswordRequestDto,
+    GenericResponseDto,
+)
+from app.services.email import EmailService
 from app.services.biometric_engine import mask_id_number
 from app.services.terminal_logger import terminal_logger
 
@@ -201,6 +210,9 @@ def register(dto: RegisterRequestDto, db: Session = Depends(get_db)):
         terminal_logger.crud("CREATE", "User", details=f"New neighbor registered: {clean_email} ({dto.full_name})")
         terminal_logger.integration("Backend", "Verification Service", "Created identity verification record", status="SUCCESS")
 
+        # Send Welcome Email
+        EmailService.send_welcome_email(clean_email, dto.full_name.split()[0])
+
         return AuthResponseDto(
             success=True,
             message="Account registration submitted successfully. Your account is PENDING administrator review and approval.",
@@ -373,3 +385,60 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
         user=user_data,
         account_status="APPROVED",
     )
+
+@router.post("/forgot-password", response_model=GenericResponseDto)
+def forgot_password(dto: ForgotPasswordRequestDto, db: Session = Depends(get_db)):
+    email = dto.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    
+    if user:
+        # Generate token and store it
+        token = secrets.token_urlsafe(32)
+        expires = datetime.now() + timedelta(hours=1)
+        
+        pr = PasswordReset(
+            user_id=user.user_id,
+            token=token,
+            expires_at=expires,
+            used=False
+        )
+        db.add(pr)
+        db.commit()
+        
+        # Send Email
+        EmailService.send_password_reset_email(
+            to_email=user.email,
+            reset_token=token,
+            username=user.profile.first_name if user.profile else "User"
+        )
+        
+    # Always return success to prevent email enumeration
+    return GenericResponseDto(success=True, message="If an account exists, a reset email has been sent.")
+
+@router.post("/reset-password", response_model=GenericResponseDto)
+def reset_password(dto: ResetPasswordRequestDto, db: Session = Depends(get_db)):
+    token = dto.token
+    new_password = dto.new_password
+    
+    pr = db.query(PasswordReset).filter(PasswordReset.token == token, PasswordReset.used == False).first()
+    if not pr:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+    if pr.expires_at < datetime.now():
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+        
+    user = db.query(User).filter(User.user_id == pr.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Hash new password
+    hashed = hash_password(new_password)
+    user.password_hash = hashed
+    user.updated_at = datetime.now()
+    
+    pr.used = True
+    db.commit()
+    
+    terminal_logger.crud("UPDATE", "User", details=f"Password reset successfully for {user.email}")
+    return GenericResponseDto(success=True, message="Password has been reset successfully.")
+

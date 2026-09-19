@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -38,7 +39,7 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6"
@@ -86,4 +87,6 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -10,8 +10,10 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function BrowsePage() {
+  const { user } = useAuthStore();
   const [searchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
 
@@ -56,12 +58,35 @@ export default function BrowsePage() {
   }, [isLoading]);
 
   const handleFavoriteToggle = async (id: string) => {
-    const isFav = await itemsService.toggleFavorite(id);
+    if (!user?.id) {
+      toast.error('Please log in to save items.');
+      return;
+    }
+
+    // Optimistic UI update locally first
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const newFavStatus = !item.isFavorited;
+    
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isFavorited: isFav } : item))
+      prev.map((i) => (i.id === id ? { ...i, isFavorited: newFavStatus } : i))
     );
-    toast.success(isFav ? 'Added to favorites' : 'Removed from favorites');
+    
+    await itemsService.toggleFavorite(id, user.id);
+    // Real response handled by event listener below if there's a discrepancy
   };
+
+  useEffect(() => {
+    const handleFavEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ itemId: string; isFavorited: boolean }>;
+      const { itemId, isFavorited } = customEvent.detail;
+      setItems((prev) =>
+        prev.map((i) => (i.id === itemId ? { ...i, isFavorited } : i))
+      );
+    };
+    window.addEventListener('bayanihan-favorite-toggled', handleFavEvent);
+    return () => window.removeEventListener('bayanihan-favorite-toggled', handleFavEvent);
+  }, []);
 
   const handleResetFilters = () => {
     setFilters({ query: '', sortBy: 'newest' });

@@ -148,3 +148,15 @@ class ProfilePicture(Base):
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="profile_pictures")
     status: Mapped["ProfilePictureStatus"] = relationship("ProfilePictureStatus", back_populates="pictures")
     reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by])
+
+
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+
+    reset_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+

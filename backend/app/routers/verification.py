@@ -7,6 +7,8 @@ from sqlalchemy import desc
 
 from app.db import get_db
 from app.models.user import User, Profile, AccountStatus, Role, UserRole
+from app.models.exchange import Rating, Exchange
+from app.services.email import EmailService
 from app.models.verification import (
     IdentityVerification,
     IdType,
@@ -239,6 +241,10 @@ def approve_application(
         )
         iv.user.is_trusted = True
         iv.user.updated_at = now
+        
+        prof = iv.user.profile
+        username = f"{prof.first_name} {prof.last_name}".strip() if prof else "User"
+        EmailService.send_approval_email(iv.user.email, username)
 
     # Log audit entry
     try:

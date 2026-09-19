@@ -409,16 +409,28 @@ export default function PostItemPage() {
   const handleAddImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const selectedFiles = Array.from(e.target.files);
+    
+    // Create immediate local previews
+    const localPreviewUrls = selectedFiles.map(f => URL.createObjectURL(f));
+    
+    setImages((prev) => {
+      const newImages = [...prev, ...localPreviewUrls].slice(0, 5);
+      return newImages;
+    });
+
     setIsUploading(true);
     const toastId = toast.loading('Uploading item photos...');
     try {
-      const uploadedUrls: string[] = [];
-      for (const file of selectedFiles) {
-        if (images.length + uploadedUrls.length >= 5) break;
+      for (let i = 0; i < selectedFiles.length; i++) {
+        // Prevent upload if we already have 5 images (checked before appending)
+        const file = selectedFiles[i];
+        const previewUrl = localPreviewUrls[i];
+        
         const url = await itemsService.uploadImage(file);
-        uploadedUrls.push(url);
+        
+        // Replace the specific preview URL with the uploaded URL
+        setImages((prev) => prev.map(img => img === previewUrl ? url : img));
       }
-      setImages((prev) => [...prev, ...uploadedUrls].slice(0, 5));
       toast.success(
         images.length === 0
           ? 'First photo set as main thumbnail! You can add up to 5 photos.'
@@ -466,6 +478,7 @@ export default function PostItemPage() {
   // ── Submit Handlers ──
   const handleDonationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploading) { toast.error('Please wait for images to finish uploading.'); return; }
     if (!user?.id) { toast.error('Please log in to post a donation.'); return; }
     if (!donationForm.title || !donationForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
@@ -489,6 +502,7 @@ export default function PostItemPage() {
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploading) { toast.error('Please wait for images to finish uploading.'); return; }
     if (!user?.id) { toast.error('Please log in to post a request.'); return; }
     if (!requestForm.title || !requestForm.description) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
@@ -535,6 +549,7 @@ export default function PostItemPage() {
 
   const handleExchangeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploading) { toast.error('Please wait for images to finish uploading.'); return; }
     if (!user?.id) { toast.error('Please log in to post an exchange.'); return; }
     if (!exchangeForm.offerTitle || !exchangeForm.offerDescription || !exchangeForm.wantItem) { toast.error('Please complete all required fields.'); return; }
     setIsLoading(true);
@@ -655,7 +670,7 @@ export default function PostItemPage() {
             </Card>
 
             <LocationCard locationDetails={locationDetails} onOpenPicker={handleOpenLocationPicker} />
-            <SubmitRow isLoading={isLoading} onCancel={() => navigate('/browse')} label="Post Donation" />
+            <SubmitRow isLoading={isLoading || isUploading} onCancel={() => navigate('/browse')} label="Post Donation" />
           </form>
         )}
 
@@ -723,7 +738,7 @@ export default function PostItemPage() {
             </Card>
 
             <LocationCard locationDetails={locationDetails} onOpenPicker={handleOpenLocationPicker} />
-            <SubmitRow isLoading={isLoading} onCancel={() => navigate('/browse')} label="Post Request" />
+            <SubmitRow isLoading={isLoading || isUploading} onCancel={() => navigate('/browse')} label="Post Request" />
           </form>
         )}
 
@@ -771,7 +786,7 @@ export default function PostItemPage() {
             </Card>
 
             <LocationCard locationDetails={locationDetails} onOpenPicker={handleOpenLocationPicker} />
-            <SubmitRow isLoading={isLoading} onCancel={() => navigate('/browse')} label="Post Exchange" />
+            <SubmitRow isLoading={isLoading || isUploading} onCancel={() => navigate('/browse')} label="Post Exchange" />
           </form>
         )}
       </div>

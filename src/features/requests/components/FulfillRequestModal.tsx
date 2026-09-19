@@ -346,26 +346,6 @@ export default function FulfillRequestModal({
           )}
         </div>
 
-        {/* Database & Notification Assurance Banner */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 0.875rem',
-            borderRadius: 'var(--radius-md)',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            fontSize: '0.75rem',
-            color: '#15803d',
-            fontWeight: 500,
-          }}
-        >
-          <CheckCircle2 style={{ width: '0.9375rem', height: '0.9375rem', flexShrink: 0, color: '#16a34a' }} />
-          <span>
-            This response will be saved in the database, notify the requester, and open a direct messaging thread.
-          </span>
-        </div>
 
         {/* Dedicated Modal Actions / Footer */}
         <div

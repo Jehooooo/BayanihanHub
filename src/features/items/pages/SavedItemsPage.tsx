@@ -28,6 +28,21 @@ export default function SavedItemsPage() {
     load();
   }, [savedIds]);
 
+  useEffect(() => {
+    const handleFavEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ itemId: string; isFavorited: boolean }>;
+      const { itemId, isFavorited } = customEvent.detail;
+      if (!isFavorited) {
+        setItems((prev) => prev.filter((i) => i.id !== itemId));
+      } else {
+        // If favorited elsewhere, we might need to fetch it, but usually SavedItemsPage reload does this.
+        // For now, we only need to remove unfavorited items for optimistic UI.
+      }
+    };
+    window.addEventListener('bayanihan-favorite-toggled', handleFavEvent);
+    return () => window.removeEventListener('bayanihan-favorite-toggled', handleFavEvent);
+  }, []);
+
   const handleUnsave = (id: string, title: string) => {
     unsaveItem(id);
     setItems((prev) => prev.filter((i) => i.id !== id));

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc, and_
 
 from app.db import get_db
+from app.services.email import EmailService
 from app.models.user import User, Profile
 from app.models.messaging import (
     Conversation,
@@ -569,6 +570,13 @@ def send_message(conversation_id: str, dto: SendMessageDto, db: Session = Depend
                     link="/messages",
                     related_user_id=num_sender,
                 )
+                
+                target_user = db.query(User).filter(User.user_id == p.user_id).first()
+                if target_user:
+                    prof = target_user.profile
+                    target_name = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
+                    EmailService.send_message_notification_email(target_user.email, target_name, sender_name, dto.content[:80] + ("..." if len(dto.content) > 80 else ""))
+                    
             except Exception:
                 pass  # Notification failure must never block message delivery
 

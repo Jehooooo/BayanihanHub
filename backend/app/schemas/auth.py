@@ -40,3 +40,14 @@ class AuthResponseDto(BaseModel):
 
     class Config:
         populate_by_name = True
+
+class ForgotPasswordRequestDto(BaseModel):
+    email: str
+
+class ResetPasswordRequestDto(BaseModel):
+    token: str
+    new_password: str
+
+class GenericResponseDto(BaseModel):
+    success: bool
+    message: str

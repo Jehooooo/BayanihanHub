@@ -19,6 +19,13 @@ VERIFICATION_API_KEY: str = os.getenv("VERIFICATION_API_KEY", "")
 CORS_ORIGINS: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 MAX_DOCUMENT_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB limit
 
+# SMTP / Email Configuration
+SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER: str = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "noreply@bayanihanhub.com")
+
 # MySQL Database Configuration
 MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT: int = int(os.getenv("MYSQL_PORT", "3306"))
