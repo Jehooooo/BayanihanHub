@@ -89,7 +89,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
     if (!user) return;
     setIsDeleting(true);
     try {
-      const success = await itemsService.deleteItem(item.id, user.id);
+      const success = await itemsService.deleteItem(item.id);
       if (success) {
         toast.success('Post deleted successfully');
         setIsDeleted(true);

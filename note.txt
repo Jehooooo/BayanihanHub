@@ -1,0 +1,7 @@
+in provider.py there is a class that is not being used
+class BaseVerificationProvider(ABC):
+    name: str
+
+    @abstractmethod
+    async def verify(self, dto: VerificationRequestDto) -> VerificationResponseDto:
+        pass

@@ -1,4 +1,5 @@
 import type { User, Item, ItemRequest, Report } from '../types';
+import { useAuthStore } from '../stores/authStore';
 
 export interface SuspendUserPayload {
   userId: string | number;

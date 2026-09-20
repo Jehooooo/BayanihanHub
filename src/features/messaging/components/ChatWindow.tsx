@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Avatar from '@/components/ui/Avatar';
 import MessageInput, { type SendMessagePayload } from './MessageInput';
@@ -622,7 +622,7 @@ export default function ChatWindow({
             to={effectivePartner.id !== 'user-unknown' ? `/profile/${effectivePartner.id.replace('user-', '')}` : '#'}
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}
             className="hover:opacity-80 transition-opacity"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               if (effectivePartner.id === 'user-unknown') {
                 e.preventDefault();
               }

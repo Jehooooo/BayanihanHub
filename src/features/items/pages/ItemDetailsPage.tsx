@@ -14,6 +14,7 @@ import {
   MoreVertical,
   AlertTriangle,
   Trash2,
+  Flag,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ImageGallery from '../components/ImageGallery';
