@@ -408,8 +408,8 @@ export default function ManageApprovalsPage() {
                                 record.status === 'VERIFIED' || record.status === 'APPROVED'
                                   ? 'success'
                                   : record.status === 'PENDING'
-                                  ? 'warning'
-                                  : 'danger'
+                                    ? 'warning'
+                                    : 'danger'
                               }
                             >
                               {record.status === 'RETRY_REQUIRED' ? 'RETRY REQ.' : record.status}
@@ -447,8 +447,7 @@ export default function ManageApprovalsPage() {
               onClose={() => setIsVerifDetailModalOpen(false)}
               title="Identity & Facial Biometric Review"
               size="lg"
-            >
-              {selectedVerif && (
+            >{selectedVerif && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   {/* Top Candidate Summary */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--color-neutral-200)', flexWrap: 'wrap', gap: '1rem' }}>
