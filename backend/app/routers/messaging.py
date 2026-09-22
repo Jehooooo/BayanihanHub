@@ -5,7 +5,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc, and_

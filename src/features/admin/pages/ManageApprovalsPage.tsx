@@ -904,7 +904,7 @@ export default function ManageApprovalsPage() {
                           </Badge>
                         </div>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: 0 }}>
-                          {user?.email} • {user?.barangay}, {user?.municipality}
+                          {user?.email} &bull; {user?.barangay}, {user?.municipality}
                         </p>
 
                         {sub.status === 'pending' && (
