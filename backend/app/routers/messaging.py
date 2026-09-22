@@ -12,7 +12,7 @@ from sqlalchemy import or_, desc, asc, and_
 
 from app.db import get_db
 from app.services.email import EmailService
-from app.models.user import User, Profile
+from app.models.user import User, Profile, NotificationPreference
 from app.models.messaging import (
     Conversation,
     ConversationParticipant,
@@ -571,11 +571,18 @@ def send_message(conversation_id: str, dto: SendMessageDto, background_tasks: Ba
                     related_user_id=num_sender,
                 )
                 
-                target_user = db.query(User).filter(User.user_id == p.user_id).first()
+                target_user = db.query(User).options(joinedload(User.notification_preferences)).filter(User.user_id == p.user_id).first()
                 if target_user:
                     prof = target_user.profile
                     target_name = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-                    background_tasks.add_task(EmailService.send_message_notification_email, target_user.email, target_name, sender_name)
+                    
+                    # Check preferences
+                    prefs = target_user.notification_preferences
+                    should_email = prefs.email_messages if prefs else True
+                    
+                    if should_email:
+                        target_email = target_user.email
+                        background_tasks.add_task(EmailService.send_message_notification_email, target_email, target_name, sender_name)
                     
             except Exception:
                 pass  # Notification failure must never block message delivery

@@ -61,6 +61,9 @@ class User(Base):
     profile_pictures: Mapped[List["ProfilePicture"]] = relationship(
         "ProfilePicture", foreign_keys="ProfilePicture.user_id", back_populates="user"
     )
+    notification_preferences: Mapped[Optional["NotificationPreference"]] = relationship(
+        "NotificationPreference", back_populates="user", uselist=False
+    )
 
 
 class UserRole(Base):
@@ -159,4 +162,38 @@ class PasswordReset(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+
+    preference_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False)
+    
+    # In-App
+    messages: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    replies: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    message_reactions: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    donation_requests: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    exchange_offers: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    request_status_updates: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    ratings_and_reviews: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    moderation_updates: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    account_updates: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    urgent_community_alerts: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Email
+    email_messages: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_donation_updates: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_exchange_updates: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_account_security: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    
+    # Frequency
+    frequency: Mapped[str] = mapped_column(String(32), default='realtime', nullable=False)
+    
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="notification_preferences")
 

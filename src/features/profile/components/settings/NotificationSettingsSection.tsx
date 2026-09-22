@@ -9,6 +9,7 @@ import SettingsToggle from './SettingsToggle';
 import { useSettingsStore } from '@/stores/settingsStore';
 import type { NotificationPreferences } from '@/stores/settingsStore';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/stores/authStore';
 
 type NotifKey = keyof NotificationPreferences;
 
@@ -47,10 +48,60 @@ const FREQUENCY_OPTIONS = [
 
 export default function NotificationSettingsSection() {
   const { notifications, updateNotifications } = useSettingsStore();
+  const { user } = useAuthStore();
 
-  const handleToggle = (key: NotifKey, value: boolean) => {
+  React.useEffect(() => {
+    async function fetchPreferences() {
+      if (!user?.id) return;
+      try {
+        const res = await fetch(`/api/users/${user.id}/notification-preferences`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.preferences) {
+            updateNotifications({
+              emailMessages: data.preferences.emailMessages,
+              emailDonationUpdates: data.preferences.emailDonationUpdates,
+              emailExchangeUpdates: data.preferences.emailExchangeUpdates,
+              emailAccountSecurity: data.preferences.emailAccountSecurity,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification preferences', error);
+      }
+    }
+    fetchPreferences();
+  }, [user?.id, updateNotifications]);
+
+  const handleToggle = async (key: NotifKey, value: boolean) => {
+    const previousValue = notifications[key];
     updateNotifications({ [key]: value } as any);
-    toast.success('Notification preference saved.');
+
+    if (key.startsWith('email') && user?.id) {
+      try {
+        const payload = {
+          emailMessages: key === 'emailMessages' ? value : notifications.emailMessages,
+          emailDonationUpdates: key === 'emailDonationUpdates' ? value : notifications.emailDonationUpdates,
+          emailExchangeUpdates: key === 'emailExchangeUpdates' ? value : notifications.emailExchangeUpdates,
+          emailAccountSecurity: key === 'emailAccountSecurity' ? value : notifications.emailAccountSecurity,
+        };
+        
+        const res = await fetch(`/api/users/${user.id}/notification-preferences`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) throw new Error('Failed to save to server');
+        toast.success('Notification preference saved.');
+      } catch (error) {
+        console.error(error);
+        updateNotifications({ [key]: previousValue } as any);
+        toast.error('Failed to save preferences.');
+      }
+    } else {
+      toast.success('Notification preference saved.');
+    }
   };
 
   return (

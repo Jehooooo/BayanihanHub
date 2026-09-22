@@ -210,8 +210,10 @@ def register(dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Ses
         terminal_logger.crud("CREATE", "User", details=f"New neighbor registered: {clean_email} ({dto.full_name})")
         terminal_logger.integration("Backend", "Verification Service", "Created identity verification record", status="SUCCESS")
 
-        # Send Welcome Email via BackgroundTasks
-        background_tasks.add_task(EmailService.send_welcome_email, clean_email, dto.full_name.split()[0])
+        email_addr = clean_email
+        fname = dto.full_name.split()[0]
+        # Send Registration Email via BackgroundTasks
+        background_tasks.add_task(EmailService.send_registration_email, email_addr, fname)
 
         return AuthResponseDto(
             success=True,
@@ -409,19 +411,22 @@ def forgot_password(dto: ForgotPasswordRequestDto, background_tasks: BackgroundT
         db.add(pr)
         db.commit()
         
+        email_addr = user.email
+        fname = user.profile.first_name if user.profile else "User"
+        
         # Send Email via BackgroundTasks
         background_tasks.add_task(
             EmailService.send_password_reset_email,
-            to_email=user.email,
+            to_email=email_addr,
             reset_token=token,  # Send raw token to user
-            username=user.profile.first_name if user.profile else "User"
+            username=fname
         )
         
     # Always return success to prevent email enumeration
     return GenericResponseDto(success=True, message="If an account exists, a reset email has been sent.")
 
 @router.post("/reset-password", response_model=GenericResponseDto)
-def reset_password(dto: ResetPasswordRequestDto, db: Session = Depends(get_db)):
+def reset_password(dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     raw_token = dto.token
     hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     new_password = dto.new_password
@@ -444,6 +449,16 @@ def reset_password(dto: ResetPasswordRequestDto, db: Session = Depends(get_db)):
     
     pr.used = True
     db.commit()
+    
+    email_addr = user.email
+    fname = user.profile.first_name if user.profile else "User"
+    
+    # Send success email
+    background_tasks.add_task(
+        EmailService.send_password_reset_success_email,
+        to_email=email_addr,
+        username=fname
+    )
     
     terminal_logger.crud("UPDATE", "User", details=f"Password reset successfully for {user.email}")
     return GenericResponseDto(success=True, message="Password has been reset successfully.")

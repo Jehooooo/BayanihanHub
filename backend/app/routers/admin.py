@@ -330,7 +330,9 @@ def suspend_user(user_id: str, dto: SuspendUserRequestDto, background_tasks: Bac
         
         prof = target_user.profile
         username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-        background_tasks.add_task(EmailService.send_suspension_email, target_user.email, username, dto.reason.strip(), duration_label)
+        user_email = target_user.email
+        reason_str = dto.reason.strip()
+        background_tasks.add_task(EmailService.send_suspension_email, user_email, username, reason_str, duration_label)
 
         db.commit()
         return {
@@ -1018,7 +1020,9 @@ def resolve_report(report_id: str, dto: ResolveReportRequestDto, background_task
                     
                     prof = target_user.profile
                     username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-                    background_tasks.add_task(EmailService.send_suspension_email, target_user.email, username, dto.message or 'Policy violation.', "Temporary")
+                    user_email = target_user.email
+                    suspend_reason = dto.message or 'Policy violation.'
+                    background_tasks.add_task(EmailService.send_suspension_email, user_email, username, suspend_reason, "Temporary")
 
         # Action E: Request Removed
         elif "request removed" in act_lower or "remove request" in act_lower:

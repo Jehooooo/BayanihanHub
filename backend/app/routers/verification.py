@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timezone
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
@@ -194,6 +194,7 @@ def get_applications(status: Optional[str] = Query(None), db: Session = Depends(
 def approve_application(
     verification_id: str,
     body: AdminDecisionRequestDto,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
@@ -244,7 +245,8 @@ def approve_application(
         
         prof = iv.user.profile
         username = f"{prof.first_name} {prof.last_name}".strip() if prof else "User"
-        EmailService.send_approval_email(iv.user.email, username)
+        user_email = iv.user.email
+        background_tasks.add_task(EmailService.send_approval_email, user_email, username)
 
     # Log audit entry
     try:
@@ -278,6 +280,7 @@ def approve_application(
 def reject_application(
     verification_id: str,
     body: AdminDecisionRequestDto,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
@@ -321,6 +324,11 @@ def reject_application(
             rejected_acc_status.account_status_id if rejected_acc_status else 3
         )
         iv.user.updated_at = now
+        
+        prof = iv.user.profile
+        username = f"{prof.first_name} {prof.last_name}".strip() if prof else "User"
+        user_email = iv.user.email
+        background_tasks.add_task(EmailService.send_rejection_email, user_email, username, reason)
 
     # Log audit entry
     try:

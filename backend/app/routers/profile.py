@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from app.db import get_db
-from app.models.user import User, Profile, ProfilePicture, ProfilePictureStatus, UserBadge, Badge
+from app.models.user import User, Profile, ProfilePicture, ProfilePictureStatus, UserBadge, Badge, NotificationPreference
 from app.services.notifications import create_notification
 
 router = APIRouter(prefix="/api", tags=["User Profile & Avatar Moderation"])
@@ -45,6 +45,13 @@ class AvatarUploadDto(BaseModel):
 class AvatarReviewDto(BaseModel):
     adminId: Optional[Any] = "user-5"
     reason: Optional[str] = "Did not meet community photo guidelines."
+
+
+class NotificationPreferenceDto(BaseModel):
+    emailMessages: bool
+    emailDonationUpdates: bool
+    emailExchangeUpdates: bool
+    emailAccountSecurity: bool
 
 
 def format_user_profile(user: User) -> dict:
@@ -164,6 +171,86 @@ def update_profile(dto: UpdateProfileDto, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return {"success": True, "message": "Profile updated successfully.", "profile": format_user_profile(user)}
+
+
+@router.get("/users/{user_id}/notification-preferences")
+def get_notification_preferences(user_id: str, db: Session = Depends(get_db)):
+    """
+    Fetch user notification preferences.
+    """
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+        
+    user = db.query(User).filter(User.user_id == num_uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    prefs = db.query(NotificationPreference).filter(NotificationPreference.user_id == num_uid).first()
+    if not prefs:
+        prefs = NotificationPreference(
+            user_id=num_uid,
+            email_messages=True,
+            email_donation_updates=True,
+            email_exchange_updates=True,
+            email_account_security=True
+        )
+        db.add(prefs)
+        db.commit()
+        db.refresh(prefs)
+        
+    return {
+        "success": True,
+        "preferences": {
+            "emailMessages": prefs.email_messages,
+            "emailDonationUpdates": prefs.email_donation_updates,
+            "emailExchangeUpdates": prefs.email_exchange_updates,
+            "emailAccountSecurity": prefs.email_account_security
+        }
+    }
+
+
+@router.put("/users/{user_id}/notification-preferences")
+def update_notification_preferences(user_id: str, dto: NotificationPreferenceDto, db: Session = Depends(get_db)):
+    """
+    Update user notification preferences.
+    """
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+        
+    user = db.query(User).filter(User.user_id == num_uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    prefs = db.query(NotificationPreference).filter(NotificationPreference.user_id == num_uid).first()
+    if not prefs:
+        prefs = NotificationPreference(
+            user_id=num_uid,
+            email_messages=dto.emailMessages,
+            email_donation_updates=dto.emailDonationUpdates,
+            email_exchange_updates=dto.emailExchangeUpdates,
+            email_account_security=dto.emailAccountSecurity
+        )
+        db.add(prefs)
+    else:
+        prefs.email_messages = dto.emailMessages
+        prefs.email_donation_updates = dto.emailDonationUpdates
+        prefs.email_exchange_updates = dto.emailExchangeUpdates
+        prefs.email_account_security = dto.emailAccountSecurity
+        
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Notification preferences updated successfully.",
+        "preferences": {
+            "emailMessages": prefs.email_messages,
+            "emailDonationUpdates": prefs.email_donation_updates,
+            "emailExchangeUpdates": prefs.email_exchange_updates,
+            "emailAccountSecurity": prefs.email_account_security
+        }
+    }
 
 
 @router.post("/users/profile/avatar")
