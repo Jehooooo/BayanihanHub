@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#f1f5f3] w-full overflow-x-hidden">
+    <div className="h-screen flex flex-col lg:flex-row bg-[#f1f5f3] w-full overflow-hidden">
       {/* Mobile Admin Header (Visible on < lg) */}
       <div className="lg:hidden sticky top-0 z-40 bg-[#0f172a] text-white flex items-center justify-between px-4 h-14 border-b border-[#1e293b] shadow-sm">
         <Link to="/admin" className="flex items-center gap-2.5 text-decoration-none">

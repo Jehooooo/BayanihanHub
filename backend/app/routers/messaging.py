@@ -480,7 +480,7 @@ def get_messages(
 
 
 @router.post("/{conversation_id}/messages", status_code=status.HTTP_201_CREATED)
-def send_message(conversation_id: str, dto: SendMessageDto, db: Session = Depends(get_db)):
+def send_message(conversation_id: str, dto: SendMessageDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Send a message into a conversation thread and notify recipients.
     Supports reply threading via replyToMessageId.
@@ -575,7 +575,7 @@ def send_message(conversation_id: str, dto: SendMessageDto, db: Session = Depend
                 if target_user:
                     prof = target_user.profile
                     target_name = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-                    EmailService.send_message_notification_email(target_user.email, target_name, sender_name, dto.content[:80] + ("..." if len(dto.content) > 80 else ""))
+                    background_tasks.add_task(EmailService.send_message_notification_email, target_user.email, target_name, sender_name)
                     
             except Exception:
                 pass  # Notification failure must never block message delivery
@@ -990,3 +990,39 @@ def edit_message(
         "isEdited": True,
         "editedAt": msg.edited_at.isoformat(),
     }
+
+@router.post("/trigger-unread-emails")
+def trigger_unread_emails(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    Trigger batch email notifications for users with unread messages.
+    Finds all users with unread messages, counts them, and sends a summary email.
+    """
+    # Find users with unread messages
+    # We look for messages where the user is a participant but not the sender,
+    # and the message was created after the user's last_read_at in that conversation,
+    # OR we just rely on a simple logic: in reality, maybe there is a 'is_read' flag or we calculate it.
+    
+    # Since we might not have a reliable is_read column on Message directly, we can check Notification table
+    unread_notifications = db.query(Notification).filter(
+        Notification.notification_type_id == 4,  # new_message
+        Notification.is_read == False
+    ).all()
+    
+    user_counts = {}
+    for notif in unread_notifications:
+        if notif.user_id not in user_counts:
+            user_counts[notif.user_id] = 0
+        user_counts[notif.user_id] += 1
+        
+    sent_count = 0
+    for uid, count in user_counts.items():
+        user = db.query(User).filter(User.user_id == uid).first()
+        if user:
+            prof = user.profile
+            username = f"{prof.first_name} {prof.last_name}".strip() if prof else user.email.split("@")[0]
+            background_tasks.add_task(EmailService.send_unread_messages_summary, user.email, username, count)
+            sent_count += 1
+            
+    # Optional: Mark them as read or add an 'emailed' flag so we don't spam. For testing, we'll leave as is.
+    
+    return {"success": True, "message": f"Triggered unread message emails for {sent_count} users."}

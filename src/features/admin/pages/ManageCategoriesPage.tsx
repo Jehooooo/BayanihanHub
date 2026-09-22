@@ -71,7 +71,7 @@ export default function ManageCategoriesPage() {
                 <tr key={cat.id} style={{ borderBottom: '1px solid var(--color-neutral-100)' }}>
                   <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>{cat.name}</td>
                   <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--color-neutral-500)' }}>{cat.id}</td>
-                  <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>{cat.itemCount || 12} items</td>
+                  <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>{cat.itemCount} items</td>
                 </tr>
               ))}
             </tbody>

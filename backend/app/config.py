@@ -26,6 +26,8 @@ SMTP_USER: str = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "noreply@bayanihanhub.com")
 
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # MySQL Database Configuration
 MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
 MYSQL_PORT: int = int(os.getenv("MYSQL_PORT", "3306"))

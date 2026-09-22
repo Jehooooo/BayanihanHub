@@ -39,10 +39,8 @@ class EmailService:
     def send_password_reset_email(to_email: str, reset_token: str, username: str) -> bool:
         subject = "Password Reset Request - Bayanihan Hub"
         
-        # Using a frontend URL for the reset link
-        # Should ideally be in config but we'll hardcode to the common frontend port for now
-        # Actually in production this is configured via frontend host env var, but 5173 or 5174 is typical for vite
-        reset_link = f"http://localhost:5174/reset-password?token={reset_token}"
+        # Using FRONTEND_URL from configuration for the reset link
+        reset_link = f"{config.FRONTEND_URL}/reset-password?token={reset_token}"
         
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -87,7 +85,7 @@ class EmailService:
             <p>Great news! Your account has been reviewed and approved by our moderation team.</p>
             <p>You now have full access to exchange items, message other members, and participate in the community.</p>
             <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:5174/login" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Log In Now</a>
+                <a href="{config.FRONTEND_URL}/login" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Log In Now</a>
             </div>
             <p style="font-size: 12px; color: #64748b; margin-top: 40px;">
                 Bayanihan Hub Team
@@ -134,21 +132,37 @@ class EmailService:
         return EmailService.send_email(to_email, subject, html)
 
     @staticmethod
-    def send_message_notification_email(to_email: str, username: str, sender_name: str, message_preview: str) -> bool:
+    def send_message_notification_email(to_email: str, username: str, sender_name: str) -> bool:
         subject = f"New message from {sender_name} - Bayanihan Hub"
         html = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <h2 style="color: #0f172a;">You have a new message!</h2>
             <p>Hi {username},</p>
-            <p><strong>{sender_name}</strong> sent you a message on Bayanihan Hub:</p>
-            <blockquote style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 10px; color: #334155; font-style: italic;">
-                "{message_preview}"
-            </blockquote>
+            <p><strong>{sender_name}</strong> sent you a direct message on Bayanihan Hub.</p>
+            <p>For your privacy and security, message contents are not displayed in this email.</p>
             <div style="text-align: center; margin: 30px 0;">
-                <a href="http://localhost:5174/messages" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reply to Message</a>
+                <a href="{config.FRONTEND_URL}/messages" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Message</a>
             </div>
             <p style="font-size: 12px; color: #64748b; margin-top: 40px;">
                 You are receiving this email because you have unread messages. To change your notification settings, visit your profile.
+            </p>
+        </div>
+        """
+        return EmailService.send_email(to_email, subject, html)
+
+    @staticmethod
+    def send_unread_messages_summary(to_email: str, username: str, count: int) -> bool:
+        subject = f"You have {count} unread messages on Bayanihan Hub"
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #0f172a;">Unread Messages</h2>
+            <p>Hi {username},</p>
+            <p>You have <strong>{count} unread messages</strong> waiting for you on Bayanihan Hub.</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{config.FRONTEND_URL}/messages" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Messages</a>
+            </div>
+            <p style="font-size: 12px; color: #64748b; margin-top: 40px;">
+                Bayanihan Hub Team
             </p>
         </div>
         """

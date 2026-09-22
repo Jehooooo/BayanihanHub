@@ -2,7 +2,7 @@ import hashlib
 import secrets
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
 
@@ -47,7 +47,7 @@ def parse_date(date_str: Optional[str]) -> Optional[date]:
 
 
 @router.post("/register", response_model=AuthResponseDto, status_code=status.HTTP_201_CREATED)
-def register(dto: RegisterRequestDto, db: Session = Depends(get_db)):
+def register(dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Register a new user in the Bayanihan Hub MySQL database.
     CRITICAL POLICY: Newly registered users are ALWAYS set to account_status 'PENDING'.
@@ -210,8 +210,8 @@ def register(dto: RegisterRequestDto, db: Session = Depends(get_db)):
         terminal_logger.crud("CREATE", "User", details=f"New neighbor registered: {clean_email} ({dto.full_name})")
         terminal_logger.integration("Backend", "Verification Service", "Created identity verification record", status="SUCCESS")
 
-        # Send Welcome Email
-        EmailService.send_welcome_email(clean_email, dto.full_name.split()[0])
+        # Send Welcome Email via BackgroundTasks
+        background_tasks.add_task(EmailService.send_welcome_email, clean_email, dto.full_name.split()[0])
 
         return AuthResponseDto(
             success=True,
@@ -387,28 +387,33 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
     )
 
 @router.post("/forgot-password", response_model=GenericResponseDto)
-def forgot_password(dto: ForgotPasswordRequestDto, db: Session = Depends(get_db)):
+def forgot_password(dto: ForgotPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = dto.email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
     
     if user:
-        # Generate token and store it
+        # Generate token and store its hash
         token = secrets.token_urlsafe(32)
+        hashed_token = hashlib.sha256(token.encode("utf-8")).hexdigest()
         expires = datetime.now() + timedelta(hours=1)
+        
+        # Invalidate old active tokens
+        db.query(PasswordReset).filter(PasswordReset.user_id == user.user_id, PasswordReset.used == False).update({"used": True})
         
         pr = PasswordReset(
             user_id=user.user_id,
-            token=token,
+            token=hashed_token,
             expires_at=expires,
             used=False
         )
         db.add(pr)
         db.commit()
         
-        # Send Email
-        EmailService.send_password_reset_email(
+        # Send Email via BackgroundTasks
+        background_tasks.add_task(
+            EmailService.send_password_reset_email,
             to_email=user.email,
-            reset_token=token,
+            reset_token=token,  # Send raw token to user
             username=user.profile.first_name if user.profile else "User"
         )
         
@@ -417,10 +422,11 @@ def forgot_password(dto: ForgotPasswordRequestDto, db: Session = Depends(get_db)
 
 @router.post("/reset-password", response_model=GenericResponseDto)
 def reset_password(dto: ResetPasswordRequestDto, db: Session = Depends(get_db)):
-    token = dto.token
+    raw_token = dto.token
+    hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     new_password = dto.new_password
     
-    pr = db.query(PasswordReset).filter(PasswordReset.token == token, PasswordReset.used == False).first()
+    pr = db.query(PasswordReset).filter(PasswordReset.token == hashed_token, PasswordReset.used == False).first()
     if not pr:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
         

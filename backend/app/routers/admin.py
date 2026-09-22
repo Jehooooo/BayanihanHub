@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import re
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc
@@ -221,7 +221,7 @@ def get_all_users(db: Session = Depends(get_db)):
 
 
 @router.post("/users/{user_id}/suspend")
-def suspend_user(user_id: str, dto: SuspendUserRequestDto, db: Session = Depends(get_db)):
+def suspend_user(user_id: str, dto: SuspendUserRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Suspend a user account with a configured duration (1d..90d, custom days, or permanent).
     Records suspension in user_suspensions, logs in audit_logs, and creates user notification.
@@ -330,7 +330,7 @@ def suspend_user(user_id: str, dto: SuspendUserRequestDto, db: Session = Depends
         
         prof = target_user.profile
         username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-        EmailService.send_suspension_email(target_user.email, username, dto.reason.strip(), duration_label)
+        background_tasks.add_task(EmailService.send_suspension_email, target_user.email, username, dto.reason.strip(), duration_label)
 
         db.commit()
         return {
@@ -873,7 +873,7 @@ def update_report_status(report_id: str, dto: UpdateReportStatusDto, db: Session
 
 
 @router.post("/reports/{report_id}/resolve")
-def resolve_report(report_id: str, dto: ResolveReportRequestDto, db: Session = Depends(get_db)):
+def resolve_report(report_id: str, dto: ResolveReportRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Resolve a report with selected moderation action and optional admin message.
     Executes existing BayanihanHub moderation action (removes post, issues warning,
@@ -1018,7 +1018,7 @@ def resolve_report(report_id: str, dto: ResolveReportRequestDto, db: Session = D
                     
                     prof = target_user.profile
                     username = f"{prof.first_name} {prof.last_name}".strip() if prof else target_user.email.split("@")[0]
-                    EmailService.send_suspension_email(target_user.email, username, dto.message or 'Policy violation.', "Temporary")
+                    background_tasks.add_task(EmailService.send_suspension_email, target_user.email, username, dto.message or 'Policy violation.', "Temporary")
 
         # Action E: Request Removed
         elif "request removed" in act_lower or "remove request" in act_lower:
@@ -1254,3 +1254,21 @@ def delete_rating(
         db.commit()
         
     return {"message": "Rating deleted successfully"}
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str, background_tasks: BackgroundTasks, adminId: Optional[str] = None, db: Session = Depends(get_db)):
+    admin_user_id = get_admin_id(db, adminId)
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+    target_user = db.query(User).filter(User.user_id == num_uid).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target_user.email.lower() == "jehosuebiscarra@gmail.com":
+        raise HTTPException(status_code=403, detail="Cannot delete the primary admin account.")
+    email = target_user.email
+    username = target_user.profile.first_name if target_user.profile else "User"
+    db.delete(target_user)
+    db.commit()
+    background_tasks.add_task(EmailService.send_deletion_email, email, username)
+    return {"success": True, "message": f"User {email} successfully deleted."}
