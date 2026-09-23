@@ -9,7 +9,6 @@ import {
   AlertOctagon,
   FolderTree,
   Star,
-  ClipboardCheck,
   Settings,
   ArrowLeft,
   LogOut,
@@ -33,7 +32,6 @@ const adminNavItems = [
   { to: '/admin/reports', icon: AlertOctagon, label: 'Reports' },
   { to: '/admin/categories', icon: FolderTree, label: 'Categories' },
   { to: '/admin/ratings', icon: Star, label: 'Ratings' },
-  { to: '/admin/qa-checklist', icon: ClipboardCheck, label: 'Pre-Deploy QA' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
