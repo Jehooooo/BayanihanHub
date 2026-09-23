@@ -27,6 +27,8 @@ import ManageReportsPage from '@/features/admin/pages/ManageReportsPage';
 import ManageCategoriesPage from '@/features/admin/pages/ManageCategoriesPage';
 import ManageApprovalsPage from '@/features/admin/pages/ManageApprovalsPage';
 import ManageRatingsPage from '@/features/admin/pages/ManageRatingsPage';
+import QAChecklistPage from '@/features/qa-checklist/pages/QAChecklistPage';
+import AdminQAChecklistPage from '@/features/admin/pages/AdminQAChecklistPage';
 import { useAuthStore } from '@/stores/authStore';
 import AiChatbotModal from '@/components/AiChatbotModal';
 import NotFoundPage from '@/features/error/NotFoundPage';
@@ -293,6 +295,17 @@ export default function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/admin/qa-checklist"
+          element={
+            <AdminRoute>
+              <AdminQAChecklistPage />
+            </AdminRoute>
+          }
+        />
+
+        {/* Standalone Pre-Deployment QA Checklist for QA / Dev Audits */}
+        <Route path="/qa-checklist" element={<QAChecklistPage />} />
 
         {/* Catch-all fallback */}
         <Route path="*" element={<NotFoundPage />} />
