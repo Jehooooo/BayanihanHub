@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from app.db import get_db
+from app.auth import get_current_admin
 from app.models.user import User, Profile, AccountStatus, Role, UserRole
 from app.models.exchange import Rating, Exchange
 from app.services.email import EmailService
@@ -83,7 +84,7 @@ async def verify_identity(dto: VerificationRequestDto):
 
 
 @router.get("/applications")
-def get_applications(status: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def get_applications(status: Optional[str] = Query(None), db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin)):
     """
     List all submitted identity verification applications from MySQL for administrator review.
     """
@@ -196,6 +197,7 @@ def approve_application(
     body: AdminDecisionRequestDto,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
 ):
     """
     Administrator approves a pending identity verification application.
@@ -223,7 +225,7 @@ def approve_application(
         db.query(AccountStatus).filter(AccountStatus.status_code == "APPROVED").first()
     )
 
-    admin_user_id = get_default_admin_id(db, body.admin_id)
+    admin_user_id = admin_user.user_id
     now = datetime.now(timezone.utc)
 
     # Update verification record
@@ -282,6 +284,7 @@ def reject_application(
     body: AdminDecisionRequestDto,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
 ):
     """
     Administrator rejects a pending identity verification application.
@@ -307,7 +310,7 @@ def reject_application(
         db.query(AccountStatus).filter(AccountStatus.status_code == "REJECTED").first()
     )
 
-    admin_user_id = get_default_admin_id(db, body.admin_id)
+    admin_user_id = admin_user.user_id
     now = datetime.now(timezone.utc)
 
     reason = body.reason or "Verification documents did not meet requirements."
@@ -363,6 +366,7 @@ def request_retry_application(
     verification_id: str,
     body: AdminDecisionRequestDto,
     db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
 ):
     """
     Administrator requests the applicant to retry submitting identification or photo.
@@ -387,7 +391,7 @@ def request_retry_application(
         db.query(AccountStatus).filter(AccountStatus.status_code == "REQUIRES_REVIEW").first()
     )
 
-    admin_user_id = get_default_admin_id(db, body.admin_id)
+    admin_user_id = admin_user.user_id
     now = datetime.now(timezone.utc)
 
     reason = body.reason or "Information or photo needs correction."
@@ -421,7 +425,7 @@ def request_retry_application(
 
 
 @router.get("/audit-logs", response_model=List[AdminAuditLogDto])
-def get_audit_logs(db: Session = Depends(get_db)):
+def get_audit_logs(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin)):
     """
     Retrieve administrator audit logs from MySQL.
     """

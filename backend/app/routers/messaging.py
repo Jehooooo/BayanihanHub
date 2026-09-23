@@ -13,6 +13,7 @@ from sqlalchemy import or_, desc, asc, and_
 from app.db import get_db
 from app.limiter import limiter
 import app.config as config
+from app.sanitizer import sanitize_text
 from app.services.email import EmailService
 from app.models.user import User, Profile, NotificationPreference
 from app.models.messaging import (
@@ -351,7 +352,7 @@ def get_or_create_conversation(dto: StartConversationDto, db: Session = Depends(
             conversation_id=new_conv.conversation_id,
             sender_id=sender_id,
             message_type_id=1,
-            content=dto.initialMessage.strip(),
+            content=sanitize_text(dto.initialMessage.strip()),
         )
         db.add(new_msg)
 
@@ -531,7 +532,7 @@ def send_message(conversation_id: str, dto: SendMessageDto, background_tasks: Ba
         conversation_id=num_conv,
         sender_id=num_sender,
         message_type_id=m_type_id,
-        content=dto.content.strip(),
+        content=sanitize_text(dto.content.strip()) or "",
         file_url=dto.fileUrl,
         file_name=dto.fileName,
         reply_to_message_id=reply_to_num,
@@ -1010,7 +1011,7 @@ def edit_message(
             detail=f"Messages can only be edited within {ACTION_WINDOW_MINUTES} minutes of sending."
         )
 
-    msg.content = new_content
+    msg.content = sanitize_text(new_content) or ""
     msg.is_edited = True
     msg.edited_at = now
 

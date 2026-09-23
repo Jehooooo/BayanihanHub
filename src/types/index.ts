@@ -101,6 +101,7 @@ export interface User {
   avatarRejectionReason?: string;
   role: UserRole;
   isVerified: boolean;
+  token?: string;
   account_status?: AccountStatus;
   facial_verification_status?: FacialVerificationStatus;
   id_verification_status?: IdVerificationStatus;
@@ -492,6 +493,7 @@ export interface RegisterData {
   account_status?: AccountStatus;
   facial_verification_status?: FacialVerificationStatus;
   id_verification_status?: IdVerificationStatus;
+  website?: string;
 }
 
 export const PHILIPPINE_ID_CONFIGS: Record<PhilippineIdType, IdTypeConfig> = {

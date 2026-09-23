@@ -26,7 +26,12 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
 
       fetchSubmissions: async () => {
         try {
-          const res = await fetch('/api/admin/avatars');
+          const user = useAuthStore.getState().user;
+          const headers: Record<string, string> = {};
+          if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+          if (user?.id) headers['X-User-Id'] = String(user.id);
+
+          const res = await fetch('/api/admin/avatars', { headers });
           if (res.ok) {
             const data = await res.json();
             if (data.submissions && Array.isArray(data.submissions)) {
@@ -46,9 +51,14 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
         const now = new Date().toISOString();
 
         try {
+          const user = useAuthStore.getState().user;
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+          if (user?.id) headers['X-User-Id'] = String(user.id);
+
           await fetch('/api/users/profile/avatar', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ userId, imageUrl }),
           });
         } catch {
@@ -97,8 +107,14 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
         const now = new Date().toISOString();
 
         try {
+          const user = useAuthStore.getState().user;
+          const headers: Record<string, string> = {};
+          if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+          if (user?.id) headers['X-User-Id'] = String(user.id);
+
           await fetch(`/api/admin/avatars/${encodeURIComponent(submissionId)}/approve`, {
             method: 'POST',
+            headers,
           });
         } catch {
           // Best effort
@@ -148,9 +164,14 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
         const now = new Date().toISOString();
 
         try {
+          const user = useAuthStore.getState().user;
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+          if (user?.id) headers['X-User-Id'] = String(user.id);
+
           await fetch(`/api/admin/avatars/${encodeURIComponent(submissionId)}/reject`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ reason: rejectionReason }),
           });
         } catch {

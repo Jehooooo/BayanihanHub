@@ -61,6 +61,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     acceptTerms: false,
+    website: '',
 
     // Step 2 & 3: ID Details
     idType: '' as PhilippineIdType | '',
@@ -98,6 +99,11 @@ export default function RegisterPage() {
   const handleStep1Next = (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+
+    if (formData.website) {
+      toast.error('Automated submission detected.');
+      return;
+    }
 
     if (!formData.fullName.trim() || !formData.username.trim() || !formData.email.trim()) {
       toast.error('Please fill in all required account fields.');
@@ -229,6 +235,7 @@ export default function RegisterPage() {
           idDocumentUrl: compressedIdDoc,
           faceImageUrl: compressedSelfie,
           verificationConfidence: response.confidenceScore,
+          website: formData.website,
         });
 
         if (registerSuccess) {
@@ -311,6 +318,18 @@ export default function RegisterPage() {
           ============================================================ */}
       {currentStep === 1 && (
         <form onSubmit={handleStep1Next} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Anti-bot Honeypot field */}
+          <div style={{ position: 'absolute', opacity: 0, zIndex: -1, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={formData.website}
+              onChange={(e) => handleChange('website', e.target.value)}
+            />
+          </div>
+
           <div style={{ paddingBottom: '0.25rem' }}>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-neutral-900)', margin: 0 }}>
               Step 1: Account Information

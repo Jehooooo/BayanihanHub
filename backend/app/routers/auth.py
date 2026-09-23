@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
 
 from app.db import get_db
+from app.auth import create_access_token
 from app.limiter import limiter
 from app.models.user import User, Profile, UserRole, Role, AccountStatus, ProfilePicture, PasswordReset
 from app.models.verification import (
@@ -84,6 +85,13 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     """
     clean_email = dto.email.strip().lower()
     clean_username = dto.username.strip().lower()
+
+    # 0. Anti-bot honeypot protection
+    if getattr(dto, "website", None) and str(dto.website).strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Automated submission rejected.",
+        )
 
     # 1. Validate unique email
     existing_user_by_email = db.query(User).filter(User.email == clean_email).first()
@@ -402,6 +410,10 @@ def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db))
         "isSuspended": user.is_suspended,
     }
 
+    # Generate tamper-proof HS256 JWT access token
+    access_token = create_access_token(user.user_id, primary_role, user.email)
+    user_data["token"] = access_token
+
     # Update last active timestamp
     user.last_active_at = datetime.now(timezone.utc)
     db.commit()
@@ -413,6 +425,7 @@ def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db))
         success=True,
         message="Login successful.",
         user=user_data,
+        token=access_token,
         account_status="APPROVED",
     )
 

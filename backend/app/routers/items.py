@@ -11,6 +11,7 @@ from sqlalchemy import or_, desc, asc
 
 from app.db import get_db
 from app.limiter import limiter
+from app.sanitizer import sanitize_text
 import app.config as config
 from app.models.user import User, Profile
 from app.models.item import (
@@ -565,8 +566,8 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
             item_type_id=type_id,
             item_status_id=1,  # available
             location_id=location.location_id,
-            title=dto.title.strip(),
-            description=dto.description.strip(),
+            title=sanitize_text(dto.title) or "",
+            description=sanitize_text(dto.description) or "",
             quantity=dto.quantity or 1,
             availability=dto.availability or "Anytime",
             views_count=0,
@@ -660,9 +661,9 @@ def update_item(
         )
 
     if dto.title:
-        item.title = dto.title.strip()
+        item.title = sanitize_text(dto.title) or ""
     if dto.description:
-        item.description = dto.description.strip()
+        item.description = sanitize_text(dto.description) or ""
     if dto.availability:
         item.availability = dto.availability.strip()
     if dto.quantity is not None:

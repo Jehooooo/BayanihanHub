@@ -21,6 +21,7 @@ class RegisterRequestDto(BaseModel):
     id_document_url: Optional[str] = Field(None, alias="idDocumentUrl")
     face_image_url: Optional[str] = Field(None, alias="faceImageUrl")
     verification_confidence: Optional[int] = Field(95, alias="verificationConfidence")
+    website: Optional[str] = Field(None, description="Anti-bot honeypot field. Must be left empty by legitimate users.")
 
     class Config:
         populate_by_name = True
@@ -35,6 +36,7 @@ class AuthResponseDto(BaseModel):
     success: bool
     message: str
     user: Optional[dict] = None
+    token: Optional[str] = None
     account_status: str = Field("PENDING", alias="accountStatus")
     verification_id: Optional[str] = Field(None, alias="verificationId")
 

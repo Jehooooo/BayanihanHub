@@ -336,9 +336,14 @@ class VerificationService {
 
   async approveApplication(verificationId: string, adminId = 'admin-1'): Promise<any> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const res = await fetch(`/api/verification/applications/${verificationId}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ adminId }),
       });
       return await res.json();
@@ -349,9 +354,14 @@ class VerificationService {
 
   async rejectApplication(verificationId: string, reason: string, adminId = 'admin-1'): Promise<any> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const res = await fetch(`/api/verification/applications/${verificationId}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ adminId, reason }),
       });
       return await res.json();
@@ -362,9 +372,14 @@ class VerificationService {
 
   async requestRetry(verificationId: string, reason: string, instructions: string, adminId = 'admin-1'): Promise<any> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const res = await fetch(`/api/verification/applications/${verificationId}/retry`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ adminId, reason, retryInstructions: instructions }),
       });
       return await res.json();
@@ -375,10 +390,15 @@ class VerificationService {
 
   async getApplications(status?: string): Promise<any> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = {};
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const url = status
         ? `/api/verification/applications?status=${encodeURIComponent(status)}`
         : '/api/verification/applications';
-      const res = await fetch(url);
+      const res = await fetch(url, { headers });
       if (res.ok) {
         return await res.json();
       }

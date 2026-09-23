@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc
 
 from app.db import get_db
+from app.sanitizer import sanitize_text
 from app.models.user import User, Profile
 from app.models.item import ItemCategory, ItemLocation
 from app.models.request import ItemRequest, RequestStatus, RequestUrgency, RequestImage
@@ -222,8 +223,8 @@ def create_request(dto: CreateRequestDto, db: Session = Depends(get_db)):
         urgency_id=urg_id,
         request_status_id=1,  # active
         location_id=loc.location_id,
-        title=dto.title.strip(),
-        description=dto.description.strip(),
+        title=sanitize_text(dto.title) or "",
+        description=sanitize_text(dto.description) or "",
         needed_before=needed_dt,
     )
     db.add(new_req)

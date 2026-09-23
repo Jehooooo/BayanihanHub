@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, func
 
 from app.db import get_db
+from app.sanitizer import sanitize_text
 from app.models.user import User, Profile, AccountStatus, Role, UserRole
 from app.models.item import Item, ItemStatus
 from app.models.request import ItemRequest
@@ -126,7 +127,7 @@ def submit_report(dto: CreateReportRequestDto, db: Session = Depends(get_db)):
         target_id=str(dto.target_id),
         reason_id=reason_obj.reason_id if reason_obj else 1,
         status_id=1,  # pending
-        description=dto.description.strip() if dto.description else "No additional description provided by reporter.",
+        description=sanitize_text(dto.description) if dto.description else "No additional description provided by reporter.",
         created_at=datetime.now()
     )
     db.add(new_report)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc
 
 from app.db import get_db
+from app.auth import get_current_admin
 from app.models.user import User, Profile, AccountStatus, Role, UserRole
 from app.models.item import Item, ItemImage, ItemStatus, ItemCategory, ItemCondition, ItemType
 from app.services.email import EmailService
@@ -15,7 +16,11 @@ from app.models.moderation import Report, ReportStatus, ReportReason, ReportTarg
 from app.models.notification import Notification, NotificationType
 from app.models.exchange import Rating
 
-router = APIRouter(prefix="/api/admin", tags=["Admin & Moderation"])
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["Admin & Moderation"],
+    dependencies=[Depends(get_current_admin)],
+)
 
 
 def parse_numeric_id(val: Any) -> Optional[int]:

@@ -38,7 +38,12 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
       fetchVerifications: async () => {
         set({ isLoading: true });
         try {
-          const res = await fetch('/api/verification/applications');
+          const user = (await import('./authStore')).useAuthStore.getState().user;
+          const headers: Record<string, string> = {};
+          if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+          if (user?.id) headers['X-User-Id'] = String(user.id);
+
+          const res = await fetch('/api/verification/applications', { headers });
           if (res.ok) {
             const data = await res.json();
             if (data && Array.isArray(data.applications)) {

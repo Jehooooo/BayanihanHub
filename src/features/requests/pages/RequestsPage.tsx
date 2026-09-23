@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { HandHeart, Plus, Clock, MessageSquare, MoreVertical, Flag } from 'lucide-react';
+import { HandHeart, Plus, Clock, MessageSquare, MoreVertical, Flag, AlertCircle } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -26,6 +26,7 @@ export default function RequestsPage() {
   const [activeTab, setActiveTab] = useState('active');
   const [requests, setRequests] = useState<ItemRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedRequestForFulfill, setSelectedRequestForFulfill] = useState<ItemRequest | null>(null);
   const [selectedRequestForReport, setSelectedRequestForReport] = useState<ItemRequest | null>(null);
@@ -41,9 +42,15 @@ export default function RequestsPage() {
 
   const loadRequests = useCallback(async () => {
     setIsLoading(true);
-    const data = await requestsService.getRequests(activeTab);
-    setRequests(data);
-    setIsLoading(false);
+    setError(null);
+    try {
+      const data = await requestsService.getRequests(activeTab);
+      setRequests(data);
+    } catch {
+      setError('Unable to load requests. Please check your internet connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [activeTab]);
 
   useEffect(() => {
@@ -150,6 +157,15 @@ export default function RequestsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ height: '8rem', backgroundColor: 'var(--color-neutral-100)', borderRadius: 'var(--radius-lg)' }} className="skeleton" />
             <div style={{ height: '8rem', backgroundColor: 'var(--color-neutral-100)', borderRadius: 'var(--radius-lg)' }} className="skeleton" />
+          </div>
+        ) : error ? (
+          <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '1px dashed var(--color-neutral-300)', borderRadius: 'var(--radius-lg)', backgroundColor: '#fff' }}>
+            <AlertCircle style={{ width: '2.5rem', height: '2.5rem', color: '#ef4444', margin: '0 auto 0.75rem auto' }} />
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-800)', margin: 0 }}>Unable to load requests</h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', marginTop: '0.25rem' }}>{error}</p>
+            <div style={{ marginTop: '1rem' }}>
+              <Button size="sm" onClick={loadRequests}>Try Again</Button>
+            </div>
           </div>
         ) : requests.length === 0 ? (
           <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '1px dashed var(--color-neutral-300)', borderRadius: 'var(--radius-lg)', backgroundColor: '#fff' }}>

@@ -19,6 +19,7 @@ export default function BrowsePage() {
 
   const [items, setItems] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>({
     query: initialQuery,
     sortBy: 'newest',
@@ -27,10 +28,12 @@ export default function BrowsePage() {
 
   const loadItems = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const data = await itemsService.getItems(filters);
       setItems(data);
     } catch {
+      setError('Unable to load items. Please check your internet connection and try again.');
       toast.error('Failed to load items.');
     } finally {
       setIsLoading(false);
@@ -118,7 +121,7 @@ export default function BrowsePage() {
           />
         </ScrollReveal>
 
-        {/* Item Grid */}
+        {/* Item Grid / Loading / Error / Empty States */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <SkeletonCard />
@@ -128,6 +131,13 @@ export default function BrowsePage() {
             <SkeletonCard />
             <SkeletonCard />
           </div>
+        ) : error ? (
+          <EmptyState
+            title="Unable to load items"
+            description={error}
+            actionLabel="Try Again"
+            onAction={loadItems}
+          />
         ) : items.length === 0 ? (
           <EmptyState
             title="No items found"

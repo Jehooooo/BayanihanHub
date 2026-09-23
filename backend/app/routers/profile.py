@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from app.db import get_db
+from app.auth import get_current_user_optional, get_current_admin
 from app.models.user import User, Profile, ProfilePicture, ProfilePictureStatus, UserBadge, Badge, NotificationPreference
 from app.services.notifications import create_notification
 
@@ -123,13 +124,26 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/users/profile")
-def update_profile(dto: UpdateProfileDto, db: Session = Depends(get_db)):
+def update_profile(
+    dto: UpdateProfileDto,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     """
     Update personal bio, phone, and address in MySQL.
+    Enforces record ownership: a user can only modify their own profile.
     """
     num_uid = parse_numeric_id(dto.userId)
     if not num_uid:
         raise HTTPException(status_code=400, detail="Valid userId is required.")
+
+    if current_user:
+        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
+        if not is_admin and current_user.user_id != num_uid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to edit another user's profile.",
+            )
 
     user = db.query(User).filter(User.user_id == num_uid).options(joinedload(User.profile)).first()
     if not user:
@@ -211,13 +225,26 @@ def get_notification_preferences(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/users/{user_id}/notification-preferences")
-def update_notification_preferences(user_id: str, dto: NotificationPreferenceDto, db: Session = Depends(get_db)):
+def update_notification_preferences(
+    user_id: str,
+    dto: NotificationPreferenceDto,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     """
-    Update user notification preferences.
+    Update user notification preferences. Enforces user record ownership.
     """
     num_uid = parse_numeric_id(user_id)
     if not num_uid:
         raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    if current_user:
+        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
+        if not is_admin and current_user.user_id != num_uid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to modify another user's preferences.",
+            )
         
     user = db.query(User).filter(User.user_id == num_uid).first()
     if not user:
@@ -254,7 +281,11 @@ def update_notification_preferences(user_id: str, dto: NotificationPreferenceDto
 
 
 @router.post("/users/profile/avatar")
-def submit_avatar(dto: AvatarUploadDto, db: Session = Depends(get_db)):
+def submit_avatar(
+    dto: AvatarUploadDto,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     """
     Submit a new profile picture. Enforces safety policy: avatar is saved as 'pending'
     and requires administrator approval before becoming active.
@@ -262,6 +293,14 @@ def submit_avatar(dto: AvatarUploadDto, db: Session = Depends(get_db)):
     num_uid = parse_numeric_id(dto.userId)
     if not num_uid:
         raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    if current_user:
+        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
+        if not is_admin and current_user.user_id != num_uid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to upload avatars for another user.",
+            )
 
     user = db.query(User).filter(User.user_id == num_uid).first()
     if not user:
@@ -296,7 +335,7 @@ def submit_avatar(dto: AvatarUploadDto, db: Session = Depends(get_db)):
 # ============================================================================
 
 @router.get("/admin/avatars")
-def get_pending_avatars(db: Session = Depends(get_db)):
+def get_pending_avatars(db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin)):
     """
     Administrator endpoint to review avatar submissions.
     """
@@ -336,7 +375,7 @@ def get_pending_avatars(db: Session = Depends(get_db)):
 
 
 @router.post("/admin/avatars/{avatar_id}/approve")
-def approve_avatar(avatar_id: str, db: Session = Depends(get_db)):
+def approve_avatar(avatar_id: str, db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin)):
     """
     Approve an avatar photo. Deactivates previous avatars for this user and activates new one.
     """
@@ -369,7 +408,7 @@ def approve_avatar(avatar_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/admin/avatars/{avatar_id}/reject")
-def reject_avatar(avatar_id: str, dto: Optional[AvatarReviewDto] = Body(None), db: Session = Depends(get_db)):
+def reject_avatar(avatar_id: str, dto: Optional[AvatarReviewDto] = Body(None), db: Session = Depends(get_db), admin_user: User = Depends(get_current_admin)):
     """
     Reject an avatar photo submission with reason.
     """
