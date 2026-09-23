@@ -5,12 +5,14 @@ import time
 import uuid
 from pathlib import Path
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc, and_
 
 from app.db import get_db
+from app.limiter import limiter
+import app.config as config
 from app.services.email import EmailService
 from app.models.user import User, Profile, NotificationPreference
 from app.models.messaging import (
@@ -724,8 +726,8 @@ def get_typing_status(
     }
 
 
-# Allowed MIME types for image rendering vs generic file download
-IMAGE_MIMES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+# Allowed MIME types for image rendering vs generic file download (SVG excluded for XSS security)
+IMAGE_MIMES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 # Resolve the project root → public/uploads/messages
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent  # project root
@@ -734,33 +736,57 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("/{conversation_id}/upload", status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def upload_message_file(
+    request: Request,
     conversation_id: str,
     file: UploadFile = File(...),
 ):
     """
-    Upload an image or file attachment for a conversation message.
-    Returns a public URL and MIME type so the frontend can render images inline.
+    Upload an image or verified document attachment for a conversation message.
+    Strictly validates file extension, MIME type, and size (max 10MB).
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided.")
 
-    # Generate a unique filename preserving original extension
-    ext = Path(file.filename).suffix.lower() or ".bin"
+    ext = Path(file.filename).suffix.lower()
+    if ext not in config.ALLOWED_ATTACHMENT_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Forbidden file extension '{ext}'. Allowed extensions: {', '.join(sorted(config.ALLOWED_ATTACHMENT_EXTENSIONS))}"
+        )
+
+    mime = (file.content_type or "application/octet-stream").lower()
+    if mime not in config.ALLOWED_ATTACHMENT_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file format '{mime}'."
+        )
+
+    contents = await file.read()
+    if len(contents) > config.MAX_DOCUMENT_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds maximum allowed size of 10MB."
+        )
+
+    if len(contents) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    # Generate a unique, sanitized filename
     unique_name = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOAD_DIR / unique_name
 
     with dest.open("wb") as out:
-        shutil.copyfileobj(file.file, out)
+        out.write(contents)
 
     public_url = f"/uploads/messages/{unique_name}"
-    mime = file.content_type or "application/octet-stream"
     is_image = mime in IMAGE_MIMES
 
     return {
         "success": True,
         "url": public_url,
-        "fileName": file.filename,
+        "fileName": Path(file.filename).name,
         "mimeType": mime,
         "isImage": is_image,
     }

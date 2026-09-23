@@ -2,11 +2,13 @@ import hashlib
 import secrets
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+import bcrypt
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
 
 from app.db import get_db
+from app.limiter import limiter
 from app.models.user import User, Profile, UserRole, Role, AccountStatus, ProfilePicture, PasswordReset
 from app.models.verification import (
     IdentityVerification,
@@ -31,8 +33,34 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication & Registration"])
 
 
 def hash_password(password: str) -> str:
-    """Password hashing disabled per project requirements: plain-text storage."""
-    return password
+    """Securely hash a password using bcrypt."""
+    # Truncate to 72 bytes per bcrypt specification
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify password against bcrypt hash, with backward-compatibility
+    fallback for legacy SHA-256 and plaintext passwords.
+    """
+    if not hashed_password or not plain_password:
+        return False
+    # 1. Bcrypt verification
+    if hashed_password.startswith(("$2a$", "$2b$", "$2y$")):
+        try:
+            return bcrypt.checkpw(plain_password.encode("utf-8")[:72], hashed_password.encode("utf-8"))
+        except Exception:
+            return False
+    # 2. Legacy SHA-256 verification
+    legacy_hash = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
+    if hashed_password == legacy_hash:
+        return True
+    # 3. Legacy Plaintext comparison (for zero-downtime migration of test accounts)
+    if hashed_password == plain_password:
+        return True
+    return False
 
 
 def parse_date(date_str: Optional[str]) -> Optional[date]:
@@ -47,7 +75,8 @@ def parse_date(date_str: Optional[str]) -> Optional[date]:
 
 
 @router.post("/register", response_model=AuthResponseDto, status_code=status.HTTP_201_CREATED)
-def register(dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def register(request: Request, dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Register a new user in the Bayanihan Hub MySQL database.
     CRITICAL POLICY: Newly registered users are ALWAYS set to account_status 'PENDING'.
@@ -235,7 +264,8 @@ def register(dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Ses
 
 
 @router.post("/login", response_model=AuthResponseDto)
-def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db)):
     """
     Authenticate a user against the Bayanihan Hub MySQL database.
     CRITICAL POLICY: Users with status 'PENDING' or 'REJECTED' CANNOT log in.
@@ -265,19 +295,17 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
             detail="Invalid email or password. Please try again.",
         )
 
-    # Verify password (plain-text comparison, no hashing per request)
-    is_valid_password = (user.password_hash == dto.password)
-    if not is_valid_password:
-        # Check legacy SHA-256 hash in case legacy hashed entries exist
-        legacy_hash = hashlib.sha256(dto.password.encode("utf-8")).hexdigest()
-        if user.password_hash == legacy_hash:
-            is_valid_password = True
-
-    if not is_valid_password:
+    # Verify password (secure bcrypt with fallback for legacy hashes and plaintext)
+    if not verify_password(dto.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password. Please try again.",
         )
+
+    # Automatic zero-downtime migration: re-hash to bcrypt if legacy or plaintext
+    if not user.password_hash.startswith(("$2a$", "$2b$", "$2y$")):
+        user.password_hash = hash_password(dto.password)
+        db.commit()
 
     # Check suspension lifecycle
     now_dt = datetime.now()
@@ -389,7 +417,8 @@ def login(dto: LoginRequestDto, db: Session = Depends(get_db)):
     )
 
 @router.post("/forgot-password", response_model=GenericResponseDto)
-def forgot_password(dto: ForgotPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def forgot_password(request: Request, dto: ForgotPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = dto.email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
     
@@ -426,7 +455,8 @@ def forgot_password(dto: ForgotPasswordRequestDto, background_tasks: BackgroundT
     return GenericResponseDto(success=True, message="If an account exists, a reset email has been sent.")
 
 @router.post("/reset-password", response_model=GenericResponseDto)
-def reset_password(dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     raw_token = dto.token
     hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     new_password = dto.new_password

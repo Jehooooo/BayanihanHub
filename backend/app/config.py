@@ -14,10 +14,43 @@ HOST: str = os.getenv("HOST", "0.0.0.0")
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
 DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
 JWT_SECRET: str = os.getenv("JWT_SECRET", "bayanihan-hub-secret-key-beta-2026")
+if ENVIRONMENT == "production" and JWT_SECRET == "bayanihan-hub-secret-key-beta-2026":
+    import warnings
+    warnings.warn("CRITICAL SECURITY: Using default JWT_SECRET in production environment! Set a unique JWT_SECRET in .env.")
+
 VERIFICATION_PROVIDER: str = os.getenv("VERIFICATION_PROVIDER", "biometric")
 VERIFICATION_API_KEY: str = os.getenv("VERIFICATION_API_KEY", "")
-CORS_ORIGINS: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
+
+# Default allowed origins (restrictive localhost instead of open wildcard)
+DEFAULT_CORS = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+CORS_ORIGINS: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", DEFAULT_CORS).split(",") if o.strip()]
+
+# Upload constraints
 MAX_DOCUMENT_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB limit
+MAX_IMAGE_SIZE_BYTES: int = 5 * 1024 * 1024       # 5MB limit for images
+ALLOWED_IMAGE_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+ALLOWED_IMAGE_MIME_TYPES: set[str] = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+}
+ALLOWED_ATTACHMENT_EXTENSIONS: set[str] = {
+    ".jpg", ".jpeg", ".png", ".webp", ".gif",
+    ".pdf", ".doc", ".docx", ".txt", ".zip",
+}
+ALLOWED_ATTACHMENT_MIME_TYPES: set[str] = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+    "application/zip",
+    "application/x-zip-compressed",
+}
 
 # SMTP / Email Configuration
 SMTP_HOST: str = os.getenv("SMTP_HOST", "")

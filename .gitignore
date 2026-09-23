@@ -46,3 +46,6 @@ scratch/
 notes.txt
 public/uploads/
 .vercel
+backups/
+backend/backups/
+*.sql.gz

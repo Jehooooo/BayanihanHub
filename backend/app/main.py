@@ -5,6 +5,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.routers import verification, auth, admin, notifications, items, exchanges, requests, messaging, profile, ai, terminal, reports
 from app.db import get_db, engine
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 from app.services.terminal_logger import terminal_logger
 import app.config as config
 
@@ -13,7 +16,14 @@ app = FastAPI(
     description="Python FastAPI backend powering identity verification, items, barter exchanges, community requests, direct messaging, and AI assistant for Bayanihan Hub.",
     version="1.0.0",
     debug=config.DEBUG,
+    docs_url="/docs" if config.DEBUG else None,
+    redoc_url="/redoc" if config.DEBUG else None,
+    openapi_url="/openapi.json" if config.DEBUG else None,
 )
+
+# Attach SlowAPI limiter state and exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
 app.add_middleware(
@@ -23,6 +33,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Enforces essential HTTP security headers on all responses."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(self)"
+    # Enforce HSTS for HTTPS or non-debug environments
+    if not config.DEBUG or request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 @app.middleware("http")

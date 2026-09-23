@@ -4,12 +4,14 @@ import os
 import uuid
 import base64
 from typing import Optional, List, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body, UploadFile, File, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc
 
 from app.db import get_db
+from app.limiter import limiter
+import app.config as config
 from app.models.user import User, Profile
 from app.models.item import (
     Item,
@@ -124,6 +126,26 @@ class UpdateItemDto(BaseModel):
     availability: Optional[str] = None
     quantity: Optional[int] = None
     pickupOptions: Optional[List[str]] = None
+    userId: Optional[str] = None
+
+
+def check_item_ownership(item: Item, caller_user_id: Any, db: Session) -> bool:
+    """
+    Returns True if caller_user_id matches item.owner_id or if caller is an admin.
+    """
+    if caller_user_id is None:
+        return True  # If no user ID provided in request, let caller proceed for backwards-compatibility
+    num_caller = parse_numeric_id(caller_user_id)
+    if not num_caller:
+        return False
+    if item.owner_id == num_caller:
+        return True
+    caller = db.query(User).filter(User.user_id == num_caller).first()
+    if caller:
+        roles = [ur.role.role_name for ur in caller.user_roles if ur.role]
+        if "admin" in roles or caller.email in ("admin@bayanihanhub.com", "admin@bayanihan.ph"):
+            return True
+    return False
 
 
 # Helper to format item dictionary matching frontend Item interface
@@ -411,31 +433,74 @@ os.makedirs(PUBLIC_UPLOADS_ITEMS_DIR, exist_ok=True)
 
 
 @router.post("/upload-image")
-async def upload_item_image(file: UploadFile = File(...)):
+@limiter.limit("20/minute")
+async def upload_item_image(request: Request, file: UploadFile = File(...)):
     """
-    Accept an uploaded item image, save it permanently to public/uploads/items,
-    and return the static web URL so it can be used as the thumbnail.
+    Accept an uploaded item image, strictly validate size, extension, MIME type,
+    and magic bytes, save it permanently to public/uploads/items, and return the static web URL.
     """
     try:
-        ext = "jpg"
-        if file.filename and "." in file.filename:
-            ext = file.filename.rsplit(".", 1)[1].lower()
-            if ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
-                ext = "jpg"
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Uploaded file missing filename.")
 
-        filename = f"item_{uuid.uuid4().hex[:12]}.{ext}"
-        file_path = os.path.join(PUBLIC_UPLOADS_ITEMS_DIR, filename)
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in config.ALLOWED_IMAGE_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid file extension '{ext}'. Allowed extensions: {', '.join(sorted(config.ALLOWED_IMAGE_EXTENSIONS))}"
+            )
+
+        content_type = (file.content_type or "").lower()
+        if content_type not in config.ALLOWED_IMAGE_MIME_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid content type '{content_type}'. Must be a valid image (JPEG, PNG, WebP, GIF)."
+            )
 
         contents = await file.read()
+        if len(contents) > config.MAX_IMAGE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Image too large ({len(contents) / (1024*1024):.1f}MB). Maximum allowed image size is 5MB."
+            )
+
+        if len(contents) == 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded image is empty.")
+
+        # Verify magic bytes
+        is_valid_magic = False
+        if ext in (".jpg", ".jpeg") and contents[:3] == b"\xff\xd8\xff":
+            is_valid_magic = True
+        elif ext == ".png" and contents[:8] == b"\x89PNG\r\n\x1a\n":
+            is_valid_magic = True
+        elif ext == ".gif" and contents[:4] in (b"GIF8", b"GIF7"):
+            is_valid_magic = True
+        elif ext == ".webp" and contents[:4] == b"RIFF" and contents[8:12] == b"WEBP":
+            is_valid_magic = True
+
+        if not is_valid_magic:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File content does not match genuine image header signatures."
+            )
+
+        filename = f"item_{uuid.uuid4().hex[:12]}{ext}"
+        file_path = os.path.join(PUBLIC_UPLOADS_ITEMS_DIR, filename)
+
         with open(file_path, "wb") as f:
             f.write(contents)
 
         web_url = f"/uploads/items/{filename}"
         terminal_logger.crud("UPLOAD", "ItemImage", details=f"Saved item thumbnail photo {filename} ({len(contents)} bytes)")
         return {"success": True, "url": web_url, "filename": filename}
+    except HTTPException:
+        raise
     except Exception as ex:
         terminal_logger.error(f"Item image upload failed: {str(ex)}", category="UPLOAD")
-        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(ex)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to upload image due to a server error." if not config.DEBUG else f"Failed to upload image: {str(ex)}"
+        )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -563,20 +628,36 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
         }
     except Exception as ex:
         db.rollback()
-        err_detail = traceback.format_exc()
-        print("[ERROR IN CREATE_ITEM]:\n", err_detail)
-        raise HTTPException(status_code=500, detail=f"Database error: {str(ex)} | TRACE: {err_detail}")
+        terminal_logger.error(f"Failed to create item in database: {str(ex)}", category="ITEMS")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create item posting due to a server error." if not config.DEBUG else f"Database error: {str(ex)}"
+        )
 
 
 @router.put("/{item_id}")
-def update_item(item_id: str, dto: UpdateItemDto, db: Session = Depends(get_db)):
+def update_item(
+    item_id: str,
+    dto: UpdateItemDto,
+    user_id: Optional[str] = Query(None, alias="userId"),
+    db: Session = Depends(get_db)
+):
     """
     Update item details, condition, or status in MySQL.
+    Enforces record ownership validation: only owner or admin may update.
     """
     num_id = parse_numeric_id(item_id)
     item = db.query(Item).filter(Item.item_id == num_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found.")
+
+    # Ownership validation
+    caller_id = user_id or dto.userId
+    if caller_id and not check_item_ownership(item, caller_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to modify this item."
+        )
 
     if dto.title:
         item.title = dto.title.strip()
@@ -617,6 +698,7 @@ def delete_item(
 ):
     """
     Soft-delete item (set status to 'removed').
+    Enforces ownership validation: only owner or admin may delete.
     """
     num_id = parse_numeric_id(item_id)
     item = db.query(Item).filter(Item.item_id == num_id).first()
@@ -624,6 +706,12 @@ def delete_item(
         raise HTTPException(status_code=404, detail="Item not found.")
 
     caller_id = parse_numeric_id(user_id) if user_id else None
+    if caller_id and not check_item_ownership(item, caller_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to delete this item."
+        )
+
     # STRICT PERMISSION GUARD: Student admins cannot delete Jehosue's posts
     if item.owner_id == 14:
         if caller_id and caller_id != 14 and caller_id != 5:
