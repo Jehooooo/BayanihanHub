@@ -79,9 +79,14 @@ export const itemsService = {
   },
 
   async createItem(data: Omit<Item, 'id' | 'views' | 'favorites' | 'createdAt' | 'updatedAt'>): Promise<Item> {
+    const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+    if (user?.id) headers['X-User-Id'] = String(user.id);
+
     const res = await fetch('/api/items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         title: data.title,
         description: data.description,
@@ -114,8 +119,14 @@ export const itemsService = {
   async toggleFavorite(itemId: string, userId?: string): Promise<boolean> {
     if (!userId) return false;
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = {};
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const res = await fetch(`/api/items/${encodeURIComponent(itemId)}/save?userId=${encodeURIComponent(userId)}`, {
         method: 'POST',
+        headers,
       });
       if (res.ok) {
         const data = await res.json();
@@ -138,8 +149,14 @@ export const itemsService = {
 
   async deleteItem(id: string): Promise<boolean> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = {};
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       const res = await fetch(`/api/items/${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        headers,
       });
       return res.ok;
     } catch (err) {

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc
 
 from app.db import get_db
+from app.auth import get_current_user
 from app.sanitizer import sanitize_text
 from app.models.user import User, Profile
 from app.models.item import ItemCategory, ItemLocation
@@ -344,14 +345,25 @@ def fulfill_request(
 
 
 @router.delete("/{request_id}")
-def cancel_request(request_id: str, db: Session = Depends(get_db)):
+def cancel_request(
+    request_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
-    Cancel community request.
+    Cancel community request. Enforces ownership: only requester or admin may cancel.
     """
     num_id = parse_numeric_id(request_id)
     req = db.query(ItemRequest).filter(ItemRequest.request_id == num_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found.")
+
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and req.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You do not have permission to cancel this request.",
+        )
 
     req.request_status_id = 4  # cancelled
     db.commit()

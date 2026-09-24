@@ -48,11 +48,10 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
             const data = await res.json();
             if (data && Array.isArray(data.applications)) {
               const sanitized = data.applications
-                .filter((a: any) => a.userId !== 'user-14' && a.userId !== '14' && !a.fullNameOnId?.toLowerCase().includes('jehosue'))
                 .map((a: any) => ({
                   ...a,
-                  faceImageUrl: '',
-                  user: a.user ? { ...a.user, avatar: '' } : a.user,
+                  faceImageUrl: a.faceImageUrl || '',
+                  user: a.user ? { ...a.user, avatar: a.user.avatar || '' } : a.user,
                 }));
               set({ verifications: sanitized, isLoading: false });
               return;

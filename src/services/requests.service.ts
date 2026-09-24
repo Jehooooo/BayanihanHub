@@ -47,9 +47,14 @@ export const requestsService = {
   },
 
   async createRequest(data: Omit<ItemRequest, 'id' | 'responses' | 'createdAt' | 'updatedAt'>): Promise<ItemRequest> {
+    const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+    if (user?.id) headers['X-User-Id'] = String(user.id);
+
     const res = await fetch('/api/requests', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         title: data.title,
         description: data.description,
@@ -80,11 +85,16 @@ export const requestsService = {
 
   async updateRequestStatus(id: string, status: ItemRequest['status']): Promise<boolean> {
     try {
+      const user = (await import('../stores/authStore')).useAuthStore.getState().user;
+      const headers: Record<string, string> = {};
+      if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
+      if (user?.id) headers['X-User-Id'] = String(user.id);
+
       if (status === 'completed') {
-        const res = await fetch(`/api/requests/${encodeURIComponent(id)}/fulfill`, { method: 'POST' });
+        const res = await fetch(`/api/requests/${encodeURIComponent(id)}/fulfill`, { method: 'POST', headers });
         return res.ok;
       } else if (status === 'cancelled') {
-        const res = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const res = await fetch(`/api/requests/${encodeURIComponent(id)}`, { method: 'DELETE', headers });
         return res.ok;
       }
     } catch (err) {

@@ -54,16 +54,16 @@ def get_live_system_statistics(db: Session) -> dict:
     except Exception as exc:
         print(f"[WARN] Error fetching AI stats: {exc}")
         return {
-            "totalItems": 18,
-            "totalDonations": 10,
-            "totalExchangesPosted": 8,
-            "completedExchanges": 5,
-            "activeExchanges": 3,
-            "totalRequests": 6,
-            "fulfilledRequests": 4,
-            "verifiedNeighbors": 12,
-            "totalReports": 1,
-            "activeBarangays": 4,
+            "totalItems": 0,
+            "totalDonations": 0,
+            "totalExchangesPosted": 0,
+            "completedExchanges": 0,
+            "activeExchanges": 0,
+            "totalRequests": 0,
+            "fulfilledRequests": 0,
+            "verifiedNeighbors": 0,
+            "totalReports": 0,
+            "activeBarangays": 0,
         }
 
 

@@ -11,11 +11,13 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc, and_
 
 from app.db import get_db
+from app.auth import get_current_user, get_current_admin
 from app.limiter import limiter
 import app.config as config
 from app.sanitizer import sanitize_text
 from app.services.email import EmailService
 from app.models.user import User, Profile, NotificationPreference
+from app.models.notification import Notification
 from app.models.messaging import (
     Conversation,
     ConversationParticipant,
@@ -228,21 +230,25 @@ def format_conversation(conv: Conversation, current_user_id: int) -> dict:
 def list_conversations(
     userId: Optional[str] = Query(None, alias="userId"),
     user_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     List all active chat conversations for a given user.
     """
     raw_id = userId or user_id
-    num_uid = resolve_conversation_user_id(raw_id, db)
-    if not num_uid:
-        raise HTTPException(status_code=400, detail="userId is required.")
+    target_id = resolve_conversation_user_id(raw_id, db) if raw_id else current_user.user_id
+    
+    # Ownership & RBAC check: Only admins can view another user's conversation list
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if target_id != current_user.user_id and not is_admin:
+        raise HTTPException(status_code=403, detail="You do not have permission to view another user's conversations.")
+
+    num_uid = target_id
 
     # Touch current user's last active timestamp
-    caller = db.query(User).filter(User.user_id == num_uid).first()
-    if caller:
-        caller.last_active_at = datetime.now()
-        db.commit()
+    current_user.last_active_at = datetime.now()
+    db.commit()
 
     convs = (
         db.query(Conversation)
@@ -367,11 +373,13 @@ def get_messages(
     conversation_id: str,
     userId: Optional[str] = Query(None, alias="userId"),
     user_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieve chronological messages for a conversation thread.
     Includes: reactions, reply preview, edit state, unsent state.
+    Requires caller to be an active participant or system admin.
     """
     num_id = parse_numeric_id(conversation_id)
     if not num_id:
@@ -381,26 +389,31 @@ def get_messages(
     if not conv:
         return {"success": True, "count": 0, "messages": []}
 
-    raw_id = userId or user_id
-    num_user = resolve_conversation_user_id(raw_id, db) if raw_id else None
-    if num_user:
+    # Verify participant or admin authorization
+    is_part = db.query(ConversationParticipant).filter(
+        ConversationParticipant.conversation_id == num_id,
+        ConversationParticipant.user_id == current_user.user_id,
+    ).first()
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+
+    if not is_part and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view messages in this conversation.",
+        )
+
+    num_user = current_user.user_id
+    if is_part:
         # Mark conversation read for this user and touch presence
-        part = db.query(ConversationParticipant).filter(
-            ConversationParticipant.conversation_id == num_id,
-            ConversationParticipant.user_id == num_user
-        ).first()
-        if part:
-            part.last_read_at = datetime.now()
-        caller = db.query(User).filter(User.user_id == num_user).first()
-        if caller:
-            caller.last_active_at = datetime.now()
+        is_part.last_read_at = datetime.now()
+        current_user.last_active_at = datetime.now()
         db.commit()
 
     # Find the other participant's last_read_at to compute read receipts per message
     other_part = db.query(ConversationParticipant).filter(
         ConversationParticipant.conversation_id == num_id,
-        ConversationParticipant.user_id != num_user
-    ).first() if num_user else None
+        ConversationParticipant.user_id != num_user,
+    ).first()
     other_last_read = other_part.last_read_at if other_part else None
 
     msgs = (
@@ -483,17 +496,23 @@ def get_messages(
 
 
 @router.post("/{conversation_id}/messages", status_code=status.HTTP_201_CREATED)
-def send_message(conversation_id: str, dto: SendMessageDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def send_message(
+    conversation_id: str,
+    dto: SendMessageDto,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Send a message into a conversation thread and notify recipients.
     Supports reply threading via replyToMessageId.
+    Requires caller to be an active participant or system admin.
     """
     num_conv = parse_numeric_id(conversation_id)
-    sender = resolve_valid_user(dto.senderId, db, fallback_index=0)
-    num_sender = sender.user_id if sender else None
+    num_sender = current_user.user_id
 
-    if not num_conv or not num_sender:
-        raise HTTPException(status_code=400, detail="Invalid conversation or sender ID.")
+    if not num_conv:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID.")
 
     conv = db.query(Conversation).filter(Conversation.conversation_id == num_conv).first()
     if not conv:
@@ -509,6 +528,17 @@ def send_message(conversation_id: str, dto: SendMessageDto, background_tasks: Ba
         other_user = db.query(User).filter(User.user_id != num_sender).first()
         if other_user:
             db.add(ConversationParticipant(conversation_id=num_conv, user_id=other_user.user_id))
+    else:
+        is_part = db.query(ConversationParticipant).filter(
+            ConversationParticipant.conversation_id == num_conv,
+            ConversationParticipant.user_id == num_sender,
+        ).first()
+        is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+        if not is_part and not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to send messages in this conversation.",
+            )
 
     # Resolve reply_to_message_id
     reply_to_num = None
@@ -742,11 +772,27 @@ async def upload_message_file(
     request: Request,
     conversation_id: str,
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Upload an image or verified document attachment for a conversation message.
     Strictly validates file extension, MIME type, and size (max 10MB).
+    Requires caller to be an active participant or system admin.
     """
+    num_conv = parse_numeric_id(conversation_id)
+    if num_conv:
+        is_part = db.query(ConversationParticipant).filter(
+            ConversationParticipant.conversation_id == num_conv,
+            ConversationParticipant.user_id == current_user.user_id,
+        ).first()
+        is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+        if not is_part and not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to upload files to this conversation.",
+            )
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided.")
 
@@ -803,6 +849,7 @@ def toggle_reaction(
     conversation_id: str,
     message_id: str,
     dto: ReactDto,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -813,10 +860,18 @@ def toggle_reaction(
     """
     num_conv = parse_numeric_id(conversation_id)
     num_msg = parse_numeric_id(message_id)
-    num_user = resolve_conversation_user_id(dto.userId, db)
+    num_user = current_user.user_id
 
-    if not num_conv or not num_msg or not num_user:
-        raise HTTPException(status_code=400, detail="Invalid conversation, message, or user ID.")
+    if not num_conv or not num_msg:
+        raise HTTPException(status_code=400, detail="Invalid conversation or message ID.")
+
+    is_part = db.query(ConversationParticipant).filter(
+        ConversationParticipant.conversation_id == num_conv,
+        ConversationParticipant.user_id == num_user,
+    ).first()
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_part and not is_admin:
+        raise HTTPException(status_code=403, detail="You do not have permission to react to messages in this conversation.")
 
     # Validate message exists in this conversation
     msg = db.query(Message).filter(
@@ -875,6 +930,7 @@ def remove_reaction(
     message_id: str,
     userId: Optional[str] = Query(None, alias="userId"),
     user_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -882,11 +938,10 @@ def remove_reaction(
     """
     num_conv = parse_numeric_id(conversation_id)
     num_msg = parse_numeric_id(message_id)
-    raw_id = userId or user_id
-    num_user = resolve_conversation_user_id(raw_id, db)
+    num_user = current_user.user_id
 
-    if not num_conv or not num_msg or not num_user:
-        raise HTTPException(status_code=400, detail="Invalid conversation, message, or user ID.")
+    if not num_conv or not num_msg:
+        raise HTTPException(status_code=400, detail="Invalid conversation or message ID.")
 
     existing = db.query(MessageReaction).filter(
         MessageReaction.message_id == num_msg,
@@ -909,6 +964,7 @@ def unsend_message(
     conversation_id: str,
     message_id: str,
     dto: UnsendDto,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -918,9 +974,9 @@ def unsend_message(
     """
     num_conv = parse_numeric_id(conversation_id)
     num_msg = parse_numeric_id(message_id)
-    num_user = resolve_conversation_user_id(dto.userId, db)
+    num_user = current_user.user_id
 
-    if not num_conv or not num_msg or not num_user:
+    if not num_conv or not num_msg:
         raise HTTPException(status_code=400, detail="Invalid parameters.")
 
     msg = db.query(Message).filter(
@@ -973,6 +1029,7 @@ def edit_message(
     conversation_id: str,
     message_id: str,
     dto: EditMessageDto,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -981,9 +1038,9 @@ def edit_message(
     """
     num_conv = parse_numeric_id(conversation_id)
     num_msg = parse_numeric_id(message_id)
-    num_user = resolve_conversation_user_id(dto.userId, db)
+    num_user = current_user.user_id
 
-    if not num_conv or not num_msg or not num_user:
+    if not num_conv or not num_msg:
         raise HTTPException(status_code=400, detail="Invalid parameters.")
 
     new_content = dto.content.strip()

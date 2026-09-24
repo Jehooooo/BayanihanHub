@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 
 from app.db import get_db
-from app.auth import get_current_user_optional, get_current_admin
+from app.auth import get_current_user, get_current_user_optional, get_current_admin
 from app.models.user import User, Profile, ProfilePicture, ProfilePictureStatus, UserBadge, Badge, NotificationPreference
 from app.services.notifications import create_notification
 
@@ -127,7 +127,7 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
 def update_profile(
     dto: UpdateProfileDto,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Update personal bio, phone, and address in MySQL.
@@ -137,13 +137,12 @@ def update_profile(
     if not num_uid:
         raise HTTPException(status_code=400, detail="Valid userId is required.")
 
-    if current_user:
-        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
-        if not is_admin and current_user.user_id != num_uid:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to edit another user's profile.",
-            )
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and current_user.user_id != num_uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to edit another user's profile.",
+        )
 
     user = db.query(User).filter(User.user_id == num_uid).options(joinedload(User.profile)).first()
     if not user:
@@ -229,7 +228,7 @@ def update_notification_preferences(
     user_id: str,
     dto: NotificationPreferenceDto,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Update user notification preferences. Enforces user record ownership.
@@ -238,13 +237,12 @@ def update_notification_preferences(
     if not num_uid:
         raise HTTPException(status_code=400, detail="Invalid user ID.")
 
-    if current_user:
-        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
-        if not is_admin and current_user.user_id != num_uid:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to modify another user's preferences.",
-            )
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and current_user.user_id != num_uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify another user's preferences.",
+        )
         
     user = db.query(User).filter(User.user_id == num_uid).first()
     if not user:
@@ -284,7 +282,7 @@ def update_notification_preferences(
 def submit_avatar(
     dto: AvatarUploadDto,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Submit a new profile picture. Enforces safety policy: avatar is saved as 'pending'
@@ -294,13 +292,12 @@ def submit_avatar(
     if not num_uid:
         raise HTTPException(status_code=400, detail="Invalid user ID.")
 
-    if current_user:
-        is_admin = any(ur.role.role_name == "admin" for ur in current_user.user_roles if ur.role)
-        if not is_admin and current_user.user_id != num_uid:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to upload avatars for another user.",
-            )
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and current_user.user_id != num_uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to upload avatars for another user.",
+        )
 
     user = db.query(User).filter(User.user_id == num_uid).first()
     if not user:

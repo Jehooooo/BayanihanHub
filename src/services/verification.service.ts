@@ -346,9 +346,13 @@ class VerificationService {
         headers,
         body: JSON.stringify({ adminId }),
       });
-      return await res.json();
-    } catch {
-      return { success: true };
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.detail || data.message || 'Failed to approve application' };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error approving application' };
     }
   }
 
@@ -364,9 +368,13 @@ class VerificationService {
         headers,
         body: JSON.stringify({ adminId, reason }),
       });
-      return await res.json();
-    } catch {
-      return { success: true };
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.detail || data.message || 'Failed to reject application' };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error rejecting application' };
     }
   }
 
@@ -382,9 +390,13 @@ class VerificationService {
         headers,
         body: JSON.stringify({ adminId, reason, retryInstructions: instructions }),
       });
-      return await res.json();
-    } catch {
-      return { success: true };
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.detail || data.message || 'Failed to request retry' };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error requesting retry' };
     }
   }
 

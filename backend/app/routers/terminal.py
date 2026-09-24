@@ -2,11 +2,16 @@ import json
 import asyncio
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
 from fastapi.responses import StreamingResponse
+from app.auth import get_current_admin
 from app.services.terminal_logger import terminal_logger
 
-router = APIRouter(prefix="/api/terminal", tags=["Terminal Logs"])
+router = APIRouter(
+    prefix="/api/terminal",
+    tags=["Terminal Logs"],
+    dependencies=[Depends(get_current_admin)],
+)
 
 
 @router.get("/logs")

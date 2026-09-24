@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc, asc
 
 from app.db import get_db
+from app.auth import get_current_user
 from app.limiter import limiter
 from app.sanitizer import sanitize_text
 import app.config as config
@@ -695,7 +696,8 @@ def update_item(
 def delete_item(
     item_id: str,
     user_id: Optional[str] = Query(None, alias="userId"),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Soft-delete item (set status to 'removed').
@@ -706,20 +708,12 @@ def delete_item(
     if not item:
         raise HTTPException(status_code=404, detail="Item not found.")
 
-    caller_id = parse_numeric_id(user_id) if user_id else None
-    if caller_id and not check_item_ownership(item, caller_id, db):
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and item.owner_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: You do not have permission to delete this item."
+            detail="Forbidden: You do not have permission to delete this item.",
         )
-
-    # STRICT PERMISSION GUARD: Student admins cannot delete Jehosue's posts
-    if item.owner_id == 14:
-        if caller_id and caller_id != 14 and caller_id != 5:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission Denied: Student admins cannot delete or remove Jehosue's posts."
-            )
 
     item.item_status_id = 7  # 'removed'
     db.commit()

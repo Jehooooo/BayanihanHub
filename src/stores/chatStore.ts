@@ -93,6 +93,32 @@ const createFallbackUser = (
   ...(isOnline !== undefined ? { isOnline } : {}),
 });
 
+const getChatAuthHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  try {
+    const raw = localStorage.getItem('bayanihan-auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const token = parsed?.state?.user?.token;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch {}
+  return headers;
+};
+
+const getChatHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {};
+  try {
+    const raw = localStorage.getItem('bayanihan-auth');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const token = parsed?.state?.user?.token;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch {}
+  return headers;
+};
+
 export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   activeChat: null,
@@ -113,7 +139,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const res = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`);
+      const res = await fetch(
+        `/api/conversations?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`,
+        { headers: getChatHeaders() }
+      );
       if (res.ok) {
         const data = await res.json();
         const apiChats: Chat[] = data.chats || data.conversations || [];
@@ -154,7 +183,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       const param = userId ? `?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}` : '';
-      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages${param}`);
+      const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages${param}`, {
+        headers: getChatHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.messages && Array.isArray(data.messages)) {
@@ -228,7 +259,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const res = await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({
           senderId,
           content,
@@ -297,7 +328,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/react`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({ userId, reaction }),
       });
     } catch {
@@ -318,7 +349,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/unsend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({ userId }),
       });
     } catch {
@@ -339,7 +370,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch(`/api/conversations/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/edit`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({ userId, content: newContent }),
       });
     } catch {
@@ -351,7 +382,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch(`/api/conversations/${encodeURIComponent(chatId)}/typing`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({ userId, isTyping }),
       });
     } catch {
@@ -363,7 +394,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch('/api/conversations/presence', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getChatAuthHeaders(),
         body: JSON.stringify({ userId }),
       });
     } catch {
@@ -379,7 +410,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (get().activeChat?.id !== chatId) return;
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
+          `/api/conversations/${encodeURIComponent(chatId)}/messages?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`,
+          { headers: getChatHeaders() }
         );
         if (res.ok) {
           const data = await res.json();
@@ -414,7 +446,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         const typingRes = await fetch(
-          `/api/conversations/${encodeURIComponent(chatId)}/typing?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`
+          `/api/conversations/${encodeURIComponent(chatId)}/typing?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`,
+          { headers: getChatHeaders() }
         );
         if (typingRes.ok) {
           const typingData = await typingRes.json();
@@ -462,6 +495,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await fetch(`/api/conversations/${encodeURIComponent(chatId)}/read?userId=${encodeURIComponent(userId)}&user_id=${encodeURIComponent(userId)}`, {
         method: 'PATCH',
+        headers: getChatAuthHeaders(),
       });
     } catch {
       // Best effort
@@ -476,7 +510,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const res = await fetch('/api/conversations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getChatAuthHeaders(),
       body: JSON.stringify({ participantIds }),
     });
 

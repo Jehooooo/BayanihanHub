@@ -505,7 +505,40 @@ export default function ItemDetailsPage() {
               )}
 
               {/* Action Buttons */}
-              {!isOwner && (
+              {isOwner ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  <div
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.8125rem',
+                      color: '#166534',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <ShieldCheck style={{ width: '1.1rem', height: '1.1rem' }} />
+                    <span>You are the author of this listing</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <Button
+                      variant="danger"
+                      size="lg"
+                      fullWidth
+                      style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      leftIcon={<Trash2 style={{ width: '1.2rem', height: '1.2rem' }} />}
+                    >
+                      Delete Post
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                   {item.type === 'exchange' ? (
                     <Button
@@ -814,6 +847,17 @@ export default function ItemDetailsPage() {
           targetTitle={item.title}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Post"
+        message="Are you sure you want to delete this post? Once removed, community members will no longer be able to view or request this item."
+        confirmLabel="Delete Post"
+        variant="danger"
+      />
     </PageLayout>
   );
 }

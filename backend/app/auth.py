@@ -3,8 +3,9 @@ import json
 import hmac
 import hashlib
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
-from fastapi import Request, Depends, HTTPException, status
+from typing import Optional, Dict, Any, Union
+from starlette.requests import HTTPConnection
+from fastapi import Request, WebSocket, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import JWT_SECRET
@@ -87,8 +88,8 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def extract_token_from_request(request: Request) -> Optional[str]:
-    """Extract bearer token or custom header from request."""
+def extract_token_from_request(request: HTTPConnection) -> Optional[str]:
+    """Extract bearer token, custom header, cookie, or query param from request or websocket."""
     # 1. Standard Authorization: Bearer <token>
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
@@ -104,11 +105,16 @@ def extract_token_from_request(request: Request) -> Optional[str]:
     if token_cookie:
         return token_cookie.strip()
 
+    # 4. Query param fallback (for WebSockets / SSE)
+    token_query = request.query_params.get("token")
+    if token_query:
+        return token_query.strip()
+
     return None
 
 
 def get_current_user_optional(
-    request: Request,
+    request: HTTPConnection,
     db: Session = Depends(get_db),
 ) -> Optional[User]:
     """Retrieve current user if a valid token is present; returns None otherwise."""
@@ -143,7 +149,7 @@ def get_current_user_optional(
 
 
 def get_current_user(
-    request: Request,
+    request: HTTPConnection,
     db: Session = Depends(get_db),
 ) -> User:
     """
@@ -183,7 +189,7 @@ def get_current_user(
 
 
 def get_current_admin(
-    request: Request,
+    request: HTTPConnection,
     db: Session = Depends(get_db),
 ) -> User:
     """

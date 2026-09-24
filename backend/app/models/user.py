@@ -55,14 +55,17 @@ class User(Base):
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     account_status: Mapped["AccountStatus"] = relationship("AccountStatus", back_populates="users")
-    profile: Mapped[Optional["Profile"]] = relationship("Profile", back_populates="user", uselist=False)
-    user_roles: Mapped[List["UserRole"]] = relationship("UserRole", back_populates="user")
-    badges: Mapped[List["UserBadge"]] = relationship("UserBadge", back_populates="user")
+    profile: Mapped[Optional["Profile"]] = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    user_roles: Mapped[List["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+    badges: Mapped[List["UserBadge"]] = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
     profile_pictures: Mapped[List["ProfilePicture"]] = relationship(
-        "ProfilePicture", foreign_keys="ProfilePicture.user_id", back_populates="user"
+        "ProfilePicture", foreign_keys="ProfilePicture.user_id", back_populates="user", cascade="all, delete-orphan"
     )
     notification_preferences: Mapped[Optional["NotificationPreference"]] = relationship(
-        "NotificationPreference", back_populates="user", uselist=False
+        "NotificationPreference", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    password_resets: Mapped[List["PasswordReset"]] = relationship(
+        "PasswordReset", back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -162,6 +165,8 @@ class PasswordReset(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="password_resets")
 
 
 class NotificationPreference(Base):

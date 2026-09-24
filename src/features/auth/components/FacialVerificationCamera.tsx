@@ -112,7 +112,7 @@ export default function FacialVerificationCamera({
     return () => {
       stopCamera();
     };
-  }, [selfieDataUrl]);
+  }, [selfieDataUrl, startCamera, stopCamera]);
 
   // Handle capture with optional flash animation
   const handleSnap = () => {

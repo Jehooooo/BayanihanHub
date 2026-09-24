@@ -115,8 +115,13 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error('Password should be at least 6 characters long.');
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(formData.password) || !/[0-9!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      toast.error('Password must contain at least one letter and at least one number or special character.');
       return;
     }
 
