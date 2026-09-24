@@ -1,13 +1,14 @@
 import { type ButtonHTMLAttributes, forwardRef } from 'react';
 import { Loader2 } from 'lucide-react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;
+  loadingText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
@@ -27,9 +28,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-9 px-4 text-xs gap-2',
-  md: 'h-10 px-5 text-sm gap-2.5',
-  lg: 'h-12 px-6 text-sm gap-3',
+  sm: 'h-9 px-4 text-xs gap-2 min-w-[4rem]',
+  md: 'h-10 px-5 text-sm gap-2.5 min-w-[5rem]',
+  lg: 'h-12 px-6 text-sm gap-3 min-w-[6rem]',
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -38,6 +39,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       isLoading = false,
+      loadingText,
       leftIcon,
       rightIcon,
       fullWidth = false,
@@ -52,11 +54,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
+        aria-busy={isLoading}
         className={`
           inline-flex items-center justify-center font-semibold
           rounded-[var(--radius-md)] cursor-pointer whitespace-nowrap
           transition-all duration-[var(--transition-fast)]
-          disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none
+          disabled:opacity-60 disabled:cursor-not-allowed disabled:pointer-events-none
           focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
           ${variantClasses[variant]}
           ${sizeClasses[size]}
@@ -66,17 +69,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin shrink-0 motion-reduce:animate-pulse" aria-hidden="true" />
         ) : (
           leftIcon && (
-            <span className="inline-flex shrink-0 items-center justify-center">
+            <span className="inline-flex shrink-0 items-center justify-center" aria-hidden="true">
               {leftIcon}
             </span>
           )
         )}
-        <span>{children}</span>
+        <span className="truncate">
+          {isLoading && loadingText ? loadingText : children}
+        </span>
         {!isLoading && rightIcon && (
-          <span className="inline-flex shrink-0 items-center justify-center">
+          <span className="inline-flex shrink-0 items-center justify-center" aria-hidden="true">
             {rightIcon}
           </span>
         )}

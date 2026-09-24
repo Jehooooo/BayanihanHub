@@ -2,13 +2,14 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showClose?: boolean;
+  isSubmitting?: boolean;
 }
 
 export default function Modal({
@@ -18,12 +19,13 @@ export default function Modal({
   children,
   size = 'md',
   showClose = true,
+  isSubmitting = false,
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !isSubmitting) onClose();
     };
 
     if (isOpen) {
@@ -35,7 +37,7 @@ export default function Modal({
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isSubmitting]);
 
   if (!isOpen) return null;
 
@@ -44,7 +46,7 @@ export default function Modal({
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 md:p-6"
       onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
+        if (e.target === overlayRef.current && !isSubmitting) onClose();
       }}
       role="dialog"
       aria-modal="true"
@@ -71,7 +73,8 @@ export default function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/70 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer flex items-center justify-center"
+                disabled={isSubmitting}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/70 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
