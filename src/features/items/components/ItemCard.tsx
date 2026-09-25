@@ -7,6 +7,7 @@ import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import ImageWithSkeleton from '@/components/feedback/ImageWithSkeleton';
 import { getCategoryName } from '@/data/categories';
 import { useAuthStore } from '@/stores/authStore';
 import { itemsService } from '@/services/items.service';
@@ -31,7 +32,6 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
   
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [imageError, setImageError] = useState(false);
   
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -137,47 +137,20 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
           style={{
             position: 'relative',
             aspectRatio: '4/3',
-            backgroundColor: 'var(--color-neutral-100)',
             overflow: 'hidden',
             flexShrink: 0,
             borderTopLeftRadius: 'calc(var(--radius-lg) - 1px)',
             borderTopRightRadius: 'calc(var(--radius-lg) - 1px)',
           }}
         >
-          {item.images && item.images.length > 0 && !imageError ? (
-            <img
-              src={item.images[0]}
-              alt={item.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                borderTopLeftRadius: 'inherit',
-                borderTopRightRadius: 'inherit',
-              }}
-              onError={() => setImageError(true)}
-            />
-          ) : null}
-
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: (item.images?.length && !imageError) ? 'none' : 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#f1f5f9',
-              color: 'var(--color-neutral-400)',
-              padding: '1rem',
-              textAlign: 'center',
-              borderTopLeftRadius: 'inherit',
-              borderTopRightRadius: 'inherit',
-            }}
-          >
-            <Tag style={{ width: '1.75rem', height: '1.75rem', marginBottom: '0.25rem', color: 'var(--color-neutral-400)' }} />
-            <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 600 }}>{getCategoryName(item.category)}</span>
-          </div>
+          <ImageWithSkeleton
+            src={item.images && item.images.length > 0 ? item.images[0] : undefined}
+            alt={item.title}
+            aspectRatio="4/3"
+            fallbackIcon={<Tag style={{ width: '1.75rem', height: '1.75rem', marginBottom: '0.25rem', color: 'var(--color-neutral-400)' }} />}
+            fallbackText={getCategoryName(item.category)}
+            containerClassName="w-full h-full"
+          />
 
           {/* Status / Type Badges */}
           <div
@@ -445,7 +418,7 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
         onConfirm={handleDelete}
         title="Delete Item"
         message={`Are you sure you want to delete "${item.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        confirmLabel={isDeleting ? 'Deleting post...' : 'Delete'}
         cancelLabel="Cancel"
         variant="danger"
         isLoading={isDeleting}

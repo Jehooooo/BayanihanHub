@@ -26,6 +26,7 @@ import Textarea from '@/components/ui/Textarea';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SEO from '@/components/common/SEO';
 import ReportModal from '@/features/moderation/components/ReportModal';
+import { SkeletonDetail, EmptyState } from '@/components/feedback';
 import { itemsService } from '@/services/items.service';
 import { exchangeService } from '@/services/exchange.service';
 import { useAuthStore } from '@/stores/authStore';
@@ -49,8 +50,10 @@ export default function ItemDetailsPage() {
   const [selectedUserItem, setSelectedUserItem] = useState('');
   const [userItems, setUserItems] = useState<Item[]>([]);
   const [isRequestingDonation, setIsRequestingDonation] = useState(false);
+  const [isSubmittingExchange, setIsSubmittingExchange] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [overflowMenuOpen, setOverflowMenuOpen] = useState(false);
   const overflowRef = useRef<HTMLDivElement>(null);
 
@@ -135,29 +138,27 @@ export default function ItemDetailsPage() {
 
   const handleDelete = async () => {
     if (!item || !user) return;
-    const success = await itemsService.deleteItem(item.id); // ItemsService.deleteItem takes one param usually
-    if (success) {
-      toast.success('Post deleted successfully');
-      navigate('/browse');
-    } else {
-      toast.error('Failed to delete post');
+    setIsDeleting(true);
+    try {
+      const success = await itemsService.deleteItem(item.id);
+      if (success) {
+        toast.success('Post deleted successfully');
+        navigate('/browse');
+      } else {
+        toast.error('Failed to delete post');
+      }
+    } catch {
+      toast.error('Error deleting post');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
     }
-    setIsDeleteModalOpen(false);
   };
 
   if (isLoading) {
     return (
       <PageLayout>
-        <div className="animate-pulse space-y-6 max-w-5xl mx-auto">
-          <div className="h-6 bg-neutral-200 rounded w-24" />
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-7 h-96 bg-neutral-200 rounded-lg" />
-            <div className="lg:col-span-5 space-y-4">
-              <div className="h-8 bg-neutral-200 rounded w-3/4" />
-              <div className="h-32 bg-neutral-200 rounded" />
-            </div>
-          </div>
-        </div>
+        <SkeletonDetail />
       </PageLayout>
     );
   }
@@ -165,12 +166,12 @@ export default function ItemDetailsPage() {
   if (!item) {
     return (
       <PageLayout>
-        <div className="text-center py-16">
-          <h2 className="text-xl font-bold text-neutral-800">Item not found</h2>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/browse')}>
-            Back to Browse
-          </Button>
-        </div>
+        <EmptyState
+          title="Item not found"
+          description="This item may have been removed or is no longer available in the community catalog."
+          actionLabel="Browse Available Items"
+          onAction={() => navigate('/browse')}
+        />
       </PageLayout>
     );
   }
@@ -194,9 +195,13 @@ export default function ItemDetailsPage() {
 
     try {
       // 1. Call backend endpoint to retrieve owner, find/reuse conversation, and send automated message
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
       const res = await fetch(`/api/items/${encodeURIComponent(item.id)}/request-donation`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           userId: user.id,
           posterId: item.ownerId,
@@ -244,52 +249,59 @@ export default function ItemDetailsPage() {
       toast.error('Please select an item to offer.');
       return;
     }
-    const offItem = userItems.find((i) => i.id === selectedUserItem);
-    await exchangeService.createExchange({
-      offeredItemId: selectedUserItem,
-      requestedItemId: item.id,
-      offererId: user!.id,
-      receiverId: item.ownerId,
-      message: offerMessage || 'Hi, I would like to offer an exchange for your item!',
-    });
-
-    // Flow 2: PROPOSE EXCHANGE BUTTON -> SEND TO USERS INBOX -> STORE IN DATABASE -> END
+    setIsSubmittingExchange(true);
     try {
-      const chat = await createChat([user!.id, item.ownerId]);
-      const proposalText = `🔄 Exchange Proposal for "${item.title}":\n\nI am offering "${offItem?.title || 'an item'}" in exchange.\n\nNote: ${offerMessage || 'Hi, I would like to offer an exchange for your item!'}`;
-      await sendMessage(chat.id, user!.id, proposalText, 'text');
-    } catch {
-      // Continue
-    }
+      const offItem = userItems.find((i) => i.id === selectedUserItem);
+      await exchangeService.createExchange({
+        offeredItemId: selectedUserItem,
+        requestedItemId: item.id,
+        offererId: user!.id,
+        receiverId: item.ownerId,
+        message: offerMessage || 'Hi, I would like to offer an exchange for your item!',
+      });
 
-    setExchangeModalOpen(false);
-    toast.success(
-      (t) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-          <span style={{ fontWeight: 700 }}>Exchange proposal sent to owner's inbox!</span>
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              navigate('/messages');
-            }}
-            style={{
-              alignSelf: 'flex-start',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: '#16a34a',
-              background: 'none',
-              border: 'none',
-              padding: '0.2rem 0',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            Go to Inbox →
-          </button>
-        </div>
-      ),
-      { duration: 5000 }
-    );
+      // Flow 2: PROPOSE EXCHANGE BUTTON -> SEND TO USERS INBOX -> STORE IN DATABASE -> END
+      try {
+        const chat = await createChat([user!.id, item.ownerId]);
+        const proposalText = `🔄 Exchange Proposal for "${item.title}":\n\nI am offering "${offItem?.title || 'an item'}" in exchange.\n\nNote: ${offerMessage || 'Hi, I would like to offer an exchange for your item!'}`;
+        await sendMessage(chat.id, user!.id, proposalText, 'text');
+      } catch {
+        // Continue
+      }
+
+      setExchangeModalOpen(false);
+      toast.success(
+        (t) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <span style={{ fontWeight: 700 }}>Exchange proposal sent to owner's inbox!</span>
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                navigate('/messages');
+              }}
+              style={{
+                alignSelf: 'flex-start',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#16a34a',
+                background: 'none',
+                border: 'none',
+                padding: '0.2rem 0',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Go to Inbox →
+            </button>
+          </div>
+        ),
+        { duration: 5000 }
+      );
+    } catch {
+      toast.error('Failed to submit exchange proposal. Please try again.');
+    } finally {
+      setIsSubmittingExchange(false);
+    }
   };
 
   return (
@@ -559,12 +571,13 @@ export default function ItemDetailsPage() {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      disabled={isRequestingDonation}
+                      isLoading={isRequestingDonation}
+                      loadingText="Opening conversation..."
                       style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
                       onClick={handleRequestDonation}
                       leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
                     >
-                      {isRequestingDonation ? 'Opening conversation...' : 'Request Donation'}
+                      Request Donation
                     </Button>
                   )}
                 </div>
@@ -829,6 +842,8 @@ export default function ItemDetailsPage() {
               variant="primary"
               fullWidth
               disabled={!selectedUserItem}
+              isLoading={isSubmittingExchange}
+              loadingText="Submitting..."
               onClick={handleCreateExchange}
             >
               Submit Offer
@@ -855,7 +870,8 @@ export default function ItemDetailsPage() {
         onConfirm={handleDelete}
         title="Delete Post"
         message="Are you sure you want to delete this post? Once removed, community members will no longer be able to view or request this item."
-        confirmLabel="Delete Post"
+        confirmLabel={isDeleting ? 'Deleting post...' : 'Delete Post'}
+        isLoading={isDeleting}
         variant="danger"
       />
     </PageLayout>

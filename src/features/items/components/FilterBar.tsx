@@ -8,9 +8,10 @@ interface FilterBarProps {
   filters: SearchFilters;
   onFilterChange: (newFilters: SearchFilters) => void;
   onReset: () => void;
+  isSearching?: boolean;
 }
 
-export default function FilterBar({ filters, onFilterChange, onReset }: FilterBarProps) {
+export default function FilterBar({ filters, onFilterChange, onReset, isSearching = false }: FilterBarProps) {
   const categoryOptions = [
     { value: '', label: 'All Categories' },
     ...categories.map((c) => ({ value: c.id, label: c.name })),
@@ -56,6 +57,7 @@ export default function FilterBar({ filters, onFilterChange, onReset }: FilterBa
           value={filters.query ?? ''}
           onChange={(q) => onFilterChange({ ...filters, query: q })}
           placeholder="Search items by title, category, or location..."
+          isSearching={isSearching}
         />
       </div>
 

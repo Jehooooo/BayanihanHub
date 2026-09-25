@@ -7,7 +7,8 @@ import ScrollReveal from '@/components/common/ScrollReveal';
 import { itemsService } from '@/services/items.service';
 import type { Item, SearchFilters } from '@/types';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import EmptyState from '@/components/ui/EmptyState';
+import ErrorState from '@/components/feedback/ErrorState';
+import EmptyState from '@/components/feedback/EmptyState';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
 import { useAuthStore } from '@/stores/authStore';
@@ -118,6 +119,7 @@ export default function BrowsePage() {
             filters={filters}
             onFilterChange={setFilters}
             onReset={handleResetFilters}
+            isSearching={isLoading && Boolean(filters.query)}
           />
         </ScrollReveal>
 
@@ -132,11 +134,11 @@ export default function BrowsePage() {
             <SkeletonCard />
           </div>
         ) : error ? (
-          <EmptyState
+          <ErrorState
             title="Unable to load items"
-            description={error}
-            actionLabel="Try Again"
-            onAction={loadItems}
+            message={error}
+            retryLabel="Try Again"
+            onRetry={loadItems}
           />
         ) : items.length === 0 ? (
           <EmptyState
