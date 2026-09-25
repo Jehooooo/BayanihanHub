@@ -28,6 +28,7 @@ import SEO from '@/components/common/SEO';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import { SkeletonDetail, EmptyState } from '@/components/feedback';
 import { itemsService } from '@/services/items.service';
+import { isSameUserId } from '@/utils/userId';
 import { exchangeService } from '@/services/exchange.service';
 import { useAuthStore } from '@/stores/authStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -176,7 +177,10 @@ export default function ItemDetailsPage() {
     );
   }
 
-  const isOwner = user?.id === item.ownerId;
+  const isOwner =
+    isSameUserId(user?.id, item.ownerId) ||
+    isSameUserId(user?.id, item.owner?.id) ||
+    isSameUserId(user?.userId, item.ownerId);
 
   const handleRequestDonation = async () => {
     if (!isAuthenticated || !user) {
@@ -222,29 +226,23 @@ export default function ItemDetailsPage() {
           state: { activeChatId: chatId, initialChat: data.conversation },
         });
         return;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.detail || errData.message || 'You cannot request your own donation item.');
+        return;
       }
     } catch {
-      // Fallback to client-side creation
-    }
-
-    // Client-side fallback if backend returns error or offline
-    try {
-      const chat = await createChat([user.id, item.ownerId]);
-      const autoMessage = `Hi! I'm interested in requesting the donation item you posted: "${item.title}".`;
-      await sendMessage(chat.id, user.id, autoMessage, 'text');
-      await setActiveChat(chat.id);
-      navigate(`/messages?chatId=${encodeURIComponent(chat.id)}`, {
-        state: { activeChatId: chat.id, initialChat: chat },
-      });
-      return;
-    } catch {
-      toast.error('Unable to start the conversation. Please try again.');
+      toast.error('Network error requesting donation. Please try again.');
     } finally {
       setIsRequestingDonation(false);
     }
   };
 
   const handleCreateExchange = async () => {
+    if (isOwner) {
+      toast.error('You cannot initiate an exchange with your own item.');
+      return;
+    }
     if (!selectedUserItem) {
       toast.error('Please select an item to offer.');
       return;
@@ -535,7 +533,7 @@ export default function ItemDetailsPage() {
                     }}
                   >
                     <ShieldCheck style={{ width: '1.1rem', height: '1.1rem' }} />
-                    <span>You are the author of this listing</span>
+                    <span>Your Item (You posted this item)</span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <Button

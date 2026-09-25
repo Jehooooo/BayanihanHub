@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import { exchangeService } from '@/services/exchange.service';
 import { itemsService } from '@/services/items.service';
+import { isSameUserId } from '@/utils/userId';
 import { useAuthStore } from '@/stores/authStore';
 import type { Exchange, ExchangeStatus, Item } from '@/types';
 import toast from 'react-hot-toast';
@@ -58,7 +59,11 @@ export default function ExchangePage() {
   };
 
   const myExchangeItems = exchangeItems.filter(
-    (item) => item.ownerId === currentUserId || item.owner?.id === currentUserId
+    (item) => isSameUserId(item.ownerId, currentUserId) || isSameUserId(item.owner?.id, currentUserId)
+  );
+
+  const communityExchangeItems = exchangeItems.filter(
+    (item) => !isSameUserId(item.ownerId, currentUserId) && !isSameUserId(item.owner?.id, currentUserId)
   );
 
   const filteredProposals = exchanges.filter((e) => {
@@ -105,7 +110,7 @@ export default function ExchangePage() {
         <Tabs
           tabs={[
             { id: 'my_items', label: `My Exchange Items (${myExchangeItems.length})` },
-            { id: 'community', label: `Community Exchanges (${exchangeItems.length})` },
+            { id: 'community', label: `Community Exchanges (${communityExchangeItems.length})` },
             { id: 'proposals', label: `Trade Proposals (${exchanges.length})` },
           ]}
           activeTab={mainTab}
@@ -148,7 +153,7 @@ export default function ExchangePage() {
                   <div key={n} style={{ height: '18rem', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--color-neutral-200)', animation: 'pulse 1.5s infinite' }} />
                 ))}
               </div>
-            ) : exchangeItems.length === 0 ? (
+            ) : communityExchangeItems.length === 0 ? (
               <EmptyState
                 icon={<ArrowLeftRight className="w-8 h-8" />}
                 title="No exchange listings available"
@@ -158,7 +163,7 @@ export default function ExchangePage() {
               />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {exchangeItems.map((item) => (
+                {communityExchangeItems.map((item) => (
                   <ItemCard key={item.id} item={item} onFavoriteToggle={handleFavoriteToggle} />
                 ))}
               </div>

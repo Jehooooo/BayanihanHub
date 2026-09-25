@@ -19,6 +19,7 @@ import FulfillRequestModal from '../components/FulfillRequestModal';
 import ReportModal from '@/features/moderation/components/ReportModal';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
+import { isSameUserId } from '@/utils/userId';
 
 export default function RequestsPage() {
   const { user } = useAuthStore();
@@ -200,7 +201,7 @@ export default function RequestsPage() {
                         </span>
 
                         {/* 3-Dot Action Menu for Non-Owners */}
-                        {user && req.userId !== user.id && (
+                        {user && !isSameUserId(req.userId, user?.id) && (
                           <div style={{ position: 'relative' }}>
                             <button
                               type="button"
@@ -291,23 +292,39 @@ export default function RequestsPage() {
                       </div>
                     )}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedRequestForFulfill(req)}
-                      leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
-                      style={{
-                        padding: '0.45rem 1rem',
-                        gap: '0.5rem',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        borderRadius: 'var(--radius-md)',
-                        borderColor: 'var(--color-neutral-300)',
-                        backgroundColor: '#ffffff',
-                      }}
-                    >
-                      Fulfill Request
-                    </Button>
+                    {isSameUserId(user?.id, req.userId) || isSameUserId(user?.userId, req.userId) ? (
+                      <span
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: '#f1f5f9',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                        }}
+                      >
+                        Your Request
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedRequestForFulfill(req)}
+                        leftIcon={<MessageSquare style={{ width: '0.9375rem', height: '0.9375rem', color: 'var(--color-primary-600)' }} />}
+                        style={{
+                          padding: '0.45rem 1rem',
+                          gap: '0.5rem',
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          borderRadius: 'var(--radius-md)',
+                          borderColor: 'var(--color-neutral-300)',
+                          backgroundColor: '#ffffff',
+                        }}
+                      >
+                        Fulfill Request
+                      </Button>
+                    )}
                   </div>
                 </Card>
               </ScrollReveal>

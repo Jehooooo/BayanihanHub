@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc
 
 from app.db import get_db
+from app.auth import get_current_user
 from app.models.user import User, Profile
 from app.models.item import Item, ItemStatus
 from app.models.exchange import (
@@ -185,15 +186,23 @@ def get_user_exchanges(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_exchange(dto: CreateExchangeDto, db: Session = Depends(get_db)):
+def create_exchange(
+    dto: CreateExchangeDto,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Propose a new item barter exchange.
+    Strictly verifies item ownership: caller must own offered item and not own requested item.
     """
     offered_item_id = parse_numeric_id(dto.offeredItemId)
     requested_item_id = parse_numeric_id(dto.requestedItemId)
 
     if not offered_item_id or not requested_item_id:
         raise HTTPException(status_code=400, detail="Both offeredItemId and requestedItemId are required.")
+
+    if offered_item_id == requested_item_id:
+        raise HTTPException(status_code=400, detail="You cannot exchange an item for itself.")
 
     req_item = db.query(Item).filter(Item.item_id == requested_item_id).first()
     if not req_item:
@@ -203,10 +212,19 @@ def create_exchange(dto: CreateExchangeDto, db: Session = Depends(get_db)):
     if not off_item:
         raise HTTPException(status_code=404, detail="Offered item not found.")
 
-    offerer_user = resolve_valid_user(dto.offererId, db, fallback_index=0)
-    receiver_user = resolve_valid_user(dto.receiverId, db, fallback_index=1)
-    offerer_id = offerer_user.user_id if offerer_user else off_item.owner_id
-    receiver_id = receiver_user.user_id if receiver_user else req_item.owner_id
+    if off_item.owner_id == req_item.owner_id:
+        raise HTTPException(status_code=400, detail="You cannot propose an exchange between items belonging to the same user.")
+
+    # Ownership validation: caller must own off_item and not own req_item
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not is_admin and off_item.owner_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="You can only offer items that you own.")
+
+    if req_item.owner_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot propose an exchange for your own item.")
+
+    offerer_id = current_user.user_id
+    receiver_id = req_item.owner_id
 
     # 1. Create Exchange record
     new_exc = Exchange(
@@ -377,21 +395,52 @@ def complete_exchange(exchange_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{exchange_id}/rating")
-def submit_rating(exchange_id: str, dto: RateExchangeDto, db: Session = Depends(get_db)):
+def submit_rating(
+    exchange_id: str,
+    dto: RateExchangeDto,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Submit rating and review for an exchange partner.
+    Prevents self-rating and ensures caller participated in the exchange.
     """
     num_exc = parse_numeric_id(exchange_id)
-    rater = resolve_valid_user(dto.raterId, db, fallback_index=0)
-    rated = resolve_valid_user(dto.ratedUserId, db, fallback_index=1)
-    rater_id = rater.user_id if rater else None
-    rated_id = rated.user_id if rated else None
+    if not num_exc:
+        raise HTTPException(status_code=400, detail="Invalid exchange ID.")
 
-    if not num_exc or not rater_id or not rated_id:
-        raise HTTPException(status_code=400, detail="Invalid IDs provided.")
+    exc = db.query(Exchange).filter(Exchange.exchange_id == num_exc).first()
+    if not exc:
+        raise HTTPException(status_code=404, detail="Exchange not found.")
+
+    rated_num = parse_numeric_id(dto.ratedUserId)
+    if not rated_num:
+        raise HTTPException(status_code=400, detail="Invalid rated user ID.")
+
+    if current_user.user_id == rated_num:
+        raise HTTPException(status_code=400, detail="You cannot rate yourself.")
+
+    # Verify caller is a participant in this exchange
+    caller_part = db.query(ExchangeParticipant).filter(
+        ExchangeParticipant.exchange_id == num_exc,
+        ExchangeParticipant.user_id == current_user.user_id,
+    ).first()
+    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
+    if not caller_part and not is_admin:
+        raise HTTPException(status_code=403, detail="You can only rate exchanges you participated in.")
+
+    # Verify rated user is also a participant in this exchange
+    rated_part = db.query(ExchangeParticipant).filter(
+        ExchangeParticipant.exchange_id == num_exc,
+        ExchangeParticipant.user_id == rated_num,
+    ).first()
+    if not rated_part:
+        raise HTTPException(status_code=400, detail="Rated user was not a participant in this exchange.")
 
     existing_rating = db.query(Rating).filter(
-        Rating.exchange_id == num_exc, Rating.rater_id == rater_id, Rating.rated_user_id == rated_id
+        Rating.exchange_id == num_exc,
+        Rating.rater_id == current_user.user_id,
+        Rating.rated_user_id == rated_num,
     ).first()
 
     if existing_rating:
@@ -400,8 +449,8 @@ def submit_rating(exchange_id: str, dto: RateExchangeDto, db: Session = Depends(
     else:
         new_rating = Rating(
             exchange_id=num_exc,
-            rater_id=rater_id,
-            rated_user_id=rated_id,
+            rater_id=current_user.user_id,
+            rated_user_id=rated_num,
             score=dto.score,
             review=dto.review.strip(),
         )

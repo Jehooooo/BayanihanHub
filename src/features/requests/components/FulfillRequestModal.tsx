@@ -18,6 +18,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { useChatStore } from '@/stores/chatStore';
 import type { ItemRequest } from '@/types';
 import toast from 'react-hot-toast';
+import { isSameUserId } from '@/utils/userId';
+import { getAuthHeaders } from '@/services/authHeader';
 
 interface FulfillRequestModalProps {
   isOpen: boolean;
@@ -84,6 +86,11 @@ export default function FulfillRequestModal({
       return;
     }
 
+    if (isSameUserId(user.id, request.userId) || isSameUserId(user.userId, request.userId)) {
+      toast.error('You cannot fulfill your own community request.');
+      return;
+    }
+
     if (!message.trim()) {
       toast.error('Please write a message explaining how you can fulfill this request.');
       return;
@@ -96,7 +103,7 @@ export default function FulfillRequestModal({
       try {
         await fetch(`/api/requests/${encodeURIComponent(request.id)}/fulfill?helperId=${encodeURIComponent(user.id)}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             helperId: user.id,
             message: message.trim(),

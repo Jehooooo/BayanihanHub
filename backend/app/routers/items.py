@@ -765,55 +765,44 @@ def toggle_save_item(item_id: str, user_id: str = Query(..., alias="userId"), db
 def request_donation(
     item_id: str,
     dto: Optional[RequestDonationDto] = Body(None),
-    user_id: Optional[str] = Query(None, alias="userId"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Directly request a donation item by opening or reusing a conversation
     with the actual item poster and sending an automatic donation request message.
+    Strictly enforces that the user cannot request their own donation item.
     """
     num_item = parse_numeric_id(item_id)
-    item = None
-    if num_item:
-        item = (
-            db.query(Item)
-            .filter(Item.item_id == num_item)
-            .options(joinedload(Item.owner).joinedload(User.profile))
-            .first()
-        )
+    if not num_item:
+        raise HTTPException(status_code=400, detail="Invalid item ID.")
 
-    # Resolve owner: from item owner, or from DTO posterId, or fallback to an existing verified user
-    owner = item.owner if item else None
-    if not owner and dto and dto.posterId:
-        owner = resolve_valid_user(dto.posterId, db, fallback_index=1)
+    item = (
+        db.query(Item)
+        .filter(Item.item_id == num_item)
+        .options(joinedload(Item.owner).joinedload(User.profile))
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found.")
 
-    # Identify currently authenticated / requesting user
-    req_uid = dto.userId if (dto and dto.userId) else user_id
-    current_user = resolve_valid_user(req_uid, db, fallback_index=0)
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Please log in to request a donation.")
-
-    # Fallback to an existing user if still no owner
-    if not owner:
-        owner = (
-            db.query(User)
-            .filter(User.user_id != current_user.user_id)
-            .order_by(User.user_id)
-            .first()
-        )
-
-    if not owner:
+    if not item.owner:
         raise HTTPException(status_code=404, detail="This donation is currently unavailable.")
 
-    # Prevent user from messaging themselves
-    if current_user.user_id == owner.user_id:
-        raise HTTPException(status_code=400, detail="You cannot request your own donation item.")
+    owner = item.owner
 
-    item_title = item.title if item else (dto.itemTitle if dto and dto.itemTitle else "Donation Item")
+    # Prevent user from requesting their own item
+    if current_user.user_id == item.owner_id or current_user.user_id == owner.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot request your own donation item."
+        )
+
+    item_title = item.title or "Donation Item"
+    u1, u2 = current_user.user_id, owner.user_id
 
     try:
         # Check if conversation already exists between current user and owner
-        u1, u2 = current_user.user_id, owner.user_id
         conv_ids_u1 = db.query(ConversationParticipant.conversation_id).filter(ConversationParticipant.user_id == u1)
         existing_part = (
             db.query(ConversationParticipant.conversation_id)
@@ -840,15 +829,15 @@ def request_donation(
 
         # Dynamic automatic donation-request message
         auto_message = (
-            dto.message
-            if (dto and dto.message)
+            dto.message.strip()
+            if (dto and dto.message and dto.message.strip())
             else f'Hi! I\'m interested in requesting the donation item you posted: "{item_title}".'
         )
         new_msg = Message(
             conversation_id=conv.conversation_id,
             sender_id=u1,
             message_type_id=1,  # text
-            content=auto_message,
+            content=sanitize_text(auto_message),
         )
         db.add(new_msg)
         conv.updated_at = datetime.now()
@@ -858,7 +847,7 @@ def request_donation(
         sender_name = (
             f"{sender_prof.first_name} {sender_prof.last_name}".strip()
             if sender_prof
-            else (current_user.email.split("@")[0])
+            else (current_user.email.split("@")[0] if current_user.email else "Neighbor")
         )
         create_notification(
             db=db,
@@ -868,12 +857,12 @@ def request_donation(
             message=f'{sender_name} requested your donation item "{item_title}".',
             link="/messages",
             related_user_id=u1,
-            related_item_id=item.item_id if item else None,
+            related_item_id=item.item_id,
         )
 
         terminal_logger.log(
             "SUCCESS",
-            f"User #{u1} ({sender_name}) requested donation item #{item.item_id if item else 'custom'} ('{item_title}') from #{owner.user_id}. Conversation #{conv.conversation_id} active.",
+            f"User #{u1} ({sender_name}) requested donation item #{item.item_id} ('{item_title}') from #{owner.user_id}. Conversation #{conv.conversation_id} active.",
         )
 
         owner_prof = owner.profile

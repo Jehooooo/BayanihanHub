@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { itemsService } from '@/services/items.service';
 import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
+import { isSameUserId } from '@/utils/userId';
 
 interface ItemCardProps {
   item: Item;
@@ -36,8 +37,10 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const isOwner = (currentUserId || user?.id) === item.ownerId ||
-    (currentUserId || user?.id) === item.owner?.id;
+  const effectiveUserId = currentUserId || user?.id || user?.userId;
+  const isOwner =
+    isSameUserId(effectiveUserId, item.ownerId) ||
+    isSameUserId(effectiveUserId, item.owner?.id);
   const canReport = user && !isOwner;
   const showMenu = canReport || isOwner;
 

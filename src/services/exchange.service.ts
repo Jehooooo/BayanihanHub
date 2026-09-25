@@ -1,10 +1,11 @@
 import type { Exchange, ExchangeStatus } from '../types';
+import { getAuthHeaders } from './authHeader';
 
 export const exchangeService = {
   async getExchanges(userId?: string): Promise<Exchange[]> {
     try {
       const url = userId ? `/api/exchanges?userId=${encodeURIComponent(userId)}` : '/api/exchanges';
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.exchanges && Array.isArray(data.exchanges)) {
@@ -26,7 +27,7 @@ export const exchangeService = {
   }): Promise<Exchange> {
     const res = await fetch('/api/exchanges', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(data),
     });
 
@@ -57,7 +58,7 @@ export const exchangeService = {
       if (endpoint) {
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             status,
             meetingDate: extra?.meetingDate,

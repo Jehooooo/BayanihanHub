@@ -16,6 +16,7 @@ import { categories } from '@/data/categories';
 import type { Item, RequestUrgency } from '@/types';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
+import { isSameUserId } from '@/utils/userId';
 
 export default function RequestItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
@@ -51,10 +52,19 @@ export default function RequestItemPage() {
     }
   }, [itemId]);
 
+  const isOwner =
+    isSameUserId(user?.id, item?.ownerId) ||
+    isSameUserId(user?.id, item?.owner?.id) ||
+    isSameUserId(user?.userId, item?.ownerId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) {
       toast.error('Please log in to request an item.');
+      return;
+    }
+    if (isOwner) {
+      toast.error('You cannot request your own donation item.');
       return;
     }
     if (!formData.title.trim() || !formData.description.trim()) {
@@ -84,7 +94,7 @@ export default function RequestItemPage() {
       // Flow 3 Branch B Outcome 2:
       // SUBMIT REQUEST -> GOES TO USERS MESSAGES WHO POSTED THE FOR DONATION ITEM -> STORE IN DATABASE -> END
       let targetChatId: string | undefined;
-      if (item?.ownerId) {
+      if (item?.ownerId && !isOwner) {
         try {
           const chat = await createChat([user.id, item.ownerId]);
           targetChatId = chat.id;
@@ -292,6 +302,26 @@ export default function RequestItemPage() {
               rows={4}
             />
 
+            {/* Owner warning banner */}
+            {isOwner && (
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: 'var(--radius-md)',
+                  color: '#991b1b',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <span>⚠️ You posted this item. You cannot request your own donation.</span>
+              </div>
+            )}
+
             {/* Form Actions */}
             <div style={{ display: 'flex', gap: '0.875rem', paddingTop: '0.5rem', borderTop: '1px solid var(--color-neutral-100)', marginTop: '0.25rem' }}>
               {/* Flow 3 Branch B Outcome 1: CANCEL -> GO BACK TO HOME -> END */}
@@ -314,21 +344,21 @@ export default function RequestItemPage() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isOwner}
                 style={{
                   flex: 2,
                   padding: '0.75rem',
                   fontSize: '0.875rem',
                   fontWeight: 800,
                   color: '#ffffff',
-                  backgroundColor: isSubmitting ? 'var(--color-neutral-400)' : 'var(--color-primary-600)',
+                  backgroundColor: isSubmitting || isOwner ? 'var(--color-neutral-400)' : 'var(--color-primary-600)',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 2px 8px rgba(46,125,50,0.3)',
+                  cursor: isSubmitting || isOwner ? 'not-allowed' : 'pointer',
+                  boxShadow: isOwner ? 'none' : '0 2px 8px rgba(46,125,50,0.3)',
                 }}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                {isOwner ? 'Your Item' : isSubmitting ? 'Submitting...' : 'Submit Request'}
               </button>
             </div>
           </form>

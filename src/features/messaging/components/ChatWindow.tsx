@@ -8,6 +8,7 @@ import ReactionDisplay from './ReactionDisplay';
 import type { Chat, Message, User } from '@/types';
 import { useChatStore } from '@/stores/chatStore';
 import { getPresenceInfo } from '@/utils/presence';
+import { isSameUserId, dedupeMessages } from '@/utils/userId';
 
 // ── Timestamp helpers ──────────────────────────────────────────────────────────
 
@@ -557,17 +558,22 @@ export default function ChatWindow({
     );
   }
 
-  const effectivePartner: User = partner || (chat as any).otherParticipant || {
-    id: chat.participants.find((p) => p !== currentUserId) || 'user-unknown',
-    fullName: (chat as any).title || 'Neighbor',
-    email: 'neighbor@example.com',
-    avatar: '',
-    role: 'user',
-    isVerified: true,
-    account_status: 'APPROVED',
-    facial_verification_status: 'PASSED',
-    id_verification_status: 'VERIFIED',
-    verificationStatus: 'APPROVED',
+  const fallbackOtherId = chat.participants.find((p) => !isSameUserId(p, currentUserId)) || 'user-unknown';
+  const effectivePartner: User =
+    (partner && !isSameUserId(partner.id, currentUserId) ? partner : undefined) ||
+    ((chat as any).otherParticipant && !isSameUserId((chat as any).otherParticipant.id || (chat as any).otherParticipant.userId, currentUserId)
+      ? (chat as any).otherParticipant
+      : undefined) || {
+      id: fallbackOtherId,
+      fullName: (chat as any).title || 'Neighbor',
+      email: 'neighbor@example.com',
+      avatar: '',
+      role: 'user',
+      isVerified: true,
+      account_status: 'APPROVED',
+      facial_verification_status: 'PASSED',
+      id_verification_status: 'VERIFIED',
+      verificationStatus: 'APPROVED',
     isTrusted: true,
     isSuspended: false,
     rating: 5.0,
@@ -723,11 +729,11 @@ export default function ChatWindow({
               <p style={{ fontSize: '0.875rem', fontWeight: 500 }}>No messages yet. Send a message to start chatting!</p>
             </div>
           ) : (
-            messages.map((msg) => (
+            dedupeMessages(messages).map((msg) => (
               <MessageBubble
                 key={msg.id}
                 msg={msg}
-                isMe={msg.senderId === currentUserId}
+                isMe={isSameUserId(msg.senderId, currentUserId)}
                 partner={partner}
                 currentUserId={currentUserId}
                 isMenuOpen={activeMenuMessageId === msg.id}

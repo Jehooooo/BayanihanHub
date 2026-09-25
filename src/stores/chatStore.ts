@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import type { Chat, Message, User } from '../types';
 import { generateId } from '../utils/id';
+import { isSameUserId, cleanUserId, dedupeMessages } from '../utils/userId';
 
 interface ChatState {
   chats: Chat[];
@@ -278,11 +279,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         const updatedPending = new Set(get()._pendingMessageIds);
         updatedPending.delete(tempId);
+
+        // Check if the confirmed message was already ingested by background polling
+        const alreadyInList = get().messages.some((m) => m.id === confirmedMsg.id);
+        const nextMessages = alreadyInList
+          ? get().messages.filter((m) => m.id !== tempId)
+          : get().messages.map((m) => (m.id === tempId ? confirmedMsg : m));
+
         set({
           _pendingMessageIds: updatedPending,
-          messages: get().messages.map((m) =>
-            m.id === tempId ? confirmedMsg : m
-          ),
+          messages: dedupeMessages(nextMessages),
         });
       } else {
         const updatedPending = new Set(get()._pendingMessageIds);
@@ -419,28 +425,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const current = get().messages;
             const pending = get()._pendingMessageIds;
 
-            const serverIds = new Set((data.messages as Message[]).map((m) => m.id));
+            const serverMsgs: Message[] = data.messages;
+            const serverIds = new Set(serverMsgs.map((m) => m.id));
+
+            // Exclude pending messages that already have a corresponding server message (by sender, content, and recent timestamp)
+            const isPendingMatchingServer = (pendingMsg: Message, serverMsg: Message) => {
+              if (!isSameUserId(pendingMsg.senderId, serverMsg.senderId)) return false;
+              if (pendingMsg.content !== serverMsg.content) return false;
+              const pTime = new Date(pendingMsg.createdAt).getTime();
+              const sTime = new Date(serverMsg.createdAt).getTime();
+              return !isNaN(pTime) && !isNaN(sTime) && Math.abs(pTime - sTime) < 15000;
+            };
+
             const pendingMsgs = current.filter(
-              (m) => pending.has(m.id) && !serverIds.has(m.id)
+              (m) => pending.has(m.id) && !serverIds.has(m.id) && !serverMsgs.some((sm) => isPendingMatchingServer(m, sm))
             );
 
+            const merged = dedupeMessages([...serverMsgs, ...pendingMsgs]);
             const serverChanged =
-              data.messages.length !== current.filter((m) => !pending.has(m.id)).length ||
-              data.messages.some((m: Message, idx: number) => {
-                const nonPending = current.filter((cm) => !pending.has(cm.id));
-                const cur = nonPending[idx];
-                if (!cur) return true;
-                if (cur.id !== m.id) return true;
+              merged.length !== current.length ||
+              merged.some((m: Message, idx: number) => {
+                const cur = current[idx];
+                if (!cur || cur.id !== m.id) return true;
                 if (cur.content !== m.content) return true;
-                if (cur.isUnsent !== m.isUnsent) return true;
-                if (cur.isEdited !== m.isEdited) return true;
+                if (cur.isUnsent !== m.isUnsent || cur.isEdited !== m.isEdited) return true;
                 if (cur.isRead !== m.isRead || (cur as any).seen !== (m as any).seen) return true;
                 if ((cur.reactions?.length ?? 0) !== (m.reactions?.length ?? 0)) return true;
                 return false;
               });
 
-            if (serverChanged || pendingMsgs.length > 0) {
-              set({ messages: [...data.messages, ...pendingMsgs] });
+            if (serverChanged) {
+              set({ messages: merged });
             }
           }
         }
@@ -503,9 +518,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   createChat: async (participantIds: string[]) => {
-    const existingChat = get().chats.find((c) =>
-      participantIds.every((pid) => c.participants.includes(pid))
-    );
+    // 1. Prevent self-conversation
+    if (participantIds.length >= 2 && isSameUserId(participantIds[0], participantIds[1])) {
+      throw new Error("You can't send a message to yourself.");
+    }
+
+    const cleanReqIds = participantIds.map((pid) => cleanUserId(pid)).filter(Boolean);
+    const existingChat = get().chats.find((c) => {
+      const cClean = c.participants.map((pid) => cleanUserId(pid)).filter(Boolean);
+      return (
+        cleanReqIds.length === cClean.length &&
+        cleanReqIds.every((pid) => cClean.includes(pid))
+      );
+    });
     if (existingChat) return existingChat;
 
     const res = await fetch('/api/conversations', {
@@ -522,7 +547,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    throw new Error('Failed to start conversation.');
+    const errData = await res.json().catch(() => ({}));
+    const errorMsg =
+      errData.detail?.message ||
+      errData.detail ||
+      errData.message ||
+      'Failed to start conversation.';
+    throw new Error(errorMsg);
   },
 
   addChat: (chat: Chat) => {
@@ -537,23 +568,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
   getOtherParticipant: (chat: Chat, currentUserId: string): User | undefined => {
     if ((chat as any).otherParticipant) {
       const op = (chat as any).otherParticipant;
-      return createFallbackUser(
-        op.id || `user-${op.userId || 1}`,
-        op.fullName || op.name || 'Neighbor',
-        op.username || 'neighbor',
-        op.email,
-        op.avatar,
-        op.lastActive,
-        op.isOnline
-      );
+      const opId = op.id || op.userId;
+      if (opId && !isSameUserId(opId, currentUserId)) {
+        return createFallbackUser(
+          op.id || `user-${op.userId || 1}`,
+          op.fullName || op.name || 'Neighbor',
+          op.username || 'neighbor',
+          op.email,
+          op.avatar,
+          op.lastActive,
+          op.isOnline
+        );
+      }
     }
 
     if (chat.participantUsers && chat.participantUsers.length > 0) {
-      const pUser = chat.participantUsers.find(
-        (u) =>
-          u.id !== currentUserId &&
-          String(u.id).replace('user-', '') !== String(currentUserId).replace('user-', '')
-      );
+      const pUser = chat.participantUsers.find((u) => !isSameUserId(u.id, currentUserId));
       if (pUser) {
         return createFallbackUser(
           pUser.id,
@@ -565,11 +595,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    const otherId = chat.participants.find(
-      (pid) =>
-        pid !== currentUserId &&
-        String(pid).replace('user-', '') !== String(currentUserId).replace('user-', '')
-    );
+    const otherId = chat.participants.find((pid) => !isSameUserId(pid, currentUserId));
     if (otherId) {
       return createFallbackUser(
         otherId,

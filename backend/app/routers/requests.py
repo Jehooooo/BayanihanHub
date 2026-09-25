@@ -253,26 +253,35 @@ def fulfill_request(
     request_id: str,
     helper_id: Optional[str] = Query(None, alias="helperId"),
     dto: Optional[FulfillRequestDto] = Body(None),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Offer assistance / mark request as in-progress or completed.
     Stores fulfillment message, pictures/evidence, and conversation thread in database.
+    Strictly prevents self-fulfillment.
     """
     num_id = parse_numeric_id(request_id)
     req = db.query(ItemRequest).filter(ItemRequest.request_id == num_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Request not found.")
 
+    # Strictly prevent self-fulfillment
+    if current_user.user_id == req.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot fulfill your own community request.",
+        )
+
     req.request_status_id = 3  # completed
 
-    actual_helper_id = (dto.helperId if dto and dto.helperId else helper_id)
-    helper_user = resolve_valid_user(actual_helper_id, db, fallback_index=1)
-    num_helper = helper_user.user_id if helper_user else None
+    num_helper = current_user.user_id
+    helper_user = current_user
+    helper_prof = helper_user.profile
     helper_name = (
-        f"{helper_user.profile.first_name} {helper_user.profile.last_name}".strip()
-        if (helper_user and helper_user.profile)
-        else "A neighbor"
+        f"{helper_prof.first_name} {helper_prof.last_name}".strip()
+        if helper_prof
+        else (helper_user.email.split("@")[0] if helper_user.email else "A neighbor")
     )
 
     # If message or evidence was provided, record it in direct messaging conversation
