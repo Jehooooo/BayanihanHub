@@ -5,9 +5,24 @@ from typing import Generator
 import app.config as config
 from app.services.terminal_logger import terminal_logger
 
+import os
+
 connect_args = {}
-if "aivencloud.com" in getattr(config, "DATABASE_URL", "") or "aivencloud.com" in getattr(config, "MYSQL_HOST", ""):
+db_url_str = getattr(config, "DATABASE_URL", "")
+mysql_host_str = getattr(config, "MYSQL_HOST", "")
+if "aivencloud.com" in db_url_str or "aivencloud.com" in mysql_host_str:
     connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+elif "tidbcloud.com" in db_url_str or "tidbcloud.com" in mysql_host_str:
+    try:
+        import certifi
+        verify = os.getenv("SSL_VERIFY_CERT", "true").lower() in ("true", "1", "yes")
+        connect_args = {
+            "ssl_ca": certifi.where(),
+            "ssl_verify_cert": verify,
+            "ssl_verify_identity": verify,
+        }
+    except Exception:
+        connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
 
 # Create SQLAlchemy engine with connection pool recycling
 engine = create_engine(

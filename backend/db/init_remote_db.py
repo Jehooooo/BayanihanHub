@@ -69,6 +69,13 @@ def init_remote_db(db_url: str = None):
     connect_args = {}
     if "aivencloud.com" in clean_url:
         connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+    elif "tidbcloud.com" in clean_url:
+        import certifi
+        connect_args = {
+            "ssl_ca": certifi.where(),
+            "ssl_verify_cert": False,
+            "ssl_verify_identity": False,
+        }
 
     try:
         engine = create_engine(clean_url, connect_args=connect_args, echo=False)
