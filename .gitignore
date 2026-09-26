@@ -49,3 +49,4 @@ public/uploads/
 backups/
 backend/backups/
 *.sql.gz
+*.exe
