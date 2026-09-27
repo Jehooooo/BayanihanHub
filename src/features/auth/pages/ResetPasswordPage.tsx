@@ -18,17 +18,23 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Passwords do not match.');
       return;
     }
     if (password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
+      toast.error('Password must be at least 8 characters long.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      toast.error('Password must contain at least one letter and at least one number or special character.');
       return;
     }
     
     if (!token) {
-      toast.error('Invalid or missing reset token');
+      toast.error('Invalid or missing reset token.');
       return;
     }
 
@@ -40,15 +46,32 @@ export default function ResetPasswordPage() {
         body: JSON.stringify({ token, new_password: password }),
       });
       
-      const data = await response.json();
-      if (data.success) {
-        toast.success('Password has been reset successfully. Please log in.');
-        navigate('/login');
-      } else {
-        toast.error(data.detail || data.message || 'An error occurred.');
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('Too many attempts. Please wait a moment and try again.');
+          return;
+        }
+        if (response.status >= 500) {
+          toast.error("We couldn't reset your password right now. Please try again in a moment.");
+          return;
+        }
+
+        const msg =
+          typeof data?.detail === 'string'
+            ? data.detail
+            : data?.detail?.message ||
+              data?.message ||
+              'Your reset token may have expired or is invalid. Please request a new link.';
+        toast.error(msg);
+        return;
       }
+
+      toast.success('Password has been reset successfully! Please log in.');
+      navigate('/login');
     } catch (error) {
-      toast.error('Network error. Please try again later.');
+      toast.error("We couldn't connect to the server. Please check your internet connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +124,8 @@ export default function ResetPasswordPage() {
           size="lg"
           fullWidth
           isLoading={isLoading}
+          loadingText="Resetting Password..."
+          disabled={isLoading}
           className="font-bold shadow-button"
           style={{ marginTop: '0.5rem' }}
         >

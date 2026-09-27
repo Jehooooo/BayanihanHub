@@ -17,6 +17,7 @@ from app.models.verification import (
     VerificationStatus,
     FacialVerificationStatus,
 )
+import re
 from app.models.moderation import UserSuspension
 from app.schemas.auth import (
     RegisterRequestDto,
@@ -25,6 +26,7 @@ from app.schemas.auth import (
     ForgotPasswordRequestDto,
     ResetPasswordRequestDto,
     GenericResponseDto,
+    ValidateStep1RequestDto,
 )
 from app.services.email import EmailService
 from app.services.biometric_engine import mask_id_number
@@ -75,8 +77,68 @@ def parse_date(date_str: Optional[str]) -> Optional[date]:
         return None
 
 
+@router.post("/validate-step1", response_model=GenericResponseDto)
+@limiter.limit("15/minute")
+def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session = Depends(get_db)):
+    """
+    Pre-validates Step 1 registration inputs (email, username, anti-bot).
+    Provides immediate, actionable feedback to users before ID verification.
+    """
+    clean_email = dto.email.strip().lower()
+    clean_username = dto.username.strip().lower()
+
+    # 1. Anti-bot honeypot check (only triggered by automated scripts filling hidden fields)
+    if getattr(dto, "bayanihan_hp_check", None) and str(dto.bayanihan_hp_check).strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "SECURITY_VALIDATION_FAILED",
+                "message": "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again.",
+            },
+        )
+
+    # 2. Validate email format
+    email_regex = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    if not re.match(email_regex, clean_email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "VALIDATION_ERROR",
+                "message": "Please enter a valid email address.",
+            },
+        )
+
+    # 3. Validate unique email
+    existing_user = db.query(User).filter(User.email == clean_email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "EMAIL_EXISTS",
+                "message": "An account with this email address already exists. Please log in or use another email.",
+            },
+        )
+
+    # 4. Validate unique username
+    existing_profile = db.query(Profile).filter(Profile.username == clean_username).first()
+    if existing_profile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "USERNAME_TAKEN",
+                "message": "This username is already taken. Please choose another username.",
+            },
+        )
+
+    return GenericResponseDto(success=True, message="Step 1 information is valid.")
+
+
 @router.post("/register", response_model=AuthResponseDto, status_code=status.HTTP_201_CREATED)
-@limiter.limit("3/minute")
+@limiter.limit("5/minute")
 def register(request: Request, dto: RegisterRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Register a new user in the Bayanihan Hub MySQL database.
@@ -86,11 +148,15 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     clean_email = dto.email.strip().lower()
     clean_username = dto.username.strip().lower()
 
-    # 0. Anti-bot honeypot protection
-    if getattr(dto, "website", None) and str(dto.website).strip():
+    # 0. Anti-bot honeypot protection (only triggered by automated scripts filling hidden trap)
+    if (getattr(dto, "bayanihan_hp_check", None) and str(dto.bayanihan_hp_check).strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Automated submission rejected.",
+            detail={
+                "success": False,
+                "error_code": "SECURITY_VALIDATION_FAILED",
+                "message": "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again.",
+            },
         )
 
     # 1. Validate unique email
@@ -98,7 +164,11 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     if existing_user_by_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email already exists.",
+            detail={
+                "success": False,
+                "error_code": "EMAIL_EXISTS",
+                "message": "An account with this email address already exists. Please log in or use another email.",
+            },
         )
 
     # 2. Validate unique username
@@ -108,7 +178,11 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     if existing_profile_by_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This username is already taken.",
+            detail={
+                "success": False,
+                "error_code": "USERNAME_TAKEN",
+                "message": "This username is already taken. Please choose another username.",
+            },
         )
 
     try:
@@ -433,76 +507,130 @@ def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db))
 @limiter.limit("5/minute")
 def forgot_password(request: Request, dto: ForgotPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = dto.email.strip().lower()
-    user = db.query(User).filter(User.email == email).first()
-    
-    if user:
-        # Generate token and store its hash
-        token = secrets.token_urlsafe(32)
-        hashed_token = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        expires = datetime.now() + timedelta(hours=1)
+    try:
+        user = db.query(User).filter(User.email == email).first()
         
-        # Invalidate old active tokens
-        db.query(PasswordReset).filter(PasswordReset.user_id == user.user_id, PasswordReset.used == False).update({"used": True})
-        
-        pr = PasswordReset(
-            user_id=user.user_id,
-            token=hashed_token,
-            expires_at=expires,
-            used=False
+        if user:
+            # Generate token and store its hash
+            token = secrets.token_urlsafe(32)
+            hashed_token = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            expires = datetime.now() + timedelta(hours=1)
+            
+            # Invalidate old active tokens
+            db.query(PasswordReset).filter(PasswordReset.user_id == user.user_id, PasswordReset.used == False).update({"used": True})
+            
+            pr = PasswordReset(
+                user_id=user.user_id,
+                token=hashed_token,
+                expires_at=expires,
+                used=False
+            )
+            db.add(pr)
+            db.commit()
+            
+            email_addr = user.email
+            fname = user.profile.first_name if user.profile else "User"
+            
+            # Send Email via BackgroundTasks
+            background_tasks.add_task(
+                EmailService.send_password_reset_email,
+                to_email=email_addr,
+                reset_token=token,  # Send raw token to user
+                username=fname
+            )
+            terminal_logger.info(f"Password reset token generated and email dispatched for {user.email}", category="AUTH")
+            
+        # Always return success to prevent email enumeration
+        return GenericResponseDto(
+            success=True,
+            message="If an account exists for this email address, check your inbox for instructions to reset your password."
         )
-        db.add(pr)
+    except Exception as e:
+        db.rollback()
+        terminal_logger.error(f"Error processing password reset request for {email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "success": False,
+                "error_code": "SERVER_ERROR",
+                "message": "We couldn't send the reset link right now. Please try again later.",
+            }
+        )
+
+@router.post("/reset-password", response_model=GenericResponseDto)
+@limiter.limit("5/minute")
+def reset_password(request: Request, dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    raw_token = dto.token.strip()
+    hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    new_password = dto.new_password
+    
+    try:
+        pr = db.query(PasswordReset).filter(PasswordReset.token == hashed_token, PasswordReset.used == False).first()
+        if not pr:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "error_code": "INVALID_TOKEN",
+                    "message": "Invalid or expired reset token. Please request a new password reset link.",
+                }
+            )
+            
+        if pr.expires_at < datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "error_code": "TOKEN_EXPIRED",
+                    "message": "Your reset token has expired. Please request a new password reset link.",
+                }
+            )
+            
+        user = db.query(User).filter(User.user_id == pr.user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "success": False,
+                    "error_code": "USER_NOT_FOUND",
+                    "message": "User account associated with this token was not found.",
+                }
+            )
+            
+        # Hash new password
+        hashed = hash_password(new_password)
+        user.password_hash = hashed
+        user.updated_at = datetime.now()
+        
+        pr.used = True
         db.commit()
         
         email_addr = user.email
         fname = user.profile.first_name if user.profile else "User"
         
-        # Send Email via BackgroundTasks
+        # Send success email
         background_tasks.add_task(
-            EmailService.send_password_reset_email,
+            EmailService.send_password_reset_success_email,
             to_email=email_addr,
-            reset_token=token,  # Send raw token to user
             username=fname
         )
         
-    # Always return success to prevent email enumeration
-    return GenericResponseDto(success=True, message="If an account exists, a reset email has been sent.")
-
-@router.post("/reset-password", response_model=GenericResponseDto)
-@limiter.limit("5/minute")
-def reset_password(request: Request, dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    raw_token = dto.token
-    hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    new_password = dto.new_password
-    
-    pr = db.query(PasswordReset).filter(PasswordReset.token == hashed_token, PasswordReset.used == False).first()
-    if not pr:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-        
-    if pr.expires_at < datetime.now():
-        raise HTTPException(status_code=400, detail="Reset token has expired")
-        
-    user = db.query(User).filter(User.user_id == pr.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    # Hash new password
-    hashed = hash_password(new_password)
-    user.password_hash = hashed
-    user.updated_at = datetime.now()
-    
-    pr.used = True
-    db.commit()
-    
-    email_addr = user.email
-    fname = user.profile.first_name if user.profile else "User"
-    
-    # Send success email
-    background_tasks.add_task(
-        EmailService.send_password_reset_success_email,
-        to_email=email_addr,
-        username=fname
-    )
-    
-    terminal_logger.crud("UPDATE", "User", details=f"Password reset successfully for {user.email}")
-    return GenericResponseDto(success=True, message="Password has been reset successfully.")
+        terminal_logger.crud("UPDATE", "User", details=f"Password reset successfully for {user.email}")
+        return GenericResponseDto(
+            success=True,
+            message="Your password has been reset successfully. You can now log in with your new password."
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        terminal_logger.error(f"Error resetting password: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "success": False,
+                "error_code": "SERVER_ERROR",
+                "message": "We couldn't reset your password right now. Please try again in a moment.",
+            }
+        )
 

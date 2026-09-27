@@ -9,7 +9,10 @@ from app.models.user import (
     UserBadge,
     ProfilePictureStatus,
     ProfilePicture,
+    PasswordReset,
+    NotificationPreference,
 )
+from app.models.email_log import EmailLog
 from app.models.verification import (
     IdType,
     FacialVerificationStatus,
@@ -108,4 +111,7 @@ __all__ = [
     "Report",
     "AuditAction",
     "AuditLog",
+    "PasswordReset",
+    "NotificationPreference",
+    "EmailLog",
 ]

@@ -104,7 +104,7 @@ export const useAuthStore = create<AuthState>()(
               idDocumentUrl: data.idDocumentUrl,
               faceImageUrl: data.faceImageUrl,
               verificationConfidence: data.verificationConfidence || 95,
-              website: data.website || '',
+              bayanihanHpCheck: data.bayanihanHpCheck || undefined,
             }),
           });
 

@@ -21,8 +21,8 @@ if ENVIRONMENT == "production" and JWT_SECRET == "bayanihan-hub-secret-key-beta-
 VERIFICATION_PROVIDER: str = os.getenv("VERIFICATION_PROVIDER", "biometric")
 VERIFICATION_API_KEY: str = os.getenv("VERIFICATION_API_KEY", "")
 
-# Default allowed origins (restrictive localhost instead of open wildcard)
-DEFAULT_CORS = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+# Default allowed origins (includes local dev and production frontend deployments)
+DEFAULT_CORS = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,https://bayanihanhub-beta.vercel.app,https://bayanihanhub.vercel.app"
 CORS_ORIGINS: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", DEFAULT_CORS).split(",") if o.strip()]
 
 # Upload constraints
@@ -62,7 +62,10 @@ SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "BayanihanHub")
 SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "false").lower() in ("true", "1", "yes")
 SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "false").lower() in ("true", "1", "yes")
 
-FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+_default_frontend = "https://bayanihanhub-beta.vercel.app" if ENVIRONMENT == "production" else "http://localhost:5173"
+FRONTEND_URL: str = os.getenv("FRONTEND_URL", _default_frontend).rstrip("/")
+if FRONTEND_URL and FRONTEND_URL not in CORS_ORIGINS:
+    CORS_ORIGINS.append(FRONTEND_URL)
 
 # MySQL Database Configuration
 MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")

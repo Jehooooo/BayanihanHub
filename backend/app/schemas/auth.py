@@ -21,8 +21,8 @@ class RegisterRequestDto(BaseModel):
     extra_info: Optional[str] = Field(None, alias="extraInfo")
     id_document_url: Optional[str] = Field(None, alias="idDocumentUrl")
     face_image_url: Optional[str] = Field(None, alias="faceImageUrl")
-    verification_confidence: Optional[int] = Field(95, alias="verificationConfidence")
-    website: Optional[str] = Field(None, description="Anti-bot honeypot field. Must be left empty by legitimate users.")
+    website: Optional[str] = Field(None, description="Legacy honeypot field, deprecated in favor of bayanihan_hp_check.")
+    bayanihan_hp_check: Optional[str] = Field(None, alias="bayanihanHpCheck", description="Anti-bot honeypot field. Must be left empty by legitimate users.")
 
     @field_validator("password")
     @classmethod
@@ -56,6 +56,16 @@ class AuthResponseDto(BaseModel):
 class ForgotPasswordRequestDto(BaseModel):
     email: str
 
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not clean:
+            raise ValueError("Please enter your email address.")
+        if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", clean):
+            raise ValueError("Please enter a valid email address.")
+        return clean
+
 class ResetPasswordRequestDto(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8)
@@ -72,3 +82,16 @@ class ResetPasswordRequestDto(BaseModel):
 class GenericResponseDto(BaseModel):
     success: bool
     message: str
+    error_code: Optional[str] = None
+    data: Optional[Any] = None
+
+class ValidateStep1RequestDto(BaseModel):
+    email: str
+    username: str
+    password: Optional[str] = None
+    bayanihan_hp_check: Optional[str] = Field(None, alias="bayanihanHpCheck", description="Anti-bot honeypot check")
+    website: Optional[str] = Field(None, description="Legacy anti-bot field")
+
+    class Config:
+        populate_by_name = True
+

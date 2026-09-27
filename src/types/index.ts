@@ -494,6 +494,7 @@ export interface RegisterData {
   facial_verification_status?: FacialVerificationStatus;
   id_verification_status?: IdVerificationStatus;
   website?: string;
+  bayanihanHpCheck?: string;
 }
 
 export const PHILIPPINE_ID_CONFIGS: Record<PhilippineIdType, IdTypeConfig> = {

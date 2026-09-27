@@ -1013,4 +1013,52 @@ INSERT INTO `verification_statuses` (`verification_status_id`, `status_code`, `d
 INSERT INTO `verification_statuses` (`verification_status_id`, `status_code`, `description`) VALUES (3, 'REJECTED', 'Declined by administrator');
 INSERT INTO `verification_statuses` (`verification_status_id`, `status_code`, `description`) VALUES (4, 'RETRY_REQUIRED', 'Returned to user for clearer photo or corrected document details');
 
+DROP TABLE IF EXISTS `password_resets`;
+CREATE TABLE `password_resets` (
+  `reset_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL,
+  `token` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`reset_id`),
+  UNIQUE KEY `uq_password_resets_token` (`token`),
+  KEY `idx_password_resets_user` (`user_id`),
+  CONSTRAINT `fk_password_resets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `notification_preferences`;
+CREATE TABLE `notification_preferences` (
+  `preference_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL,
+  `messages` tinyint(1) NOT NULL DEFAULT '1',
+  `replies` tinyint(1) NOT NULL DEFAULT '1',
+  `message_reactions` tinyint(1) NOT NULL DEFAULT '1',
+  `donation_requests` tinyint(1) NOT NULL DEFAULT '1',
+  `exchange_offers` tinyint(1) NOT NULL DEFAULT '1',
+  `request_status_updates` tinyint(1) NOT NULL DEFAULT '1',
+  `ratings_and_reviews` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`preference_id`),
+  UNIQUE KEY `uq_notification_preferences_user` (`user_id`),
+  CONSTRAINT `fk_notification_preferences_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `email_logs`;
+CREATE TABLE `email_logs` (
+  `email_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `recipient_user_id` bigint unsigned DEFAULT NULL,
+  `recipient_email` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email_type` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `provider_message_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `error_message` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `sent_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`email_id`),
+  KEY `idx_email_logs_recipient` (`recipient_user_id`),
+  CONSTRAINT `fk_email_logs_user` FOREIGN KEY (`recipient_user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS=1;
+

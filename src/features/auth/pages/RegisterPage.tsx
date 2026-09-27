@@ -46,6 +46,7 @@ export default function RegisterPage() {
 
   // Multi-step registration flow state (1: Account, 2: Select ID, 3: ID Details & Upload, 4: Face Verification, 5: Verification & Activation)
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isCheckingStep1, setIsCheckingStep1] = useState<boolean>(false);
 
   // Complete registration & identity verification form state
   const [formData, setFormData] = useState({
@@ -62,6 +63,7 @@ export default function RegisterPage() {
     confirmPassword: '',
     acceptTerms: false,
     website: '',
+    bayanihanSecToken: '',
 
     // Step 2 & 3: ID Details
     idType: '' as PhilippineIdType | '',
@@ -96,17 +98,22 @@ export default function RegisterPage() {
   };
 
   // Step 1 Validation -> Proceed to Step 2
-  const handleStep1Next = (e: React.FormEvent) => {
+  const handleStep1Next = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
 
-    if (formData.website) {
-      toast.error('Automated submission detected.');
+    // Prevent duplicate rapid submissions
+    if (isCheckingStep1) return;
+
+    // Field-level client validations
+    if (!formData.fullName.trim() || !formData.username.trim() || !formData.email.trim()) {
+      toast.error('Please fill in all required account fields.');
       return;
     }
 
-    if (!formData.fullName.trim() || !formData.username.trim() || !formData.email.trim()) {
-      toast.error('Please fill in all required account fields.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      toast.error('Please enter a valid email address.');
       return;
     }
 
@@ -130,13 +137,63 @@ export default function RegisterPage() {
       return;
     }
 
-    // Prefill full name on ID if not already edited
-    if (!formData.fullNameOnId) {
-      setFormData((prev) => ({ ...prev, fullNameOnId: prev.fullName }));
-    }
+    // Step 1 Pre-validation & Security verification with backend
+    setIsCheckingStep1(true);
+    try {
+      const response = await fetch('/api/auth/validate-step1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          username: formData.username.trim(),
+          bayanihanHpCheck: formData.bayanihanSecToken || undefined,
+        }),
+      });
 
-    setCurrentStep(2);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('Too many registration attempts. Please wait a moment and try again.');
+          return;
+        }
+
+        const errorCode = data?.detail?.error_code || data?.error_code;
+        const errorMsg = typeof data?.detail === 'string'
+          ? data.detail
+          : data?.detail?.message || data?.message;
+
+        if (errorCode === 'SECURITY_VALIDATION_FAILED') {
+          toast.error(
+            errorMsg ||
+            "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again."
+          );
+        } else if (errorCode === 'EMAIL_EXISTS') {
+          toast.error(errorMsg || 'An account with this email address already exists. Please log in or use another email.');
+        } else if (errorCode === 'USERNAME_TAKEN') {
+          toast.error(errorMsg || 'This username is already taken. Please choose another username.');
+        } else if (errorCode === 'VALIDATION_ERROR') {
+          toast.error(errorMsg || 'Please verify the information you entered.');
+        } else if (response.status >= 500) {
+          toast.error("We couldn't continue your registration right now. Please try again in a moment.");
+        } else {
+          toast.error(errorMsg || "We couldn't continue your registration. Please check your information and try again.");
+        }
+        return;
+      }
+
+      // Success: advance to ID Selection
+      if (!formData.fullNameOnId) {
+        setFormData((prev) => ({ ...prev, fullNameOnId: prev.fullName }));
+      }
+
+      setCurrentStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      toast.error("We couldn't connect to the server. Please check your internet connection and try again.");
+    } finally {
+      setIsCheckingStep1(false);
+    }
   };
 
   // Step 2 Validation -> Proceed to Step 3
@@ -240,7 +297,7 @@ export default function RegisterPage() {
           idDocumentUrl: compressedIdDoc,
           faceImageUrl: compressedSelfie,
           verificationConfidence: response.confidenceScore,
-          website: formData.website,
+          bayanihanHpCheck: formData.bayanihanSecToken || undefined,
         });
 
         if (registerSuccess) {
@@ -323,15 +380,15 @@ export default function RegisterPage() {
           ============================================================ */}
       {currentStep === 1 && (
         <form onSubmit={handleStep1Next} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Anti-bot Honeypot field */}
-          <div style={{ position: 'absolute', opacity: 0, zIndex: -1, pointerEvents: 'none', height: 0, overflow: 'hidden' }} aria-hidden="true">
+          {/* Anti-bot Honeypot field - using non-standard name and new-password to prevent browser autofill */}
+          <div style={{ position: 'absolute', opacity: 0, zIndex: -1, pointerEvents: 'none', height: 0, width: 0, overflow: 'hidden' }} aria-hidden="true">
             <input
               type="text"
-              name="website"
+              name="bayanihan_sec_token"
               tabIndex={-1}
-              autoComplete="off"
-              value={formData.website}
-              onChange={(e) => handleChange('website', e.target.value)}
+              autoComplete="new-password"
+              value={formData.bayanihanSecToken || ''}
+              onChange={(e) => handleChange('bayanihanSecToken', e.target.value)}
             />
           </div>
 
@@ -461,6 +518,9 @@ export default function RegisterPage() {
             variant="primary"
             size="lg"
             fullWidth
+            isLoading={isCheckingStep1}
+            loadingText="Checking information..."
+            disabled={isCheckingStep1}
             rightIcon={<ArrowRight className="w-4 h-4" />}
             className="font-bold shadow-button"
           >
