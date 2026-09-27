@@ -36,6 +36,7 @@ import Select from '@/components/ui/Select';
 import RegistrationStepper from '../components/RegistrationStepper';
 import IdDocumentUploader from '../components/IdDocumentUploader';
 import FacialVerificationCamera from '../components/FacialVerificationCamera';
+import { CircularProgress } from '@/components/feedback';
 import { compressImageDataUrl } from '@/utils/imageCompression';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
@@ -808,21 +809,13 @@ export default function RegisterPage() {
           {isVerifying ? (
             /* Analyzing Biometric Animation State */
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', maxWidth: '28rem' }}>
-              <div
-                style={{
-                  width: '5rem',
-                  height: '5rem',
-                  borderRadius: '9999px',
-                  backgroundColor: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-600)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  animation: 'pulse 1.5s infinite',
-                }}
-              >
-                <RefreshCw style={{ width: '2.5rem', height: '2.5rem', animation: 'spin 2s linear infinite' }} />
-              </div>
+              <CircularProgress
+                value={Math.min(Math.max((verificationProgressStep || 1) * 25, 20), 100)}
+                size={84}
+                strokeWidth={6}
+                color="primary"
+                showValue={true}
+              />
 
               <div>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>

@@ -1,6 +1,6 @@
 import re
 from typing import Optional, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class RegisterRequestDto(BaseModel):
@@ -66,9 +66,13 @@ class ForgotPasswordRequestDto(BaseModel):
             raise ValueError("Please enter a valid email address.")
         return clean
 
+
 class ResetPasswordRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     token: str
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, alias="newPassword")
+    confirm_password: Optional[str] = Field(None, alias="confirmPassword")
 
     @field_validator("new_password")
     @classmethod
@@ -79,7 +83,10 @@ class ResetPasswordRequestDto(BaseModel):
             raise ValueError("Password must contain at least one letter and at least one number or special character.")
         return v
 
+
 class ChangePasswordRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     current_password: str = Field(..., alias="currentPassword")
     new_password: str = Field(..., min_length=8, alias="newPassword")
     confirm_password: Optional[str] = Field(None, alias="confirmPassword")
@@ -93,22 +100,22 @@ class ChangePasswordRequestDto(BaseModel):
             raise ValueError("Password must contain at least one letter and at least one number or special character.")
         return v
 
-    class Config:
-        populate_by_name = True
 
 class GenericResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     success: bool
     message: str
     error_code: Optional[str] = None
     data: Optional[Any] = None
 
+
 class ValidateStep1RequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     email: str
     username: str
     password: Optional[str] = None
     bayanihan_hp_check: Optional[str] = Field(None, alias="bayanihanHpCheck", description="Anti-bot honeypot check")
     website: Optional[str] = Field(None, description="Legacy anti-bot field")
-
-    class Config:
-        populate_by_name = True
 

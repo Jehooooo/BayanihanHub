@@ -49,26 +49,22 @@ export default function ResetPasswordPage() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        if (response.status === 429) {
-          toast.error('Too many attempts. Please wait a moment and try again.');
-          return;
+        let msg = 'Your reset token may have expired or is invalid. Please request a new link.';
+        if (data?.detail) {
+          msg = typeof data.detail === 'string' ? data.detail : data.detail.message || msg;
+        } else if (data?.message) {
+          msg = data.message;
+        } else if (response.status === 429) {
+          msg = 'Too many attempts. Please wait a moment and try again.';
+        } else if (response.status >= 500) {
+          msg = "We couldn't reset your password right now. Please try again in a moment.";
         }
-        if (response.status >= 500) {
-          toast.error("We couldn't reset your password right now. Please try again in a moment.");
-          return;
-        }
-
-        const msg =
-          typeof data?.detail === 'string'
-            ? data.detail
-            : data?.detail?.message ||
-              data?.message ||
-              'Your reset token may have expired or is invalid. Please request a new link.';
         toast.error(msg);
         return;
       }
 
-      toast.success('Password has been reset successfully! Please log in.');
+      const successMsg = data?.message || 'Password has been reset successfully! Please log in.';
+      toast.success(successMsg);
       navigate('/login');
     } catch (error) {
       toast.error("We couldn't connect to the server. Please check your internet connection and try again.");

@@ -46,34 +46,23 @@ export default function ForgotPasswordPage() {
 
       if (!response.ok) {
         setStatus('ERROR');
-        if (response.status === 429) {
-          const msg = 'Too many reset requests. Please wait a few minutes before trying again.';
-          setErrorMessage(msg);
-          toast.error(msg);
-          return;
+        let msg = "We couldn't send the reset link right now. Please try again later.";
+        if (data?.detail) {
+          msg = typeof data.detail === 'string' ? data.detail : data.detail.message || msg;
+        } else if (data?.message) {
+          msg = data.message;
+        } else if (response.status === 429) {
+          msg = 'Too many reset requests. Please wait a few minutes before trying again.';
         }
-
-        if (response.status >= 500) {
-          const msg = "We couldn't send the reset link right now. Please try again later.";
-          setErrorMessage(msg);
-          toast.error(msg);
-          return;
-        }
-
-        const msg =
-          typeof data?.detail === 'string'
-            ? data.detail
-            : data?.detail?.message ||
-              data?.message ||
-              "We couldn't send the reset link right now. Please try again later.";
         setErrorMessage(msg);
         toast.error(msg);
         return;
       }
 
-      // Success (Always safe against account enumeration)
+      // Success
       setStatus('SUCCESS');
-      toast.success('Reset link sent! Please check your inbox.');
+      const successMsg = data?.message || 'Reset link sent! Please check your inbox.';
+      toast.success(successMsg);
     } catch (error: any) {
       setStatus('ERROR');
       const msg = "We couldn't connect to the server. Please check your internet connection and try again.";

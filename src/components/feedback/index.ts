@@ -38,5 +38,8 @@ export type { SuccessStateProps } from './SuccessState';
 export { default as ProgressIndicator } from './ProgressIndicator';
 export type { ProgressIndicatorProps } from './ProgressIndicator';
 
+export { default as CircularProgress } from './CircularProgress';
+export type { CircularProgressProps } from './CircularProgress';
+
 export { default as ImageWithSkeleton } from './ImageWithSkeleton';
 export type { ImageWithSkeletonProps } from './ImageWithSkeleton';
