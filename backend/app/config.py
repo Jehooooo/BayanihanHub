@@ -55,9 +55,9 @@ ALLOWED_ATTACHMENT_MIME_TYPES: set[str] = {
 # SMTP / Email Configuration
 SMTP_HOST: str = os.getenv("SMTP_HOST", "")
 SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER: str = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "noreply@bayanihanhub.com")
+SMTP_USER: str = os.getenv("SMTP_USER") or os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD") or os.getenv("SMTP_PASS", "")
+SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL") or os.getenv("SMTP_FROM", "bkbeza123321@gmail.com")
 SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "BayanihanHub")
 SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "false").lower() in ("true", "1", "yes")
 SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "false").lower() in ("true", "1", "yes")

@@ -139,7 +139,18 @@ class EmailService:
                 else:
                     server_class = smtplib.SMTP
 
-                with server_class(config.SMTP_HOST, config.SMTP_PORT, timeout=30) as server:
+                # Resolve IPv4 to avoid "[Errno 101] Network is unreachable" on container environments without IPv6 routing
+                smtp_connect_host = config.SMTP_HOST
+                try:
+                    import socket
+                    addrs = socket.getaddrinfo(config.SMTP_HOST, config.SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+                    if addrs:
+                        smtp_connect_host = addrs[0][4][0]
+                except Exception:
+                    pass
+
+                with server_class(smtp_connect_host, config.SMTP_PORT, timeout=30) as server:
+                    server._host = config.SMTP_HOST
                     if config.SMTP_USE_TLS and not config.SMTP_USE_SSL:
                         server.starttls()
                     if config.SMTP_USER and config.SMTP_PASSWORD:
