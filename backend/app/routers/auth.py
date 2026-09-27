@@ -3,14 +3,21 @@ import secrets
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
 
 from app.db import get_db
-from app.auth import create_access_token
+from app.auth import (
+    create_access_token,
+    get_current_user,
+    create_moodle_session,
+    set_moodle_cookies,
+    clear_moodle_cookies,
+)
 from app.limiter import limiter
 from app.models.user import User, Profile, UserRole, Role, AccountStatus, ProfilePicture, PasswordReset
+from app.models.user_session import UserSession
 from app.models.verification import (
     IdentityVerification,
     IdType,
@@ -25,6 +32,7 @@ from app.schemas.auth import (
     AuthResponseDto,
     ForgotPasswordRequestDto,
     ResetPasswordRequestDto,
+    ChangePasswordRequestDto,
     GenericResponseDto,
     ValidateStep1RequestDto,
 )
@@ -347,7 +355,7 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
 
 @router.post("/login", response_model=AuthResponseDto)
 @limiter.limit("5/minute")
-def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db)):
+def login(request: Request, response: Response, dto: LoginRequestDto, db: Session = Depends(get_db)):
     """
     Authenticate a user against the Bayanihan Hub MySQL database.
     CRITICAL POLICY: Users with status 'PENDING' or 'REJECTED' CANNOT log in.
@@ -492,6 +500,14 @@ def login(request: Request, dto: LoginRequestDto, db: Session = Depends(get_db))
     user.last_active_at = datetime.now(timezone.utc)
     db.commit()
 
+    # Session rotation: Invalidate old sessions and create fresh MoodleSession
+    try:
+        db.query(UserSession).filter(UserSession.user_id == user.user_id).update({"is_active": False})
+        session_token = create_moodle_session(user.user_id, request, db)
+        set_moodle_cookies(response, request, session_token, user_data["username"])
+    except Exception as e:
+        terminal_logger.warning(f"Failed to initialize MoodleSession for {user.email}: {e}")
+
     terminal_logger.integration("Backend", "Authentication Service", f"Credentials verified for {user.email}", status="SUCCESS")
     terminal_logger.success(f"User '{full_name}' authenticated successfully ({primary_role.upper()})", category="AUTH")
 
@@ -632,5 +648,109 @@ def reset_password(request: Request, dto: ResetPasswordRequestDto, background_ta
                 "error_code": "SERVER_ERROR",
                 "message": "We couldn't reset your password right now. Please try again in a moment.",
             }
+        )
+
+@router.post("/logout", response_model=GenericResponseDto)
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Invalidates the active server-side MoodleSession and expires session cookies."""
+    clear_moodle_cookies(response, request, db)
+    return GenericResponseDto(success=True, message="Logged out successfully.")
+
+@router.post("/change-password")
+@limiter.limit("5/minute")
+def change_password(
+    request: Request,
+    response: Response,
+    dto: ChangePasswordRequestDto,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Secure password change endpoint for authenticated users.
+    Validates current password, enforces password complexity, updates password hash,
+    rotates MoodleSession, and dispatches security alert email.
+    """
+    # 1. Verify current password
+    if not verify_password(dto.current_password, current_user.password_hash):
+        terminal_logger.warning(f"Failed password change attempt for {current_user.email} (incorrect current password)", category="AUTH")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "INCORRECT_CURRENT_PASSWORD",
+                "message": "The current password you entered is incorrect.",
+            },
+        )
+
+    # 2. Check if new password is identical to current password
+    if verify_password(dto.new_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "SAME_PASSWORD",
+                "message": "Your new password cannot be the same as your current password.",
+            },
+        )
+
+    # 3. Check confirmation if provided
+    if dto.confirm_password and dto.new_password != dto.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "PASSWORD_MISMATCH",
+                "message": "New passwords do not match.",
+            },
+        )
+
+    try:
+        # 4. Update database password hash
+        current_user.password_hash = hash_password(dto.new_password)
+        current_user.updated_at = datetime.now()
+
+        # 5. Session rotation: Invalidate old sessions and create fresh MoodleSession
+        db.query(UserSession).filter(UserSession.user_id == current_user.user_id).update({"is_active": False})
+        new_session_token = create_moodle_session(current_user.user_id, request, db)
+        user_identifier = current_user.profile.username if current_user.profile else current_user.email.split("@")[0]
+        set_moodle_cookies(response, request, new_session_token, user_identifier)
+
+        db.commit()
+        db.refresh(current_user)
+
+        # 6. Issue refreshed JWT access token for client state
+        primary_role = "admin" if any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role) else "user"
+        new_token = create_access_token(current_user.user_id, primary_role, current_user.email)
+
+        # 7. Queue security email notification via BackgroundTasks
+        fname = current_user.profile.first_name if current_user.profile else "User"
+        change_time = datetime.now().strftime("%B %d, %Y at %I:%M %p UTC")
+        background_tasks.add_task(
+            EmailService.send_password_changed_security_email,
+            to_email=current_user.email,
+            username=fname,
+            timestamp_str=change_time,
+        )
+
+        terminal_logger.info(f"Password changed and security alert queued for {current_user.email}", category="AUTH")
+
+        return {
+            "success": True,
+            "message": "Your password has been changed successfully.",
+            "token": new_token,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        terminal_logger.error(f"Error changing password for {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "success": False,
+                "error_code": "SERVER_ERROR",
+                "message": "Unable to update password right now. Please try again later.",
+            },
         )
 

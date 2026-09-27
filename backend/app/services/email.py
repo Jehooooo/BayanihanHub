@@ -223,6 +223,33 @@ class EmailService:
         return EmailService.send_email(to_email, subject, content, email_type="PASSWORD_RESET_SUCCESS")
 
     @staticmethod
+    def send_password_changed_security_email(to_email: str, username: str, timestamp_str: Optional[str] = None) -> bool:
+        """
+        Sends an immediate security alert email when a logged-in user changes their password.
+        Never contains the password, old password, hashes, or sensitive tokens.
+        """
+        subject = "Your BayanihanHub password was changed"
+        time_display = timestamp_str or datetime.now().strftime("%B %d, %Y at %I:%M %p UTC")
+
+        content = f"""
+        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Your BayanihanHub password was changed</h2>
+        <p>Hello <strong>{username}</strong>,</p>
+        <p>Your BayanihanHub password was successfully changed.</p>
+        <p>If you made this change, no further action is required.</p>
+        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #991b1b; font-size: 14px;">
+            <strong>Did not change your password?</strong><br>
+            If you did not change your password, please secure your account immediately by resetting your password or contacting BayanihanHub support.
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-top: 20px; line-height: 1.5;">
+            <strong>Time:</strong><br>{time_display}
+        </p>
+        <p style="font-size: 13px; color: #64748b; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+            BayanihanHub Security Team
+        </p>
+        """
+        return EmailService.send_email(to_email, subject, content, email_type="PASSWORD_CHANGED_SECURITY")
+
+    @staticmethod
     def send_registration_email(to_email: str, username: str) -> bool:
         subject = "Welcome to Bayanihan Hub!"
         content = f"""

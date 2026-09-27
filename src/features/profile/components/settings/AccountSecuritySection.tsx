@@ -14,6 +14,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { getAuthHeaders } from '@/services/authHeader';
 import toast from 'react-hot-toast';
 
 // ── Verification Status Card ──────────────────────────────────
@@ -78,28 +79,75 @@ function ChangePasswordForm() {
   const [form, setForm] = useState({ current: '', newPass: '', confirm: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  const { updateProfile } = useAuthStore();
 
   const validate = () => {
     if (!form.current) return 'Current password is required.';
     if (form.newPass.length < 8) return 'New password must be at least 8 characters.';
-    if (!/[A-Z]/.test(form.newPass)) return 'Password must include at least one uppercase letter.';
-    if (!/[0-9]/.test(form.newPass)) return 'Password must include at least one number.';
-    if (form.newPass !== form.confirm) return 'Passwords do not match.';
+    if (!/[A-Za-z]/.test(form.newPass)) return 'Password must include at least one letter.';
+    if (!/[0-9!@#$%^&*(),.?":{}|<>]/.test(form.newPass)) return 'Password must include at least one number or special character.';
+    if (form.newPass !== form.confirm) return 'New passwords do not match.';
+    if (form.current === form.newPass) return 'New password cannot be the same as your current password.';
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return; // Prevent duplicate submissions
+
     const err = validate();
-    if (err) { toast.error(err); return; }
+    if (err) {
+      toast.error(err);
+      return;
+    }
+
     setIsSaving(true);
+    setSuccessBanner(null);
+
     try {
-      await new Promise((r) => setTimeout(r, 500));
-      toast.success('Password updated successfully.');
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: form.current,
+          newPassword: form.newPass,
+          confirmPassword: form.confirm,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        let errorMsg = 'Unable to update password. Please check your credentials and try again.';
+        if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMsg = data.detail;
+          } else if (data.detail.message) {
+            errorMsg = data.detail.message;
+          }
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Password changed successfully
+      const successMsg = data.message || 'Password changed successfully.';
+      toast.success(successMsg);
+      setSuccessBanner('✓ Password changed successfully. A security confirmation email has been sent to your email address.');
       setForm({ current: '', newPass: '', confirm: '' });
+
+      if (data.token) {
+        updateProfile({ token: data.token });
+      }
+
       setShowLogoutDialog(true);
-    } catch {
-      toast.error('Unable to update password. Please try again.');
+    } catch (networkErr) {
+      console.error('[ChangePassword] Error:', networkErr);
+      toast.error('Unable to connect to server. Please check your connection and try again.');
     } finally {
       setIsSaving(false);
     }
@@ -108,13 +156,24 @@ function ChangePasswordForm() {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-3">
+        {successBanner && (
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+        )}
+
         <Input
           label="Current Password"
           type="password"
           placeholder="••••••••"
           value={form.current}
-          onChange={(e) => setForm({ ...form, current: e.target.value })}
+          onChange={(e) => {
+            setForm({ ...form, current: e.target.value });
+            if (successBanner) setSuccessBanner(null);
+          }}
           autoComplete="current-password"
+          disabled={isSaving}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
@@ -122,17 +181,25 @@ function ChangePasswordForm() {
             type="password"
             placeholder="••••••••"
             value={form.newPass}
-            onChange={(e) => setForm({ ...form, newPass: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, newPass: e.target.value });
+              if (successBanner) setSuccessBanner(null);
+            }}
             autoComplete="new-password"
-            helperText="Min 8 chars, 1 uppercase, 1 number."
+            helperText="Min 8 chars, 1 letter, 1 number or special character."
+            disabled={isSaving}
           />
           <Input
             label="Confirm New Password"
             type="password"
             placeholder="••••••••"
             value={form.confirm}
-            onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, confirm: e.target.value });
+              if (successBanner) setSuccessBanner(null);
+            }}
             autoComplete="new-password"
+            disabled={isSaving}
           />
         </div>
         <div className="flex justify-end pt-1">
@@ -141,9 +208,11 @@ function ChangePasswordForm() {
             variant="primary"
             size="sm"
             isLoading={isSaving}
+            loadingText="Changing Password..."
+            disabled={isSaving}
             leftIcon={<KeyRound className="w-4 h-4" />}
           >
-            Update Password
+            Change Password
           </Button>
         </div>
       </form>

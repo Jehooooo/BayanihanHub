@@ -13,6 +13,7 @@ from app.models.user import (
     NotificationPreference,
 )
 from app.models.email_log import EmailLog
+from app.models.user_session import UserSession
 from app.models.verification import (
     IdType,
     FacialVerificationStatus,
@@ -114,4 +115,5 @@ __all__ = [
     "PasswordReset",
     "NotificationPreference",
     "EmailLog",
+    "UserSession",
 ]

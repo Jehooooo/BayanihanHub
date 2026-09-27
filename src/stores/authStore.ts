@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(credentials),
           });
 
@@ -174,6 +175,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        try {
+          fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+          }).catch((err) => {
+            console.warn('[Logout] Session invalidation error:', err);
+          });
+        } catch {
+          // Non-blocking logout continuity
+        }
         useSavedItemsStore.getState().clearAll();
         set({ user: null, isAuthenticated: false, error: null });
       },
