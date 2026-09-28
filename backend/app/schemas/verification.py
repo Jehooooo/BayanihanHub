@@ -102,3 +102,22 @@ class LoginEligibilityResponseDto(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+class ExtractIdRequestDto(BaseModel):
+    id_type: Optional[str] = Field(None, alias="idType")
+    document_data_url: Optional[str] = Field(None, alias="idDocumentDataUrl")
+    file_name: Optional[str] = Field(None, alias="fileName")
+
+    class Config:
+        populate_by_name = True
+
+
+class ExtractIdResponseDto(BaseModel):
+    success: bool
+    extracted_date: Optional[str] = Field(None, alias="extractedDate")
+    is_expired: bool = Field(False, alias="isExpired")
+    message: Optional[str] = None
+
+    class Config:
+        populate_by_name = True

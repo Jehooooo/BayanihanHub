@@ -54,8 +54,20 @@ export function getUserFriendlyErrorMessage(
     lower.includes('programmingerror') ||
     lower.includes('exception') ||
     lower.includes('debug') ||
-    lower.includes('axioserror')
+    lower.includes('axioserror') ||
+    lower.includes('has no attribute') ||
+    lower.includes('attributeerror') ||
+    lower.includes('typeerror') ||
+    lower.includes('valueerror') ||
+    lower.includes('keyerror') ||
+    lower.includes('object has no') ||
+    lower.includes('requestdto') ||
+    lower.includes('dto') ||
+    lower.includes('pydantic')
   ) {
+    if (lower.includes('register') || lower.includes('registration')) {
+      return 'Registration could not be completed. Please try again.';
+    }
     return 'Something went wrong. Please try again.';
   }
 

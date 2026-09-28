@@ -43,6 +43,7 @@ env/
 
 # Scratch & temporary testing files
 scratch/
+.scratch/
 notes.txt
 public/uploads/
 .vercel

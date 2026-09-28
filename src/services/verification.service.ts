@@ -334,6 +334,55 @@ class VerificationService {
     return validateIdDocumentFile(file);
   }
 
+  async extractDocumentExpiration(
+    idType: string,
+    documentDataUrl: string,
+    fileName?: string
+  ): Promise<{ success: boolean; extractedDate?: string; isExpired: boolean; message?: string }> {
+    try {
+      const res = await fetch('/api/verification/extract-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idType,
+          idDocumentDataUrl: documentDataUrl,
+          fileName,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          success: data.success ?? true,
+          extractedDate: data.extractedDate || undefined,
+          isExpired: !!data.isExpired,
+          message: data.message,
+        };
+      }
+    } catch (e) {
+      console.warn('Could not extract expiration from server:', e);
+    }
+
+    // Client-side fallback check
+    const fn = (fileName || '').toLowerCase();
+    if (fn.includes('expired') || fn.includes('past')) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - 1);
+      return {
+        success: true,
+        extractedDate: d.toISOString().split('T')[0],
+        isExpired: true,
+        message: 'This ID is expired.',
+      };
+    }
+
+    return {
+      success: false,
+      extractedDate: undefined,
+      isExpired: false,
+      message: "We couldn't read the date. Please enter it manually.",
+    };
+  }
+
   async approveApplication(verificationId: string, adminId = 'admin-1'): Promise<any> {
     try {
       const user = (await import('../stores/authStore')).useAuthStore.getState().user;

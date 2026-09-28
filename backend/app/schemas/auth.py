@@ -21,6 +21,7 @@ class RegisterRequestDto(BaseModel):
     extra_info: Optional[str] = Field(None, alias="extraInfo")
     id_document_url: Optional[str] = Field(None, alias="idDocumentUrl")
     face_image_url: Optional[str] = Field(None, alias="faceImageUrl")
+    verification_confidence: Optional[int] = Field(95, alias="verificationConfidence")
     website: Optional[str] = Field(None, description="Legacy honeypot field, deprecated in favor of bayanihan_hp_check.")
     bayanihan_hp_check: Optional[str] = Field(None, alias="bayanihanHpCheck", description="Anti-bot honeypot field. Must be left empty by legitimate users.")
 
@@ -115,7 +116,17 @@ class ValidateStep1RequestDto(BaseModel):
 
     email: str
     username: str
+    full_name: Optional[str] = Field(None, alias="fullName")
+    phone: Optional[str] = None
     password: Optional[str] = None
     bayanihan_hp_check: Optional[str] = Field(None, alias="bayanihanHpCheck", description="Anti-bot honeypot check")
     website: Optional[str] = Field(None, description="Legacy anti-bot field")
+
+
+class CheckAvailabilityResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    available: bool
+    field: str
+    message: Optional[str] = None
 

@@ -89,7 +89,7 @@ class Profile(Base):
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     middle_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    phone: Mapped[str] = mapped_column(String(32), nullable=False)
+    phone: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     address_line: Mapped[str] = mapped_column(String(255), nullable=False)
     barangay: Mapped[str] = mapped_column(String(100), nullable=False)

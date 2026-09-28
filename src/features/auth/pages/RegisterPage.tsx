@@ -2,7 +2,7 @@
 // Bayanihan Hub — Verified Multi-Step Registration Page
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   User,
@@ -92,10 +92,74 @@ export default function RegisterPage() {
     details?: string;
   } | null>(null);
 
+  // Step 1 inline field errors
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    username?: string;
+    email?: string;
+    phone?: string;
+    expirationDate?: string;
+  }>({});
+
+  // Step 3 Expiration hint & loading state
+  const [expirationHint, setExpirationHint] = useState<string | null>(null);
+  const [isExtractingDate, setIsExtractingDate] = useState<boolean>(false);
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
   const selectedIdConfig = formData.idType ? PHILIPPINE_ID_CONFIGS[formData.idType] : null;
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleFieldBlur = async (field: 'email' | 'username' | 'phone' | 'fullName') => {
+    const value = formData[field]?.trim();
+    if (!value) return;
+
+    if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        setFieldErrors((prev) => ({ ...prev, email: 'Please enter a valid email address.' }));
+        return;
+      }
+    } else if (field === 'phone') {
+      const clean = value.replace(/[\s\-\(\)\.\/\+]/g, '');
+      if (clean.length < 10) {
+        setFieldErrors((prev) => ({ ...prev, phone: 'Please enter a valid 11-digit Philippine mobile number.' }));
+        return;
+      }
+    } else if (field === 'username') {
+      if (value.length < 3) {
+        setFieldErrors((prev) => ({ ...prev, username: 'Username must be at least 3 characters.' }));
+        return;
+      }
+    }
+
+    try {
+      const params = new URLSearchParams({
+        field,
+        value,
+        ...(formData.email ? { email: formData.email.trim() } : {}),
+        ...(formData.phone ? { phone: formData.phone.trim() } : {}),
+      });
+      const res = await fetch(`/api/auth/check-availability?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.available && data.message) {
+          setFieldErrors((prev) => ({ ...prev, [field]: data.message }));
+        } else {
+          setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+        }
+      }
+    } catch (e) {
+      // Ignore background check network hiccups
+    }
   };
 
   // Step 1 Validation -> Proceed to Step 2
@@ -140,6 +204,7 @@ export default function RegisterPage() {
 
     // Step 1 Pre-validation & Security verification with backend
     setIsCheckingStep1(true);
+    setFieldErrors({});
     try {
       const response = await fetch('/api/auth/validate-step1', {
         method: 'POST',
@@ -147,6 +212,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email: formData.email.trim(),
           username: formData.username.trim(),
+          fullName: formData.fullName.trim(),
+          phone: formData.phone.trim(),
           bayanihanHpCheck: formData.bayanihanSecToken || undefined,
         }),
       });
@@ -159,10 +226,17 @@ export default function RegisterPage() {
           return;
         }
 
+        const errField = data?.detail?.field || data?.field;
         const errorCode = data?.detail?.error_code || data?.error_code;
         const errorMsg = typeof data?.detail === 'string'
           ? data.detail
           : data?.detail?.message || data?.message;
+
+        if (errField && ['email', 'username', 'phone', 'fullName'].includes(errField)) {
+          setFieldErrors((prev) => ({ ...prev, [errField]: errorMsg }));
+          toast.error(errorMsg);
+          return;
+        }
 
         if (errorCode === 'SECURITY_VALIDATION_FAILED') {
           toast.error(
@@ -170,9 +244,14 @@ export default function RegisterPage() {
             "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again."
           );
         } else if (errorCode === 'EMAIL_EXISTS') {
+          setFieldErrors((prev) => ({ ...prev, email: errorMsg || 'This email is already registered.' }));
           toast.error(errorMsg || 'An account with this email address already exists. Please log in or use another email.');
         } else if (errorCode === 'USERNAME_TAKEN') {
+          setFieldErrors((prev) => ({ ...prev, username: errorMsg || 'This username is already taken.' }));
           toast.error(errorMsg || 'This username is already taken. Please choose another username.');
+        } else if (errorCode === 'PHONE_EXISTS') {
+          setFieldErrors((prev) => ({ ...prev, phone: errorMsg || 'This phone number is already registered.' }));
+          toast.error(errorMsg || 'This phone number is already registered.');
         } else if (errorCode === 'VALIDATION_ERROR') {
           toast.error(errorMsg || 'Please verify the information you entered.');
         } else if (response.status >= 500) {
@@ -224,9 +303,19 @@ export default function RegisterPage() {
       return;
     }
 
-    if (selectedIdConfig?.requiresExpiration && !formData.expirationDate) {
-      toast.error('Please specify the Expiration Date printed on your ID.');
-      return;
+    if (selectedIdConfig?.requiresExpiration) {
+      if (!formData.expirationDate) {
+        toast.error('Please specify the Expiration Date printed on your ID.');
+        return;
+      }
+      const expDate = new Date(formData.expirationDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expDate < today) {
+        setFieldErrors((prev) => ({ ...prev, expirationDate: 'This ID is expired.' }));
+        toast.error('This ID is expired. Please provide a valid, unexpired Philippine ID.');
+        return;
+      }
     }
 
     if (!formData.idDocumentDataUrl) {
@@ -407,6 +496,8 @@ export default function RegisterPage() {
               label="Full Name (Legal Name)"
               value={formData.fullName}
               onChange={(e) => handleChange('fullName', e.target.value)}
+              onBlur={() => handleFieldBlur('fullName')}
+              error={fieldErrors.fullName}
               placeholder="Juan Dela Cruz"
               leftIcon={<User className="w-4 h-4" />}
               required
@@ -415,6 +506,8 @@ export default function RegisterPage() {
               label="Username"
               value={formData.username}
               onChange={(e) => handleChange('username', e.target.value)}
+              onBlur={() => handleFieldBlur('username')}
+              error={fieldErrors.username}
               placeholder="juandc"
               required
             />
@@ -426,6 +519,8 @@ export default function RegisterPage() {
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              onBlur={() => handleFieldBlur('email')}
+              error={fieldErrors.email}
               placeholder="juan@example.com"
               leftIcon={<Mail className="w-4 h-4" />}
               required
@@ -435,6 +530,8 @@ export default function RegisterPage() {
               type="tel"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
+              onBlur={() => handleFieldBlur('phone')}
+              error={fieldErrors.phone}
               placeholder="+63 912 345 6789"
               leftIcon={<Phone className="w-4 h-4" />}
               required
@@ -683,7 +780,24 @@ export default function RegisterPage() {
                 label="Expiration Date"
                 type="date"
                 value={formData.expirationDate}
-                onChange={(e) => handleChange('expirationDate', e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleChange('expirationDate', val);
+                  if (val) {
+                    const exp = new Date(val);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (exp < today) {
+                      setFieldErrors((prev) => ({ ...prev, expirationDate: 'This ID is expired.' }));
+                    } else {
+                      setFieldErrors((prev) => ({ ...prev, expirationDate: undefined }));
+                    }
+                  } else {
+                    setFieldErrors((prev) => ({ ...prev, expirationDate: undefined }));
+                  }
+                }}
+                error={fieldErrors.expirationDate}
+                helperText={expirationHint || undefined}
                 leftIcon={<Calendar className="w-4 h-4" />}
                 required
               />
@@ -726,7 +840,43 @@ export default function RegisterPage() {
             <IdDocumentUploader
               idType={selectedIdConfig.label}
               documentDataUrl={formData.idDocumentDataUrl}
-              onDocumentChange={(dataUrl) => handleChange('idDocumentDataUrl', dataUrl)}
+              onDocumentChange={async (dataUrl, file) => {
+                handleChange('idDocumentDataUrl', dataUrl);
+                if (!dataUrl) {
+                  setExpirationHint(null);
+                  return;
+                }
+
+                if (selectedIdConfig?.requiresExpiration) {
+                  setIsExtractingDate(true);
+                  setExpirationHint('Scanning ID document for expiration date...');
+                  try {
+                    const extResult = await verificationService.extractDocumentExpiration(
+                      formData.idType,
+                      dataUrl,
+                      file?.name
+                    );
+                    if (extResult.extractedDate) {
+                      handleChange('expirationDate', extResult.extractedDate);
+                      if (extResult.isExpired) {
+                        setFieldErrors((prev) => ({ ...prev, expirationDate: 'This ID is expired.' }));
+                        setExpirationHint(null);
+                        toast.error('This ID is expired. Please upload a valid, unexpired Philippine ID.');
+                      } else {
+                        setFieldErrors((prev) => ({ ...prev, expirationDate: undefined }));
+                        setExpirationHint('Expiration date auto-filled from your uploaded ID.');
+                        toast.success('Expiration date auto-filled from ID.');
+                      }
+                    } else {
+                      setExpirationHint("We couldn't read the date. Please enter it manually.");
+                    }
+                  } catch (err) {
+                    setExpirationHint("We couldn't read the date. Please enter it manually.");
+                  } finally {
+                    setIsExtractingDate(false);
+                  }
+                }
+              }}
             />
           </div>
 
@@ -744,7 +894,14 @@ export default function RegisterPage() {
             <Button
               variant="primary"
               size="lg"
-              disabled={!formData.idNumber || !formData.dob || !formData.idDocumentDataUrl}
+              disabled={
+                !formData.idNumber ||
+                !formData.dob ||
+                !formData.idDocumentDataUrl ||
+                isExtractingDate ||
+                (selectedIdConfig.requiresExpiration &&
+                  (!formData.expirationDate || fieldErrors.expirationDate === 'This ID is expired.'))
+              }
               onClick={handleStep3Next}
               rightIcon={<ArrowRight className="w-4 h-4" />}
               className="font-bold shadow-button"

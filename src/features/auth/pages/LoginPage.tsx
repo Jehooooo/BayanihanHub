@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -12,6 +12,10 @@ import SEO from '@/components/common/SEO';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -324,6 +324,7 @@ CREATE TABLE IF NOT EXISTS `profiles` (
     PRIMARY KEY (`profile_id`),
     UNIQUE KEY `uq_profiles_user_id` (`user_id`),
     UNIQUE KEY `uq_profiles_username` (`username`),
+    UNIQUE KEY `uq_profiles_phone` (`phone`),
     INDEX `idx_profiles_location` (`municipality`, `barangay`),
     CONSTRAINT `fk_profiles_user` FOREIGN KEY (`user_id`)
         REFERENCES `users` (`user_id`)

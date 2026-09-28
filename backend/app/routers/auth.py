@@ -3,9 +3,10 @@ import secrets
 from datetime import datetime, date, timezone, timedelta
 from typing import Optional
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request, Response, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 
 from app.db import get_db
 from app.auth import (
@@ -35,6 +36,7 @@ from app.schemas.auth import (
     ChangePasswordRequestDto,
     GenericResponseDto,
     ValidateStep1RequestDto,
+    CheckAvailabilityResponseDto,
 )
 from app.services.email import EmailService
 from app.services.biometric_engine import mask_id_number
@@ -85,15 +87,153 @@ def parse_date(date_str: Optional[str]) -> Optional[date]:
         return None
 
 
+def normalize_phone_number(phone: Optional[str]) -> str:
+    """
+    Normalize Philippine mobile phone numbers to 11-digit canonical format: 09XXXXXXXXX.
+    Strips spaces, dashes, parentheses, dots, slashes, and handles:
+    - 09XXXXXXXXX -> 09XXXXXXXXX
+    - +639XXXXXXXXX -> 09XXXXXXXXX
+    - 639XXXXXXXXX -> 09XXXXXXXXX
+    - 9XXXXXXXXX (10 digits) -> 09XXXXXXXXX
+    """
+    if not phone:
+        return ""
+    cleaned = re.sub(r"[\s\-\(\)\.\/\+]", "", str(phone).strip())
+    if cleaned.startswith("639") and len(cleaned) == 12:
+        cleaned = "09" + cleaned[3:]
+    elif cleaned.startswith("9") and len(cleaned) == 10:
+        cleaned = "09" + cleaned
+    return cleaned
+
+
+def normalize_full_name(name: Optional[str]) -> str:
+    """Trim, collapse multiple spaces, and lowercase."""
+    if not name:
+        return ""
+    return " ".join(str(name).strip().lower().split())
+
+
+def check_duplicate_full_name(
+    db: Session,
+    full_name: str,
+    clean_email: str = "",
+    clean_phone: str = "",
+    id_number: Optional[str] = None,
+) -> Optional[dict]:
+    """
+    Checks for an existing account with the same normalized full name (trimmed, collapsed spaces, case-insensitive).
+    Soft check rule:
+    - If full name matches AND it also matches email, phone, or ID number -> block with conflict error.
+    - If full name matches but NONE of email, phone, or ID match -> flag/log as soft duplicate, do not block.
+    """
+    norm_name = normalize_full_name(full_name)
+    if not norm_name:
+        return None
+
+    profiles = db.query(Profile).all()
+    for prof in profiles:
+        prof_name = normalize_full_name(f"{prof.first_name} {prof.last_name}")
+        if prof_name == norm_name:
+            user = db.query(User).filter(User.user_id == prof.user_id).first()
+            p_email = user.email.strip().lower() if user else ""
+            p_phone = normalize_phone_number(prof.phone)
+
+            id_matched = False
+            if id_number:
+                clean_id = id_number.strip().lower()
+                existing_verif = (
+                    db.query(IdentityVerification)
+                    .filter(
+                        IdentityVerification.user_id == prof.user_id,
+                        IdentityVerification.id_number == clean_id,
+                    )
+                    .first()
+                )
+                if existing_verif:
+                    id_matched = True
+
+            if (clean_email and p_email == clean_email) or (clean_phone and p_phone == clean_phone) or id_matched:
+                return {
+                    "field": "fullName",
+                    "error_code": "DUPLICATE_ACCOUNT",
+                    "message": "An account matching this name and contact details is already registered.",
+                }
+            else:
+                terminal_logger.info(
+                    f"Likely duplicate name flagged for administrative review: '{norm_name}' (existing user_id={prof.user_id})",
+                    category="Registration",
+                )
+    return None
+
+
+@router.get("/check-availability", response_model=CheckAvailabilityResponseDto)
+@limiter.limit("30/minute")
+def check_availability(
+    request: Request,
+    field: str = Query(..., description="Field to check: email, username, phone, or fullName"),
+    value: str = Query(..., description="Value to check"),
+    email: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Lightweight debounced endpoint to check field availability during registration.
+    """
+    clean_val = value.strip().lower()
+
+    if field == "email":
+        if not clean_val or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", clean_val):
+            return CheckAvailabilityResponseDto(available=False, field="email", message="Please enter a valid email address.")
+        exists = db.query(User).filter(User.email == clean_val).first()
+        if exists:
+            return CheckAvailabilityResponseDto(available=False, field="email", message="This email is already registered.")
+        return CheckAvailabilityResponseDto(available=True, field="email")
+
+    elif field == "username":
+        if not clean_val or len(clean_val) < 3:
+            return CheckAvailabilityResponseDto(available=False, field="username", message="Username must be at least 3 characters.")
+        exists = db.query(Profile).filter(Profile.username == clean_val).first()
+        if exists:
+            return CheckAvailabilityResponseDto(available=False, field="username", message="This username is already taken.")
+        return CheckAvailabilityResponseDto(available=True, field="username")
+
+    elif field == "phone":
+        normalized = normalize_phone_number(value)
+        if not re.match(r"^09\d{9}$", normalized):
+            return CheckAvailabilityResponseDto(available=False, field="phone", message="Please enter a valid 11-digit Philippine mobile number.")
+        all_profiles = db.query(Profile).all()
+        for p in all_profiles:
+            if normalize_phone_number(p.phone) == normalized:
+                return CheckAvailabilityResponseDto(available=False, field="phone", message="This phone number is already registered.")
+        return CheckAvailabilityResponseDto(available=True, field="phone")
+
+    elif field == "fullName":
+        norm_name = normalize_full_name(value)
+        if not norm_name or len(norm_name) < 2:
+            return CheckAvailabilityResponseDto(available=False, field="fullName", message="Please enter your legal full name.")
+        dup_conflict = check_duplicate_full_name(
+            db,
+            value,
+            clean_email=email.strip().lower() if email else "",
+            clean_phone=normalize_phone_number(phone) if phone else "",
+        )
+        if dup_conflict:
+            return CheckAvailabilityResponseDto(available=False, field="fullName", message=dup_conflict["message"])
+        return CheckAvailabilityResponseDto(available=True, field="fullName")
+
+    return CheckAvailabilityResponseDto(available=True, field=field)
+
+
 @router.post("/validate-step1", response_model=GenericResponseDto)
 @limiter.limit("15/minute")
 def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session = Depends(get_db)):
     """
-    Pre-validates Step 1 registration inputs (email, username, anti-bot).
-    Provides immediate, actionable feedback to users before ID verification.
+    Pre-validates Step 1 registration inputs (email, username, phone, full name, anti-bot).
+    Provides immediate, actionable field-level feedback to users before ID verification.
     """
     clean_email = dto.email.strip().lower()
     clean_username = dto.username.strip().lower()
+    clean_phone = normalize_phone_number(dto.phone) if dto.phone else ""
 
     # 1. Anti-bot honeypot check (only triggered by automated scripts filling hidden fields)
     if getattr(dto, "bayanihan_hp_check", None) and str(dto.bayanihan_hp_check).strip():
@@ -101,6 +241,7 @@ def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session =
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "success": False,
+                "field": "general",
                 "error_code": "SECURITY_VALIDATION_FAILED",
                 "message": "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again.",
             },
@@ -110,10 +251,11 @@ def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session =
     email_regex = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
     if not re.match(email_regex, clean_email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "success": False,
-                "error_code": "VALIDATION_ERROR",
+                "field": "email",
+                "error_code": "INVALID_EMAIL",
                 "message": "Please enter a valid email address.",
             },
         )
@@ -122,11 +264,12 @@ def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session =
     existing_user = db.query(User).filter(User.email == clean_email).first()
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail={
                 "success": False,
+                "field": "email",
                 "error_code": "EMAIL_EXISTS",
-                "message": "An account with this email address already exists. Please log in or use another email.",
+                "message": "This email is already registered.",
             },
         )
 
@@ -134,13 +277,55 @@ def validate_step1(request: Request, dto: ValidateStep1RequestDto, db: Session =
     existing_profile = db.query(Profile).filter(Profile.username == clean_username).first()
     if existing_profile:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail={
                 "success": False,
+                "field": "username",
                 "error_code": "USERNAME_TAKEN",
-                "message": "This username is already taken. Please choose another username.",
+                "message": "This username is already taken.",
             },
         )
+
+    # 5. Validate phone if provided
+    if dto.phone:
+        if not re.match(r"^09\d{9}$", clean_phone):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "success": False,
+                    "field": "phone",
+                    "error_code": "INVALID_PHONE",
+                    "message": "Please enter a valid 11-digit Philippine mobile number.",
+                },
+            )
+        all_profiles = db.query(Profile).all()
+        for p in all_profiles:
+            if normalize_phone_number(p.phone) == clean_phone:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "success": False,
+                        "field": "phone",
+                        "error_code": "PHONE_EXISTS",
+                        "message": "This phone number is already registered.",
+                    },
+                )
+
+    # 6. Full name soft duplicate check
+    if dto.full_name:
+        dup_conflict = check_duplicate_full_name(
+            db, dto.full_name, clean_email=clean_email, clean_phone=clean_phone
+        )
+        if dup_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "success": False,
+                    "field": dup_conflict["field"],
+                    "error_code": dup_conflict["error_code"],
+                    "message": dup_conflict["message"],
+                },
+            )
 
     return GenericResponseDto(success=True, message="Step 1 information is valid.")
 
@@ -156,12 +341,15 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     clean_email = dto.email.strip().lower()
     clean_username = dto.username.strip().lower()
 
+    clean_phone = normalize_phone_number(dto.phone) if dto.phone else ""
+
     # 0. Anti-bot honeypot protection (only triggered by automated scripts filling hidden trap)
-    if (getattr(dto, "bayanihan_hp_check", None) and str(dto.bayanihan_hp_check).strip()):
+    if getattr(dto, "bayanihan_hp_check", None) and str(dto.bayanihan_hp_check).strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "success": False,
+                "field": "general",
                 "error_code": "SECURITY_VALIDATION_FAILED",
                 "message": "We couldn't continue your registration. Your submission was blocked by our security check. Please refresh the page and try again.",
             },
@@ -171,11 +359,12 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     existing_user_by_email = db.query(User).filter(User.email == clean_email).first()
     if existing_user_by_email:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail={
                 "success": False,
+                "field": "email",
                 "error_code": "EMAIL_EXISTS",
-                "message": "An account with this email address already exists. Please log in or use another email.",
+                "message": "This email is already registered.",
             },
         )
 
@@ -185,13 +374,59 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     )
     if existing_profile_by_username:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail={
                 "success": False,
+                "field": "username",
                 "error_code": "USERNAME_TAKEN",
-                "message": "This username is already taken. Please choose another username.",
+                "message": "This username is already taken.",
             },
         )
+
+    # 3. Validate unique phone
+    if dto.phone:
+        if not re.match(r"^09\d{9}$", clean_phone):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "success": False,
+                    "field": "phone",
+                    "error_code": "INVALID_PHONE",
+                    "message": "Please enter a valid 11-digit Philippine mobile number.",
+                },
+            )
+        all_profiles = db.query(Profile).all()
+        for p in all_profiles:
+            if normalize_phone_number(p.phone) == clean_phone:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "success": False,
+                        "field": "phone",
+                        "error_code": "PHONE_EXISTS",
+                        "message": "This phone number is already registered.",
+                    },
+                )
+
+    # 4. Full name soft duplicate check
+    if dto.full_name:
+        dup_conflict = check_duplicate_full_name(
+            db,
+            dto.full_name,
+            clean_email=clean_email,
+            clean_phone=clean_phone,
+            id_number=dto.id_number,
+        )
+        if dup_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "success": False,
+                    "field": dup_conflict["field"],
+                    "error_code": dup_conflict["error_code"],
+                    "message": dup_conflict["message"],
+                },
+            )
 
     try:
         # 3. Create User record with account_status_id=1 (PENDING)
@@ -231,7 +466,7 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
             first_name=first_name,
             middle_name=None,
             last_name=last_name,
-            phone=dto.phone or "N/A",
+            phone=clean_phone or "N/A",
             bio="Community Member",
             address_line=dto.address or "Address",
             barangay=dto.barangay or "Poblacion",
@@ -282,7 +517,7 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
                 facial_selfie_reference=dto.face_image_url or "",
                 facial_verification_status_id=facial_status.status_id if facial_status else 2,
                 verification_status_id=verif_status.verification_status_id if verif_status else 1,
-                confidence_score=int(dto.verification_confidence or 95),
+                confidence_score=int(getattr(dto, "verification_confidence", None) or 95),
                 provider="BayanihanHub-Biometric-Engine",
             )
             db.add(id_verif)
@@ -345,11 +580,38 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
     except HTTPException:
         db.rollback()
         raise
+    except IntegrityError as ie:
+        db.rollback()
+        err_str = str(ie).lower()
+        terminal_logger.warning(
+            f"Database unique constraint conflict during registration: {err_str}",
+            category="Registration",
+        )
+        if "uq_users_email" in err_str or "email" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"field": "email", "message": "This email is already registered."},
+            )
+        if "uq_profiles_username" in err_str or "username" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"field": "username", "message": "This username is already taken."},
+            )
+        if "uq_profiles_phone" in err_str or "phone" in err_str:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"field": "phone", "message": "This phone number is already registered."},
+            )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"field": "general", "message": "An account with these details already exists."},
+        )
     except Exception as exc:
         db.rollback()
+        terminal_logger.error(f"Failed to register user in database: {str(exc)}", category="Backend")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to register user in database: {str(exc)}",
+            detail="Registration could not be completed. Please try again.",
         )
 
 
