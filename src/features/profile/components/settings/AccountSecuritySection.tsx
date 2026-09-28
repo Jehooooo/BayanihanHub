@@ -121,11 +121,19 @@ function ChangePasswordForm() {
 
       if (!response.ok) {
         let errorMsg = 'Unable to update password. Please check your credentials and try again.';
-        if (data.detail) {
+        if (response.status === 404) {
+          errorMsg = 'Password service is currently unavailable. Please try again later.';
+        } else if (data.detail) {
           if (typeof data.detail === 'string') {
-            errorMsg = data.detail;
-          } else if (data.detail.message) {
-            errorMsg = data.detail.message;
+            errorMsg = data.detail === 'Not Found'
+              ? 'Password service is currently unavailable. Please try again later.'
+              : data.detail;
+          } else if (typeof data.detail === 'object') {
+            if (data.detail.message) {
+              errorMsg = data.detail.message;
+            } else if (Array.isArray(data.detail) && data.detail.length > 0) {
+              errorMsg = data.detail[0]?.msg || errorMsg;
+            }
           }
         } else if (data.message) {
           errorMsg = data.message;

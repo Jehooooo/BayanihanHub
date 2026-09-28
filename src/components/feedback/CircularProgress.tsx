@@ -69,16 +69,28 @@ export default function CircularProgress({
   const radius = (dimension - actualStroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Clamped percentage
+  // Clamped target percentage
   const clampedValue = Math.min(Math.max(value ?? 0, 0), 100);
-  const strokeDashoffset = circumference - (clampedValue / 100) * circumference;
+  const [animatedValue, setAnimatedValue] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!isIndeterminate && value !== undefined) {
+      const raf = requestAnimationFrame(() => {
+        setAnimatedValue(clampedValue);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [clampedValue, isIndeterminate, value]);
+
+  const targetValue = isIndeterminate ? 0 : animatedValue;
+  const strokeDashoffset = circumference - (targetValue / 100) * circumference;
 
   const themeColors = colorConfig[color] || colorConfig.primary;
 
   return (
     <div
       role="progressbar"
-      aria-valuenow={isIndeterminate ? undefined : Math.round(clampedValue)}
+      aria-valuenow={isIndeterminate ? undefined : Math.round(targetValue)}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={label || 'Operation in progress'}
@@ -101,7 +113,7 @@ export default function CircularProgress({
           height={dimension}
           viewBox={`0 0 ${dimension} ${dimension}`}
           style={{
-            transform: 'rotate(-90deg)',
+            transform: isIndeterminate ? undefined : 'rotate(-90deg)',
             transformOrigin: '50% 50%',
             overflow: 'visible',
             animation: isIndeterminate ? 'spin 1.2s linear infinite' : undefined,
@@ -129,7 +141,8 @@ export default function CircularProgress({
             strokeDashoffset={isIndeterminate ? 0 : strokeDashoffset}
             strokeLinecap="round"
             style={{
-              transition: isIndeterminate ? 'none' : 'stroke-dashoffset 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: isIndeterminate ? 'none' : 'stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+              willChange: 'stroke-dashoffset',
             }}
           />
         </svg>
@@ -157,7 +170,7 @@ export default function CircularProgress({
                 lineHeight: 1,
               }}
             >
-              {Math.round(clampedValue)}%
+              {Math.round(targetValue)}%
             </span>
           ) : null}
         </div>

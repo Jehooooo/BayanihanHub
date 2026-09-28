@@ -283,8 +283,31 @@
   animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite !important;
 }
 
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.animate-progress-indeterminate {
+  width: 40% !important;
+  animation: progress-indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-spin {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+  }
+  .animate-progress-indeterminate {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+    transform: none !important;
+    width: 100% !important;
   }
 }

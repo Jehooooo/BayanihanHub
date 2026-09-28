@@ -727,7 +727,7 @@ def change_password(
             detail={
                 "success": False,
                 "error_code": "INCORRECT_CURRENT_PASSWORD",
-                "message": "The current password you entered is incorrect.",
+                "message": "Current password is incorrect.",
             },
         )
 

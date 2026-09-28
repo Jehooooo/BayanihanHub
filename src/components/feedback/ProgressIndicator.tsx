@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 export interface ProgressIndicatorProps {
   value?: number; // 0 - 100, undefined for indeterminate
   steps?: { label: string; completed: boolean }[];
@@ -16,29 +18,44 @@ export default function ProgressIndicator({
   const heightClass = size === 'sm' ? 'h-1.5' : size === 'lg' ? 'h-3' : 'h-2';
   const isIndeterminate = value === undefined;
 
+  const [animatedWidth, setAnimatedWidth] = useState(0);
+
+  useEffect(() => {
+    if (!isIndeterminate && value !== undefined) {
+      const raf = requestAnimationFrame(() => {
+        setAnimatedWidth(Math.min(Math.max(value, 0), 100));
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [value, isIndeterminate]);
+
   return (
     <div className={`w-full flex flex-col gap-2 ${className}`}>
       {label && (
         <div className="flex justify-between items-center text-xs font-semibold text-neutral-600">
           <span>{label}</span>
-          {!isIndeterminate && <span>{Math.round(value)}%</span>}
+          {!isIndeterminate && <span>{Math.round(animatedWidth)}%</span>}
         </div>
       )}
 
       {/* Progress Track */}
       <div
         role="progressbar"
-        aria-valuenow={isIndeterminate ? undefined : value}
+        aria-valuenow={isIndeterminate ? undefined : Math.round(animatedWidth)}
         aria-valuemin={0}
         aria-valuemax={100}
         className={`w-full ${heightClass} bg-neutral-200 rounded-full overflow-hidden relative`}
       >
         {isIndeterminate ? (
-          <div className="h-full bg-primary-600 rounded-full w-1/3 animate-[slide-up_1.5s_infinite_ease-in-out]" />
+          <div className="h-full bg-primary-600 rounded-full animate-progress-indeterminate" />
         ) : (
           <div
-            className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
-            style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+            className="h-full bg-primary-600 rounded-full"
+            style={{
+              width: `${animatedWidth}%`,
+              transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+              willChange: 'width',
+            }}
           />
         )}
       </div>
