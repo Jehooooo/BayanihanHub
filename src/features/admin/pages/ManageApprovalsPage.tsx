@@ -23,6 +23,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Avatar from '@/components/ui/Avatar';
 import Modal from '@/components/ui/Modal';
+import { Ring } from '@/components/ui/ring';
 import { useProfilePictureStore } from '@/stores/profilePictureStore';
 import { useIdentityVerificationStore } from '@/stores/identityVerificationStore';
 import type {
@@ -41,6 +42,7 @@ export default function ManageApprovalsPage() {
   // --- Identity Verification State & Store ---
   const {
     verifications,
+    isLoading: isVerifLoading,
     approveVerification,
     rejectVerification,
     requestRetry,
@@ -62,14 +64,10 @@ export default function ManageApprovalsPage() {
   const [verifRetryInstructions, setVerifRetryInstructions] = useState('');
 
   const pendingVerifCount = getPendingVerifCount();
-  const verifiedCount = verifications.filter((v) => (v.status === 'VERIFIED' || v.status === 'APPROVED') && v.userId !== 'user-14' && v.userId !== '14').length;
-  const rejectedVerifCount = verifications.filter((v) => (v.status === 'REJECTED' || v.status === 'RETRY_REQUIRED') && v.userId !== 'user-14' && v.userId !== '14').length;
+  const verifiedCount = verifications.filter((v) => v.status === 'VERIFIED' || v.status === 'APPROVED').length;
+  const rejectedVerifCount = verifications.filter((v) => v.status === 'REJECTED' || v.status === 'RETRY_REQUIRED').length;
 
   const filteredVerifications = verifications.filter((v) => {
-    // Exclude Jehosue from verification review list
-    if (v.userId === 'user-14' || v.userId === '14' || v.fullNameOnId?.toLowerCase().includes('jehosue') || v.user?.fullName?.toLowerCase().includes('jehosue')) {
-      return false;
-    }
     const matchesTab =
       verifStatusFilter === 'all' ||
       v.status === verifStatusFilter ||
@@ -117,15 +115,11 @@ export default function ManageApprovalsPage() {
   const [photoRejectReason, setPhotoRejectReason] = useState('');
   const [photoPreviewModalOpen, setPhotoPreviewModalOpen] = useState(false);
 
-  const pendingPhotoCount = submissions.filter((s) => s.status === 'pending' && s.userId !== 'user-14' && s.userId !== '14').length;
-  const approvedPhotoCount = submissions.filter((s) => s.status === 'approved' && s.userId !== 'user-14' && s.userId !== '14').length;
-  const rejectedPhotoCount = submissions.filter((s) => s.status === 'rejected' && s.userId !== 'user-14' && s.userId !== '14').length;
+  const pendingPhotoCount = submissions.filter((s) => s.status === 'pending').length;
+  const approvedPhotoCount = submissions.filter((s) => s.status === 'approved').length;
+  const rejectedPhotoCount = submissions.filter((s) => s.status === 'rejected').length;
 
   const filteredPhotoSubmissions = submissions.filter((sub) => {
-    // Exclude Jehosue from photo approvals list
-    if (sub.userId === 'user-14' || sub.userId === '14' || sub.user?.fullName?.toLowerCase().includes('jehosue')) {
-      return false;
-    }
     const matchesTab = activePhotoTab === 'all' || sub.status === activePhotoTab;
     const userName = sub.user?.fullName || 'User';
     const userEmail = sub.user?.email || '';
@@ -317,7 +311,17 @@ export default function ManageApprovalsPage() {
             </Card>
 
             {/* Verifications Table */}
-            {filteredVerifications.length === 0 ? (
+            {isVerifLoading ? (
+              <Card style={{ padding: '4rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                <Ring className="w-8 h-8 text-primary-600" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-800)', margin: 0 }}>
+                  Loading applications...
+                </h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-500)', margin: 0 }}>
+                  Retrieving identity verification submissions from the database.
+                </p>
+              </Card>
+            ) : filteredVerifications.length === 0 ? (
               <Card style={{ padding: '4rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                 <ShieldCheck style={{ width: '3rem', height: '3rem', color: 'var(--color-neutral-300)' }} />
                 <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-neutral-800)', margin: 0 }}>

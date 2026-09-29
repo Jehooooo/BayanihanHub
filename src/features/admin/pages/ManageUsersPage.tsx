@@ -11,6 +11,7 @@ import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { User } from '@/types';
 import SEO from '@/components/common/SEO';
+import { Ring } from '@/components/ui/ring';
 import {
   Ban,
   CheckCircle2,
@@ -207,7 +208,7 @@ export default function ManageUsersPage() {
             onClick={fetchUsers}
             disabled={isLoading}
             className="w-full sm:w-auto shrink-0 justify-center"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+            leftIcon={isLoading ? <Ring className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" />}
           >
             Refresh Users
           </Button>
@@ -332,7 +333,7 @@ export default function ManageUsersPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-neutral-500)' }}>
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-600" />
+                      <Ring className="w-6 h-6 mx-auto mb-2 text-primary-600" />
                       <p style={{ margin: 0, fontWeight: 600 }}>Loading canonical registered users from database...</p>
                     </td>
                   </tr>
@@ -752,7 +753,7 @@ export default function ManageUsersPage() {
                 onClick={handleConfirmSuspend}
                 disabled={isSubmitting}
                 className="w-full sm:w-auto justify-center"
-                leftIcon={isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                leftIcon={isSubmitting ? <Ring className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
               >
                 {isSubmitting ? 'Suspending...' : 'Confirm Suspension'}
               </Button>

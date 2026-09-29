@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type SpinnerColor = 'primary' | 'white' | 'neutral' | 'success' | 'danger';
@@ -48,8 +48,8 @@ export default function LoadingSpinner({
       `}
       {...props}
     >
-      <Loader2
-        className={`${iconSize} ${iconColor} animate-spin shrink-0 motion-reduce:animate-pulse`}
+      <Ring
+        className={`${iconSize} ${iconColor} shrink-0`}
         aria-hidden="true"
       />
       {label ? (

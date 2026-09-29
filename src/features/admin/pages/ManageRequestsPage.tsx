@@ -10,6 +10,7 @@ import { getErrorMessage } from '@/utils/apiError';
 import { adminService } from '@/services/admin.service';
 import type { ItemRequest } from '@/types';
 import SEO from '@/components/common/SEO';
+import { Ring } from '@/components/ui/ring';
 import {
   Trash2,
   AlertTriangle,
@@ -138,7 +139,7 @@ export default function ManageRequestsPage() {
             onClick={fetchRequests}
             disabled={isLoading}
             className="w-full sm:w-auto shrink-0 justify-center"
-            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+            leftIcon={isLoading ? <Ring className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" />}
           >
             Refresh Requests
           </Button>
@@ -229,7 +230,7 @@ export default function ManageRequestsPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-neutral-500)' }}>
-                      <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-600" />
+                      <Ring className="w-6 h-6 mx-auto mb-2 text-primary-600" />
                       <p style={{ margin: 0, fontWeight: 600 }}>Loading requests from database...</p>
                     </td>
                   </tr>
@@ -498,7 +499,7 @@ export default function ManageRequestsPage() {
                 onClick={handleConfirmRemove}
                 disabled={isSubmitting}
                 className="w-full sm:w-auto justify-center"
-                leftIcon={isSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                leftIcon={isSubmitting ? <Ring className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
               >
                 {isSubmitting ? 'Removing...' : 'Confirm Remove Request'}
               </Button>

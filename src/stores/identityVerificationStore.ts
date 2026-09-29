@@ -185,7 +185,6 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
             const parsed = JSON.parse(val);
             if (parsed?.state?.verifications && Array.isArray(parsed.state.verifications)) {
               parsed.state.verifications = parsed.state.verifications
-                .filter((v: any) => v.userId !== 'user-14' && v.userId !== '14' && !v.fullNameOnId?.toLowerCase().includes('jehosue'))
                 .map((v: any) => ({ ...v, faceImageUrl: '', user: v.user ? { ...v.user, avatar: '' } : v.user }));
             }
             return parsed;

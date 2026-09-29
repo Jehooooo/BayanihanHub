@@ -35,10 +35,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
           if (res.ok) {
             const data = await res.json();
             if (data.submissions && Array.isArray(data.submissions)) {
-              const sanitized = data.submissions.filter(
-                (s: any) => s.userId !== 'user-14' && s.userId !== '14' && !s.user?.fullName?.toLowerCase().includes('jehosue')
-              );
-              set({ submissions: sanitized });
+              set({ submissions: data.submissions });
               return;
             }
           }
@@ -234,9 +231,7 @@ export const useProfilePictureStore = create<ProfilePictureState>()(
             if (!val) return null;
             const parsed = JSON.parse(val);
             if (parsed?.state?.submissions && Array.isArray(parsed.state.submissions)) {
-              parsed.state.submissions = parsed.state.submissions.filter(
-                (s: any) => s.userId !== 'user-14' && s.userId !== '14' && !s.user?.fullName?.toLowerCase().includes('jehosue')
-              );
+              // parsed submissions retained as-is
             }
             return parsed;
           } catch {

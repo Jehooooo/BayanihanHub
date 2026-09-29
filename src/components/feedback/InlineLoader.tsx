@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export interface InlineLoaderProps {
   label?: string;
@@ -20,8 +20,8 @@ export default function InlineLoader({
       aria-live="polite"
       className={`inline-flex items-center gap-1.5 text-neutral-500 font-medium ${textSize} ${className}`}
     >
-      <Loader2
-        className={`${iconSize} text-primary-600 animate-spin shrink-0 motion-reduce:animate-pulse`}
+      <Ring
+        className={`${iconSize} text-primary-600 shrink-0`}
         aria-hidden="true"
       />
       <span>{label}</span>

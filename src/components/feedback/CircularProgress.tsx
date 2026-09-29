@@ -1,4 +1,5 @@
 import React from 'react';
+import { Ring } from '@/components/ui/ring';
 
 export interface CircularProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value?: number; // 0 - 100. If undefined, runs indeterminate smooth rotation
@@ -108,44 +109,50 @@ export default function CircularProgress({
           justifyContent: 'center',
         }}
       >
-        <svg
-          width={dimension}
-          height={dimension}
-          viewBox={`0 0 ${dimension} ${dimension}`}
-          style={{
-            transform: isIndeterminate ? undefined : 'rotate(-90deg)',
-            transformOrigin: '50% 50%',
-            overflow: 'visible',
-            animation: isIndeterminate ? 'spin 1.2s linear infinite' : undefined,
-          }}
-        >
-          {/* Background Track */}
-          <circle
-            cx={dimension / 2}
-            cy={dimension / 2}
-            r={radius}
-            fill="none"
-            stroke={themeColors.track}
-            strokeWidth={actualStroke}
+        {isIndeterminate ? (
+          <Ring
+            size={dimension}
+            style={{ color: themeColors.stroke }}
           />
-
-          {/* Active Animated Progress Arc */}
-          <circle
-            cx={dimension / 2}
-            cy={dimension / 2}
-            r={radius}
-            fill="none"
-            stroke={themeColors.stroke}
-            strokeWidth={actualStroke}
-            strokeDasharray={isIndeterminate ? `${circumference * 0.75} ${circumference * 0.25}` : circumference}
-            strokeDashoffset={isIndeterminate ? 0 : strokeDashoffset}
-            strokeLinecap="round"
+        ) : (
+          <svg
+            width={dimension}
+            height={dimension}
+            viewBox={`0 0 ${dimension} ${dimension}`}
             style={{
-              transition: isIndeterminate ? 'none' : 'stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-              willChange: 'stroke-dashoffset',
+              transform: 'rotate(-90deg)',
+              transformOrigin: '50% 50%',
+              overflow: 'visible',
             }}
-          />
-        </svg>
+          >
+            {/* Background Track */}
+            <circle
+              cx={dimension / 2}
+              cy={dimension / 2}
+              r={radius}
+              fill="none"
+              stroke={themeColors.track}
+              strokeWidth={actualStroke}
+            />
+
+            {/* Active Animated Progress Arc */}
+            <circle
+              cx={dimension / 2}
+              cy={dimension / 2}
+              r={radius}
+              fill="none"
+              stroke={themeColors.stroke}
+              strokeWidth={actualStroke}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              style={{
+                transition: 'stroke-dashoffset 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'stroke-dashoffset',
+              }}
+            />
+          </svg>
+        )}
 
         {/* Center Content / Percentage */}
         <div

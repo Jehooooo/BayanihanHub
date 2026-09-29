@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Smile, X, Image as ImageIcon, FileText, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Smile, X, Image as ImageIcon, FileText } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 import toast from 'react-hot-toast';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -361,7 +362,7 @@ export default function MessageInput({
               <span style={{ color: 'var(--color-primary-600)', fontSize: '0.6875rem' }}>
                 {isUploading ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Loader2 style={{ width: '0.75rem', height: '0.75rem', animation: 'spin 1s linear infinite' }} />
+                    <Ring size="0.75rem" className="text-primary-600" />
                     Uploading...
                   </span>
                 ) : attachment.uploadedUrl ? '✓ Ready to send' : 'Waiting...'}
@@ -499,7 +500,7 @@ export default function MessageInput({
           title="Attach file or photo"
         >
           {isUploading ? (
-            <Loader2 style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1s linear infinite' }} />
+            <Ring size="1.25rem" className="text-primary-600" />
           ) : (
             <Paperclip style={{ width: '1.25rem', height: '1.25rem' }} />
           )}

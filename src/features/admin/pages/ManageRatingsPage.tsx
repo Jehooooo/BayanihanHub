@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Star, Trash2, Search, AlertCircle, Calendar, ArrowUpDown, Link as LinkIcon } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 import { adminService } from '@/services/admin.service';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -141,9 +142,9 @@ export default function ManageRatingsPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={7} style={{ padding: '2rem', textAlign: 'center' }}>
-                    <div className="animate-pulse flex flex-col items-center gap-2">
-                      <div className="w-8 h-8 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin" />
-                      <span className="text-sm text-neutral-500">Loading ratings...</span>
+                    <div className="flex flex-col items-center gap-2">
+                      <Ring className="w-8 h-8 text-primary-600" />
+                      <span className="text-sm text-neutral-500 font-medium">Loading ratings...</span>
                     </div>
                   </td>
                 </tr>

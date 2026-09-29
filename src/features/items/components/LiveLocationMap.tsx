@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { MapPin, CheckCircle2, Loader2, Navigation, Search } from 'lucide-react';
+import { MapPin, CheckCircle2, Navigation, Search } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export interface LocationDetails {
   lat?: number;
@@ -412,7 +413,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
                 }}
               />
               {isSearching && (
-                <Loader2 style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-primary-600)', animation: 'spin 0.8s linear infinite', position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <Ring size="0.875rem" className="text-primary-600 absolute right-3 top-1/2 -translate-y-1/2" />
               )}
             </div>
           </div>
@@ -542,7 +543,7 @@ export default function LiveLocationMap({ location, onLocationChange, disabled =
 
           {isResolving ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--color-neutral-500)', padding: '0.25rem 0' }}>
-              <Loader2 style={{ width: '0.875rem', height: '0.875rem', animation: 'spin 0.8s linear infinite' }} />
+              <Ring size="0.875rem" className="text-primary-600" />
               <span>Locating accurate Street, Barangay, and Municipality…</span>
             </div>
           ) : (

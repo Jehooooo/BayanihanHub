@@ -41,6 +41,7 @@ from app.schemas.auth import (
 from app.services.email import EmailService
 from app.services.biometric_engine import mask_id_number
 from app.services.terminal_logger import terminal_logger
+import app.config as config
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & Registration"])
 
@@ -783,61 +784,61 @@ def login(request: Request, response: Response, dto: LoginRequestDto, db: Sessio
 
 @router.post("/forgot-password", response_model=GenericResponseDto)
 @limiter.limit("5/minute")
-def forgot_password(request: Request, dto: ForgotPasswordRequestDto, db: Session = Depends(get_db)):
+def forgot_password(
+    request: Request,
+    dto: ForgotPasswordRequestDto,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     email = dto.email.strip().lower()
     try:
         user = db.query(User).filter(User.email == email).first()
-        
+
         if user:
-            # Generate secure token and store its hash
+            # Generate secure token and store its SHA-256 hash
             token = secrets.token_urlsafe(32)
             hashed_token = hashlib.sha256(token.encode("utf-8")).hexdigest()
             expires = datetime.now() + timedelta(hours=1)
-            
+
             # Invalidate old active tokens
-            db.query(PasswordReset).filter(PasswordReset.user_id == user.user_id, PasswordReset.used == False).update({"used": True})
-            
+            db.query(PasswordReset).filter(
+                PasswordReset.user_id == user.user_id, PasswordReset.used == False
+            ).update({"used": True})
+
             pr = PasswordReset(
                 user_id=user.user_id,
                 token=hashed_token,
                 expires_at=expires,
-                used=False
+                used=False,
             )
             db.add(pr)
             db.commit()
-            
+
             email_addr = user.email
             fname = user.profile.first_name if user.profile else "User"
-            
-            # Dispatch email synchronously to ensure delivery succeeds before reporting success to user
-            email_sent = EmailService.send_password_reset_email(
+
+            # Dispatch email via background task to prevent request timeouts / 500s on SMTP delays
+            background_tasks.add_task(
+                EmailService.send_password_reset_email,
                 to_email=email_addr,
                 reset_token=token,  # Send raw token to user
-                username=fname
+                username=fname,
             )
-            
-            if not email_sent:
-                db.rollback()
-                terminal_logger.error(f"Failed to dispatch password reset email to {user.email}", category="AUTH")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail={
-                        "success": False,
-                        "error_code": "EMAIL_DELIVERY_FAILED",
-                        "message": "We couldn't send the password reset email. Please try again later.",
-                    }
-                )
-            
-            terminal_logger.info(f"Password reset token generated and email dispatched successfully for {user.email}", category="AUTH")
+
+            reset_url = f"{config.FRONTEND_URL}/reset-password?token={token}"
+            terminal_logger.info(
+                f"Password reset link generated for {user.email}: {reset_url}",
+                category="AUTH",
+            )
             return GenericResponseDto(
                 success=True,
-                message="Reset link sent successfully! Please check your inbox for instructions to reset your password."
+                message="If an account exists for this email address, instructions have been sent. Please check your inbox.",
             )
-            
+
         # If user does not exist, return safe generic message to prevent account enumeration
         return GenericResponseDto(
             success=True,
-            message="If an account exists for this email address, instructions have been sent. Please check your inbox."
+            message="If an account exists for this email address, instructions have been sent. Please check your inbox.",
         )
     except HTTPException:
         raise
@@ -849,17 +850,105 @@ def forgot_password(request: Request, dto: ForgotPasswordRequestDto, db: Session
             detail={
                 "success": False,
                 "error_code": "SERVER_ERROR",
-                "message": "We couldn't send the reset link right now. Please try again later.",
-            }
+                "message": "Unable to process password reset request. Please try again later.",
+            },
         )
+
+
+@router.get("/validate-reset-token", response_model=GenericResponseDto)
+@router.get("/reset-password", response_model=GenericResponseDto)
+def validate_reset_token(token: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """
+    Validates a password reset token on page load.
+    Returns:
+    - 200 OK if token exists and is unexpired
+    - 400 Bad Request if token is missing
+    - 404 Not Found if token does not exist or has already been used
+    - 401 Unauthorized if token has expired
+    """
+    if not token or not token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "MISSING_TOKEN",
+                "message": "Reset token is required.",
+            },
+        )
+
+    raw_token = token.strip()
+    hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    pr = (
+        db.query(PasswordReset)
+        .filter(PasswordReset.token == hashed_token, PasswordReset.used == False)
+        .first()
+    )
+    if not pr:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "success": False,
+                "error_code": "INVALID_TOKEN",
+                "message": "This password reset link is invalid or has expired.",
+            },
+        )
+
+    now_dt = datetime.now()
+    exp = (
+        pr.expires_at.replace(tzinfo=None)
+        if (hasattr(pr.expires_at, "tzinfo") and pr.expires_at.tzinfo)
+        else pr.expires_at
+    )
+    if exp < now_dt:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "success": False,
+                "error_code": "TOKEN_EXPIRED",
+                "message": "This password reset link is invalid or has expired.",
+            },
+        )
+
+    user = db.query(User).filter(User.user_id == pr.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "success": False,
+                "error_code": "USER_NOT_FOUND",
+                "message": "User account associated with this token was not found.",
+            },
+        )
+
+    return GenericResponseDto(
+        success=True,
+        message="Reset token is valid.",
+    )
+
 
 @router.post("/reset-password", response_model=GenericResponseDto)
 @limiter.limit("5/minute")
-def reset_password(request: Request, dto: ResetPasswordRequestDto, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def reset_password(
+    request: Request,
+    dto: ResetPasswordRequestDto,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     raw_token = dto.token.strip()
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "error_code": "MISSING_TOKEN",
+                "message": "Reset token is required.",
+            },
+        )
+
     hashed_token = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
     new_password = dto.new_password
-    
+
     # 1. Check confirm password if provided
     if dto.confirm_password and dto.new_password != dto.confirm_password:
         raise HTTPException(
@@ -868,32 +957,42 @@ def reset_password(request: Request, dto: ResetPasswordRequestDto, background_ta
                 "success": False,
                 "error_code": "PASSWORD_MISMATCH",
                 "message": "New passwords do not match.",
-            }
+            },
         )
 
     try:
         # 2. Validate token and active status
-        pr = db.query(PasswordReset).filter(PasswordReset.token == hashed_token, PasswordReset.used == False).first()
+        pr = (
+            db.query(PasswordReset)
+            .filter(PasswordReset.token == hashed_token, PasswordReset.used == False)
+            .first()
+        )
         if not pr:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "success": False,
                     "error_code": "INVALID_TOKEN",
-                    "message": "Invalid or expired reset token. Please request a new password reset link.",
-                }
+                    "message": "This password reset link is invalid or has expired.",
+                },
             )
-            
-        if pr.expires_at < datetime.now():
+
+        now_dt = datetime.now()
+        exp = (
+            pr.expires_at.replace(tzinfo=None)
+            if (hasattr(pr.expires_at, "tzinfo") and pr.expires_at.tzinfo)
+            else pr.expires_at
+        )
+        if exp < now_dt:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
                     "success": False,
                     "error_code": "TOKEN_EXPIRED",
-                    "message": "Your reset token has expired. Please request a new password reset link.",
-                }
+                    "message": "This password reset link is invalid or has expired.",
+                },
             )
-            
+
         user = db.query(User).filter(User.user_id == pr.user_id).first()
         if not user:
             raise HTTPException(
@@ -902,23 +1001,23 @@ def reset_password(request: Request, dto: ResetPasswordRequestDto, background_ta
                     "success": False,
                     "error_code": "USER_NOT_FOUND",
                     "message": "User account associated with this token was not found.",
-                }
+                },
             )
-            
+
         # 3. Hash new password with bcrypt
         hashed = hash_password(new_password)
         user.password_hash = hashed
         user.updated_at = datetime.now()
-        
+
         # 4. Invalidate used token
         pr.used = True
-        
+
         # 5. Invalidate all active sessions for this user for security
         db.query(UserSession).filter(UserSession.user_id == user.user_id).update({"is_active": False})
-        
+
         db.commit()
         db.refresh(user)
-        
+
         # 6. Verify database update immediately
         if not verify_password(new_password, user.password_hash):
             db.rollback()
@@ -928,23 +1027,23 @@ def reset_password(request: Request, dto: ResetPasswordRequestDto, background_ta
                     "success": False,
                     "error_code": "UPDATE_FAILED",
                     "message": "Password update could not be verified in the database. Please try again.",
-                }
+                },
             )
-            
+
         email_addr = user.email
         fname = user.profile.first_name if user.profile else "User"
-        
+
         # 7. Dispatch success email
         background_tasks.add_task(
             EmailService.send_password_reset_success_email,
             to_email=email_addr,
-            username=fname
+            username=fname,
         )
-        
+
         terminal_logger.crud("UPDATE", "User", details=f"Password reset successfully for {user.email}")
         return GenericResponseDto(
             success=True,
-            message="Your password has been reset successfully. You can now log in with your new password."
+            message="Your password has been reset successfully. You can now log in with your new password.",
         )
     except HTTPException:
         raise
@@ -956,8 +1055,8 @@ def reset_password(request: Request, dto: ResetPasswordRequestDto, background_ta
             detail={
                 "success": False,
                 "error_code": "SERVER_ERROR",
-                "message": "We couldn't reset your password right now. Please try again in a moment.",
-            }
+                "message": "Unable to reset your password. Please try again.",
+            },
         )
 
 @router.post("/logout", response_model=GenericResponseDto)

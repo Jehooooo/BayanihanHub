@@ -1,4 +1,5 @@
-import { Search as SearchIcon, X as XIcon, Loader2 } from 'lucide-react';
+import { Search as SearchIcon, X as XIcon } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export interface SearchBarProps {
   value: string;
@@ -105,12 +106,9 @@ export default function SearchBar({
             }}
             title="Searching..."
           >
-            <Loader2
-              style={{
-                width: size === 'sm' ? '0.85rem' : '1rem',
-                height: size === 'sm' ? '0.85rem' : '1rem',
-                animation: 'spin 0.8s linear infinite',
-              }}
+            <Ring
+              size={size === 'sm' ? '0.85rem' : '1rem'}
+              className="text-primary-600"
             />
           </span>
         )}

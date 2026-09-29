@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes, forwardRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -69,7 +69,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin shrink-0 motion-reduce:animate-pulse" aria-hidden="true" />
+          <Ring className="w-4 h-4 shrink-0" aria-hidden="true" />
         ) : (
           leftIcon && (
             <span className="inline-flex shrink-0 items-center justify-center" aria-hidden="true">

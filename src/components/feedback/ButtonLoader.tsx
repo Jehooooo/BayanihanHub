@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Ring } from '@/components/ui/ring';
 
 export interface ButtonLoaderProps {
   loadingText?: string;
@@ -20,8 +20,8 @@ export default function ButtonLoader({
       role="status"
       aria-live="polite"
     >
-      <Loader2
-        className={`${iconSize} animate-spin shrink-0 motion-reduce:animate-pulse`}
+      <Ring
+        className={`${iconSize} shrink-0`}
         aria-hidden="true"
       />
       {loadingText && (
