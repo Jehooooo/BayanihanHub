@@ -61,3 +61,4 @@ The key is loaded through Vite's environment-variable system rather than being h
 - **2026-09-21** — Internal maintenance: periodic documentation refresh.
 - **2026-09-26** — Internal maintenance: ongoing project upkeep.
 - **2026-09-30** — Internal maintenance: readme clarity improvements.
+- **2026-09-30** — Internal maintenance: changelog formatting consistency.
