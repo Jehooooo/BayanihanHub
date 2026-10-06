@@ -250,52 +250,86 @@ class EmailService:
         return EmailService.send_email(to_email, subject, content, email_type="PASSWORD_CHANGED_SECURITY")
 
     @staticmethod
-    def send_registration_email(to_email: str, username: str) -> bool:
-        subject = "Welcome to Bayanihan Hub!"
+    def send_application_submitted_email(to_email: str, full_name: str, user_id: Optional[int] = None) -> bool:
+        subject = "BayanihanHub Application Submitted"
         content = f"""
-        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Welcome to Bayanihan Hub!</h2>
-        <p>Hello <strong>{username}</strong>,</p>
-        <p>Thank you for signing up to join the Bayanihan Hub community platform.</p>
+        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Application Submitted Successfully</h2>
+        <p>Hello <strong>{full_name}</strong>,</p>
+        <p>Your BayanihanHub application has been successfully submitted.</p>
         <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #166534; font-size: 14px;">
-            Your registration has been received and is currently undergoing verification by our community administrators.
+            Your application is currently pending review by an administrator.
         </div>
-        <p>You will receive another email notification as soon as your account is reviewed and approved.</p>
-        <p>We are excited to have you as part of our mutual aid and sharing network!</p>
+        <p>You will receive another email once your application has been approved or rejected.</p>
+        <p style="margin-top: 24px; color: #475569;">
+            Thank you,<br>
+            <strong>BayanihanHub</strong>
+        </p>
         """
-        return EmailService.send_email(to_email, subject, content, email_type="REGISTRATION")
+        return EmailService.send_email(to_email, subject, content, email_type="APPLICATION_SUBMITTED", user_id=user_id)
 
     @staticmethod
-    def send_approval_email(to_email: str, username: str) -> bool:
-        subject = "Your Bayanihan Hub Account is Approved!"
+    def send_registration_email(to_email: str, username: str, user_id: Optional[int] = None) -> bool:
+        """Alias for send_application_submitted_email to maintain backward compatibility."""
+        return EmailService.send_application_submitted_email(to_email, username, user_id=user_id)
+
+    @staticmethod
+    def send_application_approved_email(to_email: str, full_name: str, user_id: Optional[int] = None) -> bool:
+        subject = "Your BayanihanHub Application Has Been Approved"
         login_link = f"{config.FRONTEND_URL}/login"
         content = f"""
-        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Account Approved!</h2>
-        <p>Hello <strong>{username}</strong>,</p>
-        <p>Great news! Your account verification has been reviewed and <strong>approved</strong> by our moderation team.</p>
-        <p>You now have full access to share items, request assistance, and connect with neighbors on Bayanihan Hub.</p>
-        <div style="text-align: center; margin: 32px 0;">
-            <a href="{login_link}" style="background-color: #0f766e; color: #ffffff; padding: 13px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(15, 118, 110, 0.2);">Log In to Your Account</a>
+        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Your BayanihanHub Application Has Been Approved</h2>
+        <p>Hello <strong>{full_name}</strong>,</p>
+        <p>Good news!</p>
+        <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #065f46; font-size: 14px;">
+            Your BayanihanHub application has been approved.
         </div>
+        <p>You can now log in to your account and start using BayanihanHub.</p>
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="{login_link}" style="background-color: #0f766e; color: #ffffff; padding: 13px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(15, 118, 110, 0.2);">Log In to BayanihanHub</a>
+        </div>
+        <p style="margin-top: 24px; color: #475569;">
+            Thank you,<br>
+            <strong>BayanihanHub</strong>
+        </p>
         """
-        return EmailService.send_email(to_email, subject, content, email_type="ACCOUNT_APPROVED")
+        return EmailService.send_email(to_email, subject, content, email_type="APPLICATION_APPROVED", user_id=user_id)
 
     @staticmethod
-    def send_rejection_email(to_email: str, username: str, reason: str = "") -> bool:
-        subject = "Account Registration Update - Bayanihan Hub"
+    def send_approval_email(to_email: str, username: str, user_id: Optional[int] = None) -> bool:
+        """Alias for send_application_approved_email to maintain backward compatibility."""
+        return EmailService.send_application_approved_email(to_email, username, user_id=user_id)
+
+    @staticmethod
+    def send_application_rejected_email(to_email: str, full_name: str, reason: str = "", user_id: Optional[int] = None) -> bool:
+        subject = "Update on Your BayanihanHub Application"
+        clean_reason = reason.strip() if reason and reason.strip() else ""
         reason_html = (
-            f'<div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #991b1b; font-size: 14px;">'
-            f'<strong>Reason provided:</strong><br>{reason}</div>'
-            if reason
+            f"""<div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #991b1b; font-size: 14px;">
+                <strong>Reason:</strong><br>{clean_reason}
+            </div>"""
+            if clean_reason
             else ""
         )
         content = f"""
-        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Account Registration Update</h2>
-        <p>Hello <strong>{username}</strong>,</p>
-        <p>We are writing to inform you that your registration for Bayanihan Hub could not be approved at this time.</p>
+        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">Update on Your BayanihanHub Application</h2>
+        <p>Hello <strong>{full_name}</strong>,</p>
+        <p>We reviewed your BayanihanHub application.</p>
+        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; color: #991b1b; font-size: 14px;">
+            Unfortunately, your application was not approved at this time.
+        </div>
         {reason_html}
-        <p>If you believe this was in error or you have updated documentation to provide, please contact our support team.</p>
+        <p>Please review the information provided and follow the instructions in your account if you are allowed to resubmit.</p>
+        <p style="margin-top: 24px; color: #475569;">
+            Thank you,<br>
+            <strong>BayanihanHub</strong>
+        </p>
         """
-        return EmailService.send_email(to_email, subject, content, email_type="ACCOUNT_REJECTED")
+        return EmailService.send_email(to_email, subject, content, email_type="APPLICATION_REJECTED", user_id=user_id)
+
+    @staticmethod
+    def send_rejection_email(to_email: str, username: str, reason: str = "", user_id: Optional[int] = None) -> bool:
+        """Alias for send_application_rejected_email to maintain backward compatibility."""
+        return EmailService.send_application_rejected_email(to_email, username, reason=reason, user_id=user_id)
 
     @staticmethod
     def send_suspension_email(to_email: str, username: str, reason: str, duration: str) -> bool:

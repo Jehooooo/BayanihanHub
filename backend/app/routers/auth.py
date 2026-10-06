@@ -566,9 +566,14 @@ def register(request: Request, dto: RegisterRequestDto, background_tasks: Backgr
         terminal_logger.integration("Backend", "Verification Service", "Created identity verification record", status="SUCCESS")
 
         email_addr = clean_email
-        fname = dto.full_name.split()[0]
-        # Send Registration Email via BackgroundTasks
-        background_tasks.add_task(EmailService.send_registration_email, email_addr, fname)
+        full_name_str = dto.full_name.strip()
+        # Send Application Submitted Email via BackgroundTasks
+        background_tasks.add_task(
+            EmailService.send_application_submitted_email,
+            email_addr,
+            full_name_str,
+            new_user.user_id,
+        )
 
         return AuthResponseDto(
             success=True,

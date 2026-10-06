@@ -59,8 +59,10 @@ SMTP_USER: str = os.getenv("SMTP_USER") or os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD") or os.getenv("SMTP_PASS", "")
 SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL") or os.getenv("SMTP_FROM", "bkbeza123321@gmail.com")
 SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "BayanihanHub")
-SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "false").lower() in ("true", "1", "yes")
-SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "false").lower() in ("true", "1", "yes")
+_tls_env = os.getenv("SMTP_USE_TLS")
+SMTP_USE_TLS: bool = _tls_env.lower() in ("true", "1", "yes") if _tls_env is not None else (SMTP_PORT == 587)
+_ssl_env = os.getenv("SMTP_USE_SSL")
+SMTP_USE_SSL: bool = _ssl_env.lower() in ("true", "1", "yes") if _ssl_env is not None else (SMTP_PORT == 465)
 
 _default_frontend = "https://bayanihanhub-beta.vercel.app" if ENVIRONMENT == "production" else "http://localhost:5173"
 FRONTEND_URL: str = os.getenv("FRONTEND_URL", _default_frontend).rstrip("/")

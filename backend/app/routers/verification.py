@@ -332,7 +332,10 @@ def approve_application(
 
     iv = (
         db.query(IdentityVerification)
-        .options(joinedload(IdentityVerification.user))
+        .options(
+            joinedload(IdentityVerification.user).joinedload(User.profile),
+            joinedload(IdentityVerification.user).joinedload(User.account_status),
+        )
         .filter(IdentityVerification.identity_verification_id == num_id)
         .first()
     )
@@ -349,28 +352,36 @@ def approve_application(
 
     admin_user_id = admin_user.user_id
     now = datetime.now(timezone.utc)
+    target_verif_status_id = approved_verif_status.verification_status_id if approved_verif_status else 2
+    target_acc_status_id = approved_acc_status.account_status_id if approved_acc_status else 2
+
+    is_already_approved = (iv.verification_status_id == target_verif_status_id)
 
     # Update verification record
-    iv.verification_status_id = (
-        approved_verif_status.verification_status_id if approved_verif_status else 2
-    )
+    iv.verification_status_id = target_verif_status_id
     iv.reviewed_at = now
     iv.reviewed_by = admin_user_id
     iv.rejection_reason = None
     iv.retry_instructions = None
 
     # Update associated user
+    user_email = None
+    recipient_name = None
+    target_user_id = None
+
     if iv.user:
-        iv.user.account_status_id = (
-            approved_acc_status.account_status_id if approved_acc_status else 2
-        )
+        iv.user.account_status_id = target_acc_status_id
         iv.user.is_trusted = True
         iv.user.updated_at = now
-        
-        prof = iv.user.profile
-        username = f"{prof.first_name} {prof.last_name}".strip() if prof else "User"
+
         user_email = iv.user.email
-        background_tasks.add_task(EmailService.send_approval_email, user_email, username)
+        target_user_id = iv.user.user_id
+        prof = iv.user.profile
+        recipient_name = (
+            f"{prof.first_name} {prof.last_name}".strip()
+            if (prof and (prof.first_name or prof.last_name))
+            else (iv.full_name_on_id or iv.user.email.split("@")[0])
+        )
 
     # Log audit entry
     try:
@@ -390,13 +401,34 @@ def approve_application(
     except Exception:
         pass  # Non-blocking for audit log
 
+    # Commit DB changes first
     db.commit()
+
+    # Send Approval Email only after successful DB commit and if not already approved
+    email_sent = True
+    if not is_already_approved and user_email:
+        try:
+            email_sent = EmailService.send_application_approved_email(
+                to_email=user_email,
+                full_name=recipient_name or "Applicant",
+                user_id=target_user_id,
+            )
+        except Exception as e:
+            terminal_logger.error(f"Approval email failed to send to {user_email}: {e}")
+            email_sent = False
+
+    msg = (
+        "Account approved successfully. User can now log in."
+        if email_sent
+        else "Application approved, but the email notification could not be sent."
+    )
 
     return {
         "success": True,
         "verificationId": verification_id,
         "accountStatus": "APPROVED",
-        "message": "Account approved successfully. User can now log in.",
+        "emailSent": email_sent,
+        "message": msg,
     }
 
 
@@ -418,7 +450,10 @@ def reject_application(
 
     iv = (
         db.query(IdentityVerification)
-        .options(joinedload(IdentityVerification.user))
+        .options(
+            joinedload(IdentityVerification.user).joinedload(User.profile),
+            joinedload(IdentityVerification.user).joinedload(User.account_status),
+        )
         .filter(IdentityVerification.identity_verification_id == num_id)
         .first()
     )
@@ -434,26 +469,34 @@ def reject_application(
 
     admin_user_id = admin_user.user_id
     now = datetime.now(timezone.utc)
+    target_verif_status_id = rejected_verif_status.verification_status_id if rejected_verif_status else 3
+    target_acc_status_id = rejected_acc_status.account_status_id if rejected_acc_status else 3
+
+    is_already_rejected = (iv.verification_status_id == target_verif_status_id)
 
     reason = body.reason or "Verification documents did not meet requirements."
 
-    iv.verification_status_id = (
-        rejected_verif_status.verification_status_id if rejected_verif_status else 3
-    )
+    iv.verification_status_id = target_verif_status_id
     iv.rejection_reason = reason
     iv.reviewed_at = now
     iv.reviewed_by = admin_user_id
 
+    user_email = None
+    recipient_name = None
+    target_user_id = None
+
     if iv.user:
-        iv.user.account_status_id = (
-            rejected_acc_status.account_status_id if rejected_acc_status else 3
-        )
+        iv.user.account_status_id = target_acc_status_id
         iv.user.updated_at = now
-        
-        prof = iv.user.profile
-        username = f"{prof.first_name} {prof.last_name}".strip() if prof else "User"
+
         user_email = iv.user.email
-        background_tasks.add_task(EmailService.send_rejection_email, user_email, username, reason)
+        target_user_id = iv.user.user_id
+        prof = iv.user.profile
+        recipient_name = (
+            f"{prof.first_name} {prof.last_name}".strip()
+            if (prof and (prof.first_name or prof.last_name))
+            else (iv.full_name_on_id or iv.user.email.split("@")[0])
+        )
 
     # Log audit entry
     try:
@@ -473,13 +516,35 @@ def reject_application(
     except Exception:
         pass
 
+    # Commit DB changes first
     db.commit()
+
+    # Send Rejection Email only after successful DB commit and if not already rejected
+    email_sent = True
+    if not is_already_rejected and user_email:
+        try:
+            email_sent = EmailService.send_application_rejected_email(
+                to_email=user_email,
+                full_name=recipient_name or "Applicant",
+                reason=reason,
+                user_id=target_user_id,
+            )
+        except Exception as e:
+            terminal_logger.error(f"Rejection email failed to send to {user_email}: {e}")
+            email_sent = False
+
+    msg = (
+        "Application rejected."
+        if email_sent
+        else "Application rejected, but the email notification could not be sent."
+    )
 
     return {
         "success": True,
         "verificationId": verification_id,
         "accountStatus": "REJECTED",
-        "message": "Application rejected.",
+        "emailSent": email_sent,
+        "message": msg,
     }
 
 
