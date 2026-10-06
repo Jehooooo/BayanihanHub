@@ -17,14 +17,14 @@ interface IdentityVerificationState {
   submitVerification: (
     data: Omit<IdentityVerificationRecord, 'id' | 'submittedAt' | 'maskedIdNumber'>
   ) => IdentityVerificationRecord;
-  approveVerification: (verificationId: string, reviewedBy?: string) => Promise<void>;
-  rejectVerification: (verificationId: string, reason: string, reviewedBy?: string) => Promise<void>;
+  approveVerification: (verificationId: string, reviewedBy?: string) => Promise<any>;
+  rejectVerification: (verificationId: string, reason: string, reviewedBy?: string) => Promise<any>;
   requestRetry: (
     verificationId: string,
     reason: string,
     instructions: string,
     reviewedBy?: string
-  ) => Promise<void>;
+  ) => Promise<any>;
   getRecordByUserId: (userId: string) => IdentityVerificationRecord | undefined;
   getPendingCount: () => number;
 }
@@ -43,7 +43,7 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           if (user?.token) headers['Authorization'] = `Bearer ${user.token}`;
           if (user?.id) headers['X-User-Id'] = String(user.id);
 
-          const res = await fetch('/api/verification/applications', { headers });
+          const res = await fetch('/api/verification/applications', { headers, credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
             if (data && Array.isArray(data.applications)) {
@@ -114,9 +114,10 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           });
         }
 
-        // Sync with backend asynchronously
-        await verificationService.approveApplication(verificationId, reviewedBy).catch(() => {});
+        // Sync with backend
+        const result = await verificationService.approveApplication(verificationId, reviewedBy);
         get().fetchVerifications().catch(() => {});
+        return result;
       },
 
       rejectVerification: async (verificationId: string, reason: string, reviewedBy = 'Admin') => {
@@ -144,9 +145,10 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           });
         }
 
-        // Sync with backend asynchronously
-        await verificationService.rejectApplication(verificationId, reason, reviewedBy).catch(() => {});
+        // Sync with backend
+        const result = await verificationService.rejectApplication(verificationId, reason, reviewedBy);
         get().fetchVerifications().catch(() => {});
+        return result;
       },
 
       requestRetry: async (verificationId: string, reason: string, instructions: string, reviewedBy = 'Admin') => {
@@ -163,8 +165,9 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
           }),
         }));
 
-        await verificationService.requestRetry(verificationId, reason, instructions, reviewedBy).catch(() => {});
+        const result = await verificationService.requestRetry(verificationId, reason, instructions, reviewedBy);
         get().fetchVerifications().catch(() => {});
+        return result;
       },
 
       getRecordByUserId: (userId: string) => {

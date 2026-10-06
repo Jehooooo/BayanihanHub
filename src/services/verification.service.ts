@@ -393,6 +393,7 @@ class VerificationService {
       const res = await fetch(`/api/verification/applications/${verificationId}/approve`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify({ adminId }),
       });
       const data = await res.json();
@@ -415,6 +416,7 @@ class VerificationService {
       const res = await fetch(`/api/verification/applications/${verificationId}/reject`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify({ adminId, reason }),
       });
       const data = await res.json();
@@ -437,6 +439,7 @@ class VerificationService {
       const res = await fetch(`/api/verification/applications/${verificationId}/retry`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify({ adminId, reason, retryInstructions: instructions }),
       });
       const data = await res.json();

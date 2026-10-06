@@ -392,15 +392,8 @@ export default function RegisterPage() {
 
         if (registerSuccess) {
           setShowPendingNotification(true);
-          toast('Verifying your profile please wait within an our', {
-            icon: <Clock style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b' }} />,
-            duration: 8000,
-            style: {
-              fontWeight: 700,
-              borderRadius: '12px',
-              background: '#0f172a',
-              color: '#ffffff',
-            },
+          toast.success('Application submitted successfully. Your application is now pending review.', {
+            duration: 6000,
           });
         }
       } else {

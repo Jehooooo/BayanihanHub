@@ -80,26 +80,38 @@ export default function ManageApprovalsPage() {
     return matchesTab && matchesSearch;
   });
 
-  const handleApproveVerif = (record: IdentityVerificationRecord) => {
-    approveVerification(record.id, 'Admin');
-    toast.success(`Approved account for ${record.user?.fullName || record.fullNameOnId}! Status: APPROVED`);
+  const handleApproveVerif = async (record: IdentityVerificationRecord) => {
+    const res = await approveVerification(record.id, 'Admin');
+    if (res?.emailSent === false) {
+      toast('Application approved, but the email notification could not be sent.', { icon: '⚠️' });
+    } else {
+      toast.success('Application approved.');
+    }
     setIsVerifDetailModalOpen(false);
     setSelectedVerif(null);
   };
 
-  const handleConfirmRejectVerif = () => {
+  const handleConfirmRejectVerif = async () => {
     if (!selectedVerif) return;
-    rejectVerification(selectedVerif.id, verifRejectReason.trim(), 'Admin');
-    toast.success(`Rejected verification for ${selectedVerif.user?.fullName || selectedVerif.fullNameOnId}`);
+    const res = await rejectVerification(selectedVerif.id, verifRejectReason.trim(), 'Admin');
+    if (res?.emailSent === false) {
+      toast('Application rejected, but the email notification could not be sent.', { icon: '⚠️' });
+    } else {
+      toast.success('Application rejected.');
+    }
     setIsRejectVerifModalOpen(false);
     setIsVerifDetailModalOpen(false);
     setSelectedVerif(null);
   };
 
-  const handleConfirmRetryVerif = () => {
+  const handleConfirmRetryVerif = async () => {
     if (!selectedVerif) return;
-    requestRetry(selectedVerif.id, 'Information or photo needs correction.', verifRetryInstructions.trim(), 'Admin');
-    toast.success(`Requested verification retry for ${selectedVerif.user?.fullName || selectedVerif.fullNameOnId}`);
+    const res = await requestRetry(selectedVerif.id, 'Information or photo needs correction.', verifRetryInstructions.trim(), 'Admin');
+    if (res?.emailSent === false) {
+      toast('Retry requested, but the email notification could not be sent.', { icon: '⚠️' });
+    } else {
+      toast.success('Verification retry requested.');
+    }
     setIsRetryVerifModalOpen(false);
     setIsVerifDetailModalOpen(false);
     setSelectedVerif(null);
