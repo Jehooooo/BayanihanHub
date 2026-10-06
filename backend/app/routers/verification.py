@@ -253,7 +253,10 @@ def get_applications(status: Optional[str] = Query(None), db: Session = Depends(
                 "barangay": profile.barangay if profile else "",
                 "municipality": profile.municipality if profile else "",
                 "province": profile.province if profile else "",
-                "avatar": "",
+                "avatar": (
+                    iv.facial_selfie_reference
+                    or (profile.avatar_url if (profile and profile.avatar_url) else "")
+                ),
                 "role": "user",
                 "account_status": user_status,
                 "isVerified": user_status == "APPROVED",
@@ -271,7 +274,7 @@ def get_applications(status: Optional[str] = Query(None), db: Session = Depends(
             ),
             "extraInfo": iv.extra_info,
             "idDocumentUrl": iv.document_reference,
-            "faceImageUrl": "",  # Privacy: do not display facial biometric selfie in admin panel
+            "faceImageUrl": iv.facial_selfie_reference or "",
             "confidenceScore": iv.confidence_score,
             "facialVerificationStatus": (
                 iv.facial_status.status_code if iv.facial_status else "PASSED"

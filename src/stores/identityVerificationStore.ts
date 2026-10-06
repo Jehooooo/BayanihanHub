@@ -50,8 +50,8 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
               const sanitized = data.applications
                 .map((a: any) => ({
                   ...a,
-                  faceImageUrl: a.faceImageUrl || '',
-                  user: a.user ? { ...a.user, avatar: a.user.avatar || '' } : a.user,
+                  faceImageUrl: a.faceImageUrl || a.facialSelfieReference || a.user?.avatar || '',
+                  user: a.user ? { ...a.user, avatar: a.user.avatar || a.faceImageUrl || a.facialSelfieReference || '' } : a.user,
                 }));
               set({ verifications: sanitized, isLoading: false });
               return;
@@ -185,7 +185,11 @@ export const useIdentityVerificationStore = create<IdentityVerificationState>()(
             const parsed = JSON.parse(val);
             if (parsed?.state?.verifications && Array.isArray(parsed.state.verifications)) {
               parsed.state.verifications = parsed.state.verifications
-                .map((v: any) => ({ ...v, faceImageUrl: '', user: v.user ? { ...v.user, avatar: '' } : v.user }));
+                .map((v: any) => ({
+                  ...v,
+                  faceImageUrl: v.faceImageUrl || v.user?.avatar || '',
+                  user: v.user ? { ...v.user, avatar: v.user.avatar || v.faceImageUrl || '' } : v.user,
+                }));
             }
             return parsed;
           } catch {
