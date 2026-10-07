@@ -102,7 +102,7 @@ export default function ManageRatingsPage() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
         score: scoreFilter !== 'all' ? parseInt(scoreFilter, 10) : undefined,
       });
-      setRatings(data);
+      setRatings(Array.isArray(data) ? data : (data.ratings || []));
     } catch (err) {
       console.error(err);
       toast.error('Failed to load ratings');

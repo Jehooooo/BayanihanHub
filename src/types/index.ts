@@ -248,27 +248,29 @@ export interface ExchangeHistory {
 export interface Rating {
   id: string;
   exchangeId: string;
+  raterId?: string;
+  ratedUserId?: string;
   score: number;
   review?: string | null;
-  status: 'active' | 'hidden';
+  status?: 'active' | 'hidden';
   createdAt: string;
   updatedAt?: string;
-  rater: {
+  rater?: {
     id: string;
     userId?: number;
     fullName: string;
     username: string;
     avatar?: string;
     email?: string;
-  };
-  ratedUser: {
+  } | User;
+  ratedUser?: {
     id: string;
     userId?: number;
     fullName: string;
     username: string;
     avatar?: string;
     email?: string;
-  };
+  } | User;
 }
 
 export interface UserReputationSummary {
@@ -395,19 +397,6 @@ export interface Notification {
   relatedItemId?: string;
 }
 
-// --- Rating & Review Types ---
-
-export interface Rating {
-  id: string;
-  exchangeId: string;
-  raterId: string;
-  rater?: User;
-  ratedUserId: string;
-  ratedUser?: User;
-  score: number; // 1-5
-  review: string;
-  createdAt: string;
-}
 
 // --- Report Types ---
 

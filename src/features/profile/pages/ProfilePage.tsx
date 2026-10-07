@@ -524,10 +524,8 @@ export default function ProfilePage() {
                 const bKey = typeof b === 'string' ? b : (b.id || b.code || bName);
 
                 return (
-                  <Badge
+                  <span
                     key={bKey}
-                    variant="primary"
-                    size="md"
                     title={bDesc}
                     style={{
                       display: 'inline-flex',
@@ -538,11 +536,15 @@ export default function ProfilePage() {
                       fontWeight: 600,
                       whiteSpace: 'nowrap',
                       cursor: 'help',
+                      borderRadius: '9999px',
+                      backgroundColor: 'var(--color-primary-50)',
+                      color: 'var(--color-primary-700)',
+                      border: '1px solid var(--color-primary-200)',
                     }}
                   >
                     {getBadgeIcon(bIcon)}
                     <span>{bName}</span>
-                  </Badge>
+                  </span>
                 );
               })}
             </div>
@@ -804,7 +806,7 @@ export default function ProfilePage() {
                   <p style={{ margin: 0, fontSize: '0.8125rem' }}>Loading ratings...</p>
                 </Card>
               ) : !reputationData?.reviews || reputationData.reviews.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', spaceY: '0.5rem' }}>
+                <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)' }}>
                   <Star style={{ width: '2.5rem', height: '2.5rem', margin: '0 auto 0.75rem auto', color: 'var(--color-neutral-300)' }} />
                   <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-neutral-800)' }}>
                     No ratings yet
