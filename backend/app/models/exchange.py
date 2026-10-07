@@ -103,9 +103,14 @@ class Rating(Base):
     rater_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), nullable=False)
     rated_user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), nullable=False)
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    review: Mapped[str] = mapped_column(Text, nullable=False)
+    review: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=False
+    )
 
     exchange: Mapped["Exchange"] = relationship("Exchange", back_populates="ratings")
     rater = relationship("app.models.user.User", foreign_keys=[rater_id])
     rated_user = relationship("app.models.user.User", foreign_keys=[rated_user_id])
+

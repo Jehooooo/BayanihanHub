@@ -57,7 +57,7 @@ class User(Base):
     account_status: Mapped["AccountStatus"] = relationship("AccountStatus", back_populates="users")
     profile: Mapped[Optional["Profile"]] = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     user_roles: Mapped[List["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
-    badges: Mapped[List["UserBadge"]] = relationship("UserBadge", back_populates="user", cascade="all, delete-orphan")
+    badges: Mapped[List["UserBadge"]] = relationship("UserBadge", foreign_keys="UserBadge.user_id", back_populates="user", cascade="all, delete-orphan")
     profile_pictures: Mapped[List["ProfilePicture"]] = relationship(
         "ProfilePicture", foreign_keys="ProfilePicture.user_id", back_populates="user", cascade="all, delete-orphan"
     )
@@ -67,6 +67,20 @@ class User(Base):
     password_resets: Mapped[List["PasswordReset"]] = relationship(
         "PasswordReset", back_populates="user", cascade="all, delete-orphan"
     )
+
+    @property
+    def username(self) -> str:
+        if self.profile and self.profile.username:
+            return self.profile.username
+        return self.email.split("@")[0] if self.email else "user"
+
+    @property
+    def full_name(self) -> str:
+        if self.profile:
+            name = f"{self.profile.first_name} {self.profile.last_name}".strip()
+            if name:
+                return name
+        return self.username
 
 
 class UserRole(Base):
@@ -123,9 +137,14 @@ class UserBadge(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
     badge_id: Mapped[int] = mapped_column(Integer, ForeignKey("badges.badge_id"), primary_key=True)
     earned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.current_timestamp(), nullable=False)
+    awarded_by: Mapped[Optional[int]] = mapped_column(BigInteger, ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
+    reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    user: Mapped["User"] = relationship("User", back_populates="badges")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="badges")
     badge: Mapped["Badge"] = relationship("Badge", back_populates="user_badges")
+    awarder: Mapped[Optional["User"]] = relationship("User", foreign_keys=[awarded_by])
 
 
 class ProfilePictureStatus(Base):
