@@ -19,6 +19,8 @@ from app.models.exchange import (
     Rating,
 )
 from app.services.notifications import create_notification
+from app.services.reputation import check_and_award_automatic_badges
+from app.services.email import EmailService
 
 router = APIRouter(prefix="/api/exchanges", tags=["Community Exchanges & Barter"])
 
@@ -68,10 +70,9 @@ class UpdateExchangeStatusDto(BaseModel):
 
 
 class RateExchangeDto(BaseModel):
-    raterId: Any = Field(...)
-    ratedUserId: Any = Field(...)
+    ratedUserId: Optional[Any] = None
     score: int = Field(..., ge=1, le=5)
-    review: str = Field(...)
+    review: Optional[str] = ""
 
 
 def format_exchange(exc: Exchange, db: Session) -> dict:
@@ -120,10 +121,26 @@ def format_exchange(exc: Exchange, db: Session) -> dict:
 
     status_name = exc.status.status_name if exc.status else "pending"
 
+    ratings_list = [
+        {
+            "id": str(r.rating_id),
+            "raterId": f"user-{r.rater_id}",
+            "ratedUserId": f"user-{r.rated_user_id}",
+            "score": r.score,
+            "review": r.review,
+            "createdAt": r.created_at.isoformat() if r.created_at else None,
+            "status": r.status,
+        }
+        for r in getattr(exc, "ratings", [])
+        if getattr(r, "status", "active") == "active"
+    ]
+
     return {
         "id": f"exc-{exc.exchange_id}",
         "exchangeId": exc.exchange_id,
         "status": status_name,
+        "isCompleted": exc.exchange_status_id == 4,
+        "completedAt": exc.completed_at.isoformat() if exc.completed_at else None,
         "offeredItemId": f"item-{offered_item.item_id}" if offered_item else "",
         "requestedItemId": f"item-{requested_item.item_id}" if requested_item else "",
         "offeredItem": format_mini_item(offered_item),
@@ -132,13 +149,14 @@ def format_exchange(exc: Exchange, db: Session) -> dict:
         "receiverId": f"user-{receiver_user.user_id}" if receiver_user else "",
         "offerer": format_mini_user(offerer_user),
         "receiver": format_mini_user(receiver_user),
+        "ratings": ratings_list,
         "message": exc.message,
         "meetingDate": exc.meeting_date.isoformat() if exc.meeting_date else None,
         "meetingLocation": exc.meeting_location,
         "createdAt": exc.created_at.isoformat() if exc.created_at else datetime.now().isoformat(),
         "updatedAt": exc.updated_at.isoformat() if exc.updated_at else datetime.now().isoformat(),
-        "completedAt": exc.completed_at.isoformat() if exc.completed_at else None,
     }
+
 
 
 # ============================================================================
@@ -394,6 +412,131 @@ def complete_exchange(exchange_id: str, db: Session = Depends(get_db)):
     return {"success": True, "message": "Exchange marked as completed.", "exchange": format_exchange(exc, db)}
 
 
+@router.get("/{exchange_id}/rating-eligibility")
+def get_rating_eligibility(
+    exchange_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Check if current user is eligible to rate this exchange.
+    Enforces completed status, legitimate participation, and one rating per deal.
+    """
+    num_exc = parse_numeric_id(exchange_id)
+    if not num_exc:
+        raise HTTPException(status_code=400, detail="Invalid exchange ID.")
+
+    exc = (
+        db.query(Exchange)
+        .filter(Exchange.exchange_id == num_exc)
+        .options(
+            joinedload(Exchange.participants).joinedload(ExchangeParticipant.user).joinedload(User.profile),
+            joinedload(Exchange.exchange_items).joinedload(ExchangeItem.item),
+        )
+        .first()
+    )
+    if not exc:
+        raise HTTPException(status_code=404, detail="Exchange not found.")
+
+    # 1. Must be completed (status 4)
+    if exc.exchange_status_id != 4:
+        return {
+            "eligible": False,
+            "reason": "This transaction has not been marked as completed yet. Only completed transactions can be rated.",
+            "isCompleted": False,
+            "partner": None,
+            "alreadyRated": False,
+        }
+
+    # 2. Must be a participant
+    caller_part = next((p for p in exc.participants if p.user_id == current_user.user_id), None)
+    if not caller_part:
+        return {
+            "eligible": False,
+            "reason": "You did not participate in this transaction.",
+            "isCompleted": True,
+            "partner": None,
+            "alreadyRated": False,
+        }
+
+    # 3. Find the partner participant
+    partner_part = next((p for p in exc.participants if p.user_id != current_user.user_id), None)
+    if not partner_part or not partner_part.user:
+        return {
+            "eligible": False,
+            "reason": "Partner user was not found for this transaction.",
+            "isCompleted": True,
+            "partner": None,
+            "alreadyRated": False,
+        }
+
+    partner_user = partner_part.user
+    partner_name = partner_user.full_name or partner_user.username
+    partner_avatar = ""
+    for pic in getattr(partner_user, "profile_pictures", []):
+        if getattr(pic, "is_active", False) and getattr(pic, "status_id", 0) == 2:
+            partner_avatar = pic.file_reference
+            break
+
+    # Get exchanged item title if any
+    item_title = "Item Exchange"
+    for ei in exc.exchange_items:
+        if ei.item and ei.item.title:
+            item_title = ei.item.title
+            break
+
+    # 4. Check if already rated by caller
+    existing_rating = (
+        db.query(Rating)
+        .filter(
+            Rating.exchange_id == num_exc,
+            Rating.rater_id == current_user.user_id,
+            Rating.rated_user_id == partner_user.user_id,
+        )
+        .first()
+    )
+
+    if existing_rating:
+        return {
+            "eligible": False,
+            "reason": "You have already submitted your rating for this completed transaction.",
+            "isCompleted": True,
+            "alreadyRated": True,
+            "existingRating": {
+                "id": str(existing_rating.rating_id),
+                "score": existing_rating.score,
+                "review": existing_rating.review,
+                "createdAt": existing_rating.created_at.isoformat() + "Z",
+                "status": existing_rating.status,
+            },
+            "partner": {
+                "id": f"user-{partner_user.user_id}",
+                "userId": partner_user.user_id,
+                "fullName": partner_name,
+                "username": partner_user.username,
+                "avatar": partner_avatar,
+                "itemTitle": item_title,
+                "completedAt": exc.completed_at.isoformat() + "Z" if exc.completed_at else exc.updated_at.isoformat() + "Z",
+            },
+        }
+
+    return {
+        "eligible": True,
+        "reason": None,
+        "isCompleted": True,
+        "alreadyRated": False,
+        "partner": {
+            "id": f"user-{partner_user.user_id}",
+            "userId": partner_user.user_id,
+            "fullName": partner_name,
+            "username": partner_user.username,
+            "avatar": partner_avatar,
+            "itemTitle": item_title,
+            "completedAt": exc.completed_at.isoformat() + "Z" if exc.completed_at else exc.updated_at.isoformat() + "Z",
+        },
+    }
+
+
 @router.post("/{exchange_id}/rating")
 def submit_rating(
     exchange_id: str,
@@ -402,8 +545,14 @@ def submit_rating(
     db: Session = Depends(get_db),
 ):
     """
-    Submit rating and review for an exchange partner.
-    Prevents self-rating and ensures caller participated in the exchange.
+    Submit rating and review for a completed exchange partner.
+    Backend validates:
+    - 1 <= score <= 5
+    - rater_id != rated_user_id
+    - transaction exists and is completed (status 4)
+    - caller participated in the transaction
+    - rated user is the legitimate counterparty
+    - one rating per completed transaction (prevents duplicates)
     """
     num_exc = parse_numeric_id(exchange_id)
     if not num_exc:
@@ -411,50 +560,123 @@ def submit_rating(
 
     exc = db.query(Exchange).filter(Exchange.exchange_id == num_exc).first()
     if not exc:
-        raise HTTPException(status_code=404, detail="Exchange not found.")
+        raise HTTPException(status_code=404, detail="Transaction not found.")
 
-    rated_num = parse_numeric_id(dto.ratedUserId)
-    if not rated_num:
-        raise HTTPException(status_code=400, detail="Invalid rated user ID.")
+    # 1. Enforce completed status
+    if exc.exchange_status_id != 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only completed transactions can be rated. This transaction is not completed.",
+        )
 
-    if current_user.user_id == rated_num:
-        raise HTTPException(status_code=400, detail="You cannot rate yourself.")
-
-    # Verify caller is a participant in this exchange
+    # 2. Verify caller is a legitimate participant
     caller_part = db.query(ExchangeParticipant).filter(
         ExchangeParticipant.exchange_id == num_exc,
         ExchangeParticipant.user_id == current_user.user_id,
     ).first()
-    is_admin = any(ur.role.role_name.lower() == "admin" for ur in current_user.user_roles if ur.role)
-    if not caller_part and not is_admin:
-        raise HTTPException(status_code=403, detail="You can only rate exchanges you participated in.")
+    if not caller_part:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only rate transactions you participated in.",
+        )
 
-    # Verify rated user is also a participant in this exchange
-    rated_part = db.query(ExchangeParticipant).filter(
+    # 3. Resolve the counterparty partner
+    partner_part = db.query(ExchangeParticipant).filter(
         ExchangeParticipant.exchange_id == num_exc,
-        ExchangeParticipant.user_id == rated_num,
+        ExchangeParticipant.user_id != current_user.user_id,
     ).first()
-    if not rated_part:
-        raise HTTPException(status_code=400, detail="Rated user was not a participant in this exchange.")
+    if not partner_part:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No partner found for this transaction to rate.",
+        )
 
+    rated_user_id = partner_part.user_id
+
+    # If explicit ratedUserId was provided, verify match
+    if dto.ratedUserId:
+        explicit_num = parse_numeric_id(dto.ratedUserId)
+        if explicit_num and explicit_num != rated_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specified rated user does not match the actual transaction partner.",
+            )
+
+    # 4. Prevent self-rating
+    if current_user.user_id == rated_user_id:
+        raise HTTPException(status_code=400, detail="You cannot rate yourself.")
+
+    # 5. Prevent duplicate ratings for the same completed interaction
     existing_rating = db.query(Rating).filter(
         Rating.exchange_id == num_exc,
         Rating.rater_id == current_user.user_id,
-        Rating.rated_user_id == rated_num,
+        Rating.rated_user_id == rated_user_id,
     ).first()
-
     if existing_rating:
-        existing_rating.score = dto.score
-        existing_rating.review = dto.review.strip()
-    else:
-        new_rating = Rating(
-            exchange_id=num_exc,
-            rater_id=current_user.user_id,
-            rated_user_id=rated_num,
-            score=dto.score,
-            review=dto.review.strip(),
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already submitted a rating for this completed transaction.",
         )
-        db.add(new_rating)
 
+    # 6. Save valid rating
+    cleaned_review = (dto.review or "").strip() or None
+    new_rating = Rating(
+        exchange_id=num_exc,
+        rater_id=current_user.user_id,
+        rated_user_id=rated_user_id,
+        score=dto.score,
+        review=cleaned_review,
+        status="active",
+    )
+    db.add(new_rating)
     db.commit()
-    return {"success": True, "message": "Rating submitted successfully."}
+    db.refresh(new_rating)
+
+    # 7. Check and award automatic badges
+    try:
+        check_and_award_automatic_badges(db, rated_user_id)
+    except Exception as e:
+        print(f"[WARNING] Automatic badge evaluation error: {e}")
+
+    # 8. Create in-app notification for the rated partner
+    rater_name = current_user.full_name or current_user.username
+    try:
+        create_notification(
+            db=db,
+            user_id=rated_user_id,
+            type_code="new_rating",
+            title="New Rating Received!",
+            message=f"You received a new {dto.score}-star rating from {rater_name}.",
+            link="/profile",
+            related_user_id=current_user.user_id,
+        )
+    except Exception as e:
+        print(f"[WARNING] Notification creation failed: {e}")
+
+    # 9. Send email notification if user has an email
+    try:
+        rated_user = db.query(User).filter(User.user_id == rated_user_id).first()
+        if rated_user and rated_user.email:
+            recipient_name = rated_user.full_name or rated_user.username
+            EmailService.send_new_rating_email(
+                to_email=rated_user.email,
+                recipient_name=recipient_name,
+                rater_name=rater_name,
+                score=dto.score,
+                review=cleaned_review,
+            )
+    except Exception as e:
+        print(f"[WARNING] Rating email delivery failed: {e}")
+
+    return {
+        "success": True,
+        "message": "Rating submitted successfully.",
+        "rating": {
+            "id": str(new_rating.rating_id),
+            "exchangeId": str(new_rating.exchange_id),
+            "score": new_rating.score,
+            "review": new_rating.review,
+            "createdAt": new_rating.created_at.isoformat() + "Z",
+        },
+    }
+

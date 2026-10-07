@@ -250,6 +250,32 @@ class EmailService:
         return EmailService.send_email(to_email, subject, content, email_type="PASSWORD_CHANGED_SECURITY")
 
     @staticmethod
+    def send_new_rating_email(
+        to_email: str,
+        recipient_name: str,
+        rater_name: str,
+        score: int,
+        review: Optional[str] = None
+    ) -> bool:
+        subject = f"You received a new {score}-star rating on BayanihanHub"
+        stars_html = "".join(["★" for _ in range(score)] + ["☆" for _ in range(5 - score)])
+        review_html = f'<blockquote style="margin: 16px 0; padding: 12px 16px; border-left: 4px solid #0f766e; background: #f0fdfa; color: #134e4a; font-style: italic;">"{review}"</blockquote>' if review else ""
+        content = f"""
+        <h2 style="color: #0f172a; margin-top: 0; font-size: 20px;">You received a new rating!</h2>
+        <p>Hello <strong>{recipient_name}</strong>,</p>
+        <p><strong>{rater_name}</strong> has just rated your recent completed interaction on BayanihanHub:</p>
+        <div style="font-size: 24px; color: #f59e0b; margin: 12px 0;">
+            {stars_html} <span style="font-size: 16px; font-weight: bold; color: #1e293b;">{score}/5</span>
+        </div>
+        {review_html}
+        <p>Your reputation helps build trust across our community.</p>
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{config.FRONTEND_URL}/profile" style="background-color: #0f766e; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">View Your Profile & Reputation</a>
+        </div>
+        """
+        return EmailService.send_email(to_email, subject, content, email_type="NEW_RATING")
+
+    @staticmethod
     def send_application_submitted_email(to_email: str, full_name: str, user_id: Optional[int] = None) -> bool:
         subject = "BayanihanHub Application Submitted"
         content = f"""

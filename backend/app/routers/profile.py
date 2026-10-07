@@ -9,9 +9,12 @@ from sqlalchemy import desc
 from app.db import get_db
 from app.auth import get_current_user, get_current_user_optional, get_current_admin
 from app.models.user import User, Profile, ProfilePicture, ProfilePictureStatus, UserBadge, Badge, NotificationPreference
+from app.models.exchange import Rating
 from app.services.notifications import create_notification
+from app.services.reputation import calculate_user_reputation_stats
 
 router = APIRouter(prefix="/api", tags=["User Profile & Avatar Moderation"])
+
 
 
 def parse_numeric_id(val: Any) -> Optional[int]:
@@ -55,7 +58,7 @@ class NotificationPreferenceDto(BaseModel):
     emailAccountSecurity: bool
 
 
-def format_user_profile(user: User) -> dict:
+def format_user_profile(user: User, db: Optional[Session] = None) -> dict:
     prof = user.profile
     full_name = f"{prof.first_name} {prof.last_name}".strip() if prof else user.email.split("@")[0]
 
@@ -66,7 +69,37 @@ def format_user_profile(user: User) -> dict:
     avatar_url = active_pic.file_reference if active_pic else ""
     pending_avatar_url = pending_pic.file_reference if pending_pic else None
 
-    badges = [b.badge.name for b in user.badges if b.badge] if user.badges else ["Verified Neighbor"]
+    # Filter only active badges
+    active_user_badges = [
+        b for b in user.badges
+        if b.badge and getattr(b, "status", "active") == "active"
+    ]
+    badge_names = [b.badge.name for b in active_user_badges] if active_user_badges else ["Verified Neighbor"]
+    badge_objects = [
+        {
+            "id": b.badge.badge_id,
+            "name": b.badge.name,
+            "code": b.badge.badge_code,
+            "icon": b.badge.icon,
+            "description": b.badge.description,
+            "earnedAt": b.earned_at.isoformat() if b.earned_at else None,
+            "reason": b.reason,
+        }
+        for b in active_user_badges
+    ]
+
+    # Dynamic rating calculation
+    rating = None
+    review_count = 0
+    reputation_level = "New Member"
+    completed_deals = 0
+
+    if db:
+        stats = calculate_user_reputation_stats(db, user.user_id)
+        rating = stats["averageRating"]
+        review_count = stats["totalRatings"]
+        reputation_level = stats["reputationLevel"]
+        completed_deals = stats["completedDeals"]
 
     return {
         "id": f"user-{user.user_id}",
@@ -83,11 +116,14 @@ def format_user_profile(user: User) -> dict:
         "avatar": avatar_url,
         "pendingAvatar": pending_avatar_url,
         "avatarStatus": "pending" if pending_pic else ("approved" if active_pic else "none"),
-        "badges": badges,
+        "badges": badge_names,
+        "badgeDetails": badge_objects,
         "isVerified": user.account_status_id == 2,
         "accountStatus": user.account_status.status_code if user.account_status else "PENDING",
-        "rating": 4.9,
-        "reviewCount": 14,
+        "rating": rating,
+        "reviewCount": review_count,
+        "reputationLevel": reputation_level,
+        "completedDeals": completed_deals,
         "joinedDate": user.created_at.strftime("%B %Y") if user.created_at else "August 2026",
     }
 
@@ -120,7 +156,104 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    return {"success": True, "profile": format_user_profile(user)}
+    return {"success": True, "profile": format_user_profile(user, db)}
+
+
+@router.get("/users/profile/{user_id}/reputation")
+def get_user_reputation(user_id: str, db: Session = Depends(get_db)):
+    """
+    Fetch comprehensive reputation summary:
+    - Dynamic average rating and count
+    - 5-star distribution breakdown (1-5 stars)
+    - Active earned and awarded badges
+    - List of valid public reviews with rater info
+    - Reputation tier
+    """
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    user = (
+        db.query(User)
+        .filter(User.user_id == num_uid)
+        .options(
+            joinedload(User.profile),
+            joinedload(User.badges).joinedload(UserBadge.badge),
+        )
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    stats = calculate_user_reputation_stats(db, num_uid)
+
+    # Active badges
+    active_badges = [
+        {
+            "id": b.badge.badge_id,
+            "code": b.badge.badge_code,
+            "name": b.badge.name,
+            "icon": b.badge.icon,
+            "description": b.badge.description,
+            "earnedAt": b.earned_at.isoformat() if b.earned_at else None,
+            "reason": b.reason,
+            "isAwardedByAdmin": b.awarded_by is not None,
+        }
+        for b in user.badges
+        if b.badge and getattr(b, "status", "active") == "active"
+    ]
+
+    # Valid reviews received (status == 'active')
+    ratings = (
+        db.query(Rating)
+        .filter(Rating.rated_user_id == num_uid, Rating.status == "active")
+        .options(
+            joinedload(Rating.rater).joinedload(User.profile),
+            joinedload(Rating.rater).joinedload(User.profile_pictures),
+        )
+        .order_by(desc(Rating.created_at))
+        .all()
+    )
+
+    reviews_list = []
+    for r in ratings:
+        rater = r.rater
+        rater_avatar = ""
+        if rater:
+            for pic in getattr(rater, "profile_pictures", []):
+                if getattr(pic, "is_active", False) and getattr(pic, "status_id", 0) == 2:
+                    rater_avatar = pic.file_reference
+                    break
+
+        reviews_list.append({
+            "id": str(r.rating_id),
+            "exchangeId": str(r.exchange_id),
+            "score": r.score,
+            "review": r.review,
+            "createdAt": r.created_at.isoformat() + "Z",
+            "rater": {
+                "id": f"user-{rater.user_id}" if rater else "",
+                "fullName": rater.full_name if rater else "Community Neighbor",
+                "username": rater.username if rater else "neighbor",
+                "avatar": rater_avatar,
+            },
+        })
+
+    return {
+        "success": True,
+        "userId": num_uid,
+        "fullName": user.full_name,
+        "username": user.username,
+        "averageRating": stats["averageRating"],
+        "totalRatings": stats["totalRatings"],
+        "distribution": stats["distribution"],
+        "completedDeals": stats["completedDeals"],
+        "reputationLevel": stats["reputationLevel"],
+        "bayesianScore": stats["bayesianScore"],
+        "badges": active_badges,
+        "reviews": reviews_list,
+    }
+
 
 
 @router.put("/users/profile")

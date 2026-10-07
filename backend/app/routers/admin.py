@@ -8,15 +8,18 @@ from sqlalchemy import or_, desc
 
 from app.db import get_db
 from app.auth import get_current_admin
-from app.models.user import User, Profile, AccountStatus, Role, UserRole
+from app.models.user import User, Profile, AccountStatus, Role, UserRole, Badge, UserBadge
 from app.models.item import Item, ItemImage, ItemStatus, ItemCategory, ItemCondition, ItemType
 from app.services.email import EmailService
 from app.models.request import ItemRequest, RequestStatus, RequestUrgency
 from app.models.moderation import Report, ReportStatus, ReportReason, ReportTargetType, AuditLog, AuditAction, UserSuspension
 from app.models.notification import Notification, NotificationType
-from app.models.exchange import Rating
+from app.models.exchange import Rating, Exchange, ExchangeParticipant
+from app.services.notifications import create_notification
+from app.services.reputation import calculate_user_reputation_stats, check_and_award_automatic_badges
 
 router = APIRouter(
+
     prefix="/api/admin",
     tags=["Admin & Moderation"],
     dependencies=[Depends(get_current_admin)],
@@ -1181,88 +1184,536 @@ def get_user_moderation_history(user_id: str, db: Session = Depends(get_db)):
     }
 
 # ============================================================================
-# Admin Ratings Management
+# Admin Ratings, Moderation, Rankings & Badges Management
 # ============================================================================
+
+class UpdateRatingStatusDto(BaseModel):
+    status: str = Field(..., description="'active' or 'hidden'")
+    reason: Optional[str] = "Admin moderation action"
+    adminId: Optional[Any] = None
+
+
+class AwardBadgeDto(BaseModel):
+    badgeId: int = Field(...)
+    reason: Optional[str] = "Awarded by administrator"
+    adminId: Optional[Any] = None
+
 
 @router.get("/ratings")
 def get_all_ratings(
     adminId: Optional[str] = None,
-    db: Session = Depends(get_db)
+    search: Optional[str] = None,
+    score: Optional[int] = None,
+    status: Optional[str] = "all",
+    sortBy: Optional[str] = "date_desc",
+    page: int = 1,
+    limit: int = 50,
+    db: Session = Depends(get_db),
 ):
-    """Fetch all user ratings and reviews for admin moderation."""
+    """
+    Fetch user ratings and reviews for admin moderation with filtering and sorting.
+    """
     admin_id = get_admin_id(db, adminId)
-    ratings = db.query(Rating).options(
-        joinedload(Rating.rater),
-        joinedload(Rating.rated_user)
-    ).order_by(desc(Rating.created_at)).all()
-    
+
+    query = db.query(Rating).options(
+        joinedload(Rating.rater).joinedload(User.profile),
+        joinedload(Rating.rater).joinedload(User.profile_pictures),
+        joinedload(Rating.rated_user).joinedload(User.profile),
+        joinedload(Rating.rated_user).joinedload(User.profile_pictures),
+        joinedload(Rating.exchange),
+    )
+
+    # Filter by score
+    if score is not None and 1 <= score <= 5:
+        query = query.filter(Rating.score == score)
+
+    # Filter by moderation status
+    if status and status in ["active", "hidden"]:
+        query = query.filter(Rating.status == status)
+
+    # Filter by search keyword
+    if search:
+        s = f"%{search.strip().lower()}%"
+        query = query.join(Rating.rater).join(Rating.rated_user).filter(
+            or_(
+                Rating.review.ilike(s),
+                Rating.rater.has(User.email.ilike(s)),
+                Rating.rated_user.has(User.email.ilike(s)),
+                Rating.rater.has(User.profile.has(Profile.username.ilike(s))),
+                Rating.rater.has(User.profile.has(Profile.first_name.ilike(s))),
+                Rating.rater.has(User.profile.has(Profile.last_name.ilike(s))),
+                Rating.rated_user.has(User.profile.has(Profile.username.ilike(s))),
+                Rating.rated_user.has(User.profile.has(Profile.first_name.ilike(s))),
+                Rating.rated_user.has(User.profile.has(Profile.last_name.ilike(s))),
+            )
+        )
+
+    # Sorting
+    if sortBy == "score_desc":
+        query = query.order_by(desc(Rating.score), desc(Rating.created_at))
+    elif sortBy == "score_asc":
+        query = query.order_by(Rating.score.asc(), desc(Rating.created_at))
+    elif sortBy == "date_asc":
+        query = query.order_by(Rating.created_at.asc())
+    else:
+        query = query.order_by(desc(Rating.created_at))
+
+    total = query.count()
+    offset = max(0, (page - 1) * limit)
+    ratings = query.offset(offset).limit(limit).all()
+
+    def get_user_avatar(u: Optional[User]) -> str:
+        if not u:
+            return ""
+        for pic in getattr(u, "profile_pictures", []):
+            if getattr(pic, "is_active", False) and getattr(pic, "status_id", 0) == 2:
+                return pic.file_reference
+        return ""
+
     results = []
     for r in ratings:
+        rater = r.rater
+        rated = r.rated_user
         results.append({
             "id": str(r.rating_id),
             "exchangeId": str(r.exchange_id),
-            "rater": {
-                "id": str(r.rater.user_id) if r.rater else "",
-                "fullName": r.rater.full_name if r.rater else "Unknown User",
-                "username": r.rater.username if r.rater else "unknown",
-            },
-            "ratedUser": {
-                "id": str(r.rated_user.user_id) if r.rated_user else "",
-                "fullName": r.rated_user.full_name if r.rated_user else "Unknown User",
-                "username": r.rated_user.username if r.rated_user else "unknown",
-            },
             "score": r.score,
             "review": r.review,
-            "createdAt": r.created_at.isoformat() + "Z"
+            "status": r.status,
+            "createdAt": r.created_at.isoformat() + "Z",
+            "updatedAt": r.updated_at.isoformat() + "Z" if r.updated_at else r.created_at.isoformat() + "Z",
+            "rater": {
+                "id": f"user-{rater.user_id}" if rater else "",
+                "userId": rater.user_id if rater else None,
+                "fullName": rater.full_name if rater else "Neighbor",
+                "username": rater.username if rater else "unknown",
+                "email": rater.email if rater else "",
+                "avatar": get_user_avatar(rater),
+            },
+            "ratedUser": {
+                "id": f"user-{rated.user_id}" if rated else "",
+                "userId": rated.user_id if rated else None,
+                "fullName": rated.full_name if rated else "Neighbor",
+                "username": rated.username if rated else "unknown",
+                "email": rated.email if rated else "",
+                "avatar": get_user_avatar(rated),
+            },
         })
-    
-    return {"ratings": results}
+
+    return {
+        "success": True,
+        "ratings": results,
+        "total": total,
+        "page": page,
+        "limit": limit,
+    }
+
+
+@router.patch("/ratings/{rating_id}/status")
+def update_rating_status(
+    rating_id: str,
+    dto: UpdateRatingStatusDto,
+    db: Session = Depends(get_db),
+):
+    """
+    Moderate a rating: change status between 'active' and 'hidden'.
+    Preserves audit trail and moderation history without wiping records.
+    """
+    admin_user_id = get_admin_id(db, dto.adminId)
+    r_id = parse_numeric_id(rating_id)
+    if not r_id:
+        raise HTTPException(status_code=400, detail="Invalid rating ID.")
+
+    rating = db.query(Rating).filter(Rating.rating_id == r_id).first()
+    if not rating:
+        raise HTTPException(status_code=404, detail="Rating not found.")
+
+    new_status = dto.status.strip().lower()
+    if new_status not in ["active", "hidden"]:
+        raise HTTPException(status_code=400, detail="Status must be 'active' or 'hidden'.")
+
+    old_status = rating.status
+    rating.status = new_status
+    rating.updated_at = datetime.now()
+
+    # Log action in AuditLog
+    log = AuditLog(
+        admin_id=admin_user_id,
+        action=AuditAction.UPDATE,
+        target_type=ReportTargetType.USER,
+        target_id=rating.rated_user_id,
+        details=f"Admin updated rating #{r_id} (score {rating.score}) status from '{old_status}' to '{new_status}'. Reason: {dto.reason or 'Admin moderation'}",
+    )
+    db.add(log)
+    db.commit()
+
+    # Re-evaluate automatic badges
+    try:
+        check_and_award_automatic_badges(db, rating.rated_user_id)
+    except Exception as e:
+        print(f"[WARNING] Automatic badge re-evaluation error: {e}")
+
+    return {
+        "success": True,
+        "message": f"Rating marked as {new_status}.",
+        "ratingId": str(rating.rating_id),
+        "status": rating.status,
+    }
 
 
 @router.delete("/ratings/{rating_id}")
 def delete_rating(
     rating_id: str,
     adminId: Optional[str] = None,
-    db: Session = Depends(get_db)
+    permanent: bool = Query(False, description="Whether to permanently remove or soft-hide"),
+    db: Session = Depends(get_db),
 ):
-    """Delete an inappropriate rating and recalculate the user's score."""
+    """
+    Delete or hide an inappropriate rating.
+    By default sets status='hidden' to preserve moderation history.
+    """
     admin_user_id = get_admin_id(db, adminId)
     r_id = parse_numeric_id(rating_id)
     if not r_id:
         raise HTTPException(status_code=400, detail="Invalid rating ID")
-        
+
     rating = db.query(Rating).filter(Rating.rating_id == r_id).first()
     if not rating:
         raise HTTPException(status_code=404, detail="Rating not found")
-        
-    rated_user = db.query(User).filter(User.user_id == rating.rated_user_id).first()
-    
-    db.delete(rating)
+
+    target_user_id = rating.rated_user_id
+
+    if permanent:
+        db.delete(rating)
+        action_desc = f"Admin permanently deleted rating #{r_id} (score {rating.score}) written by user {rating.rater_id}."
+    else:
+        rating.status = "hidden"
+        rating.updated_at = datetime.now()
+        action_desc = f"Admin hid inappropriate rating #{r_id} (score {rating.score}) written by user {rating.rater_id}."
+
+    log = AuditLog(
+        admin_id=admin_user_id,
+        action=AuditAction.UPDATE,
+        target_type=ReportTargetType.USER,
+        target_id=target_user_id,
+        details=action_desc,
+    )
+    db.add(log)
     db.commit()
-    
-    # Recalculate
-    if rated_user:
-        all_other_ratings = db.query(Rating).filter(Rating.rated_user_id == rated_user.user_id).all()
-        if all_other_ratings:
-            total_score = sum(r.score for r in all_other_ratings)
-            rated_user.rating = float(total_score) / len(all_other_ratings)
-            rated_user.total_ratings = len(all_other_ratings)
-        else:
-            rated_user.rating = 0.0
-            rated_user.total_ratings = 0
-            
-        # Log the action
-        log = AuditLog(
-            admin_id=admin_user_id,
-            action=AuditAction.UPDATE,
-            target_type=ReportTargetType.USER,
-            target_id=rated_user.user_id,
-            details=f"Admin deleted rating {r_id} (score {rating.score}) written by user {rating.rater_id} due to moderation."
+
+    return {"success": True, "message": "Rating moderation applied successfully."}
+
+
+@router.get("/rankings")
+def get_user_rankings(
+    adminId: Optional[str] = None,
+    search: Optional[str] = None,
+    minRatings: Optional[int] = None,
+    reputationLevel: Optional[str] = None,
+    sortBy: Optional[str] = "rank",  # rank, rating, ratings_count, deals_count
+    db: Session = Depends(get_db),
+):
+    """
+    Reliable user ranking system based on:
+    - Bayesian weighted score factoring rating average and volume
+    - Completed interactions/deals
+    - Reputation levels (New Member, Trusted, Very Trusted, Top Contributor, Outstanding)
+    - Active badges
+    """
+    users = (
+        db.query(User)
+        .options(
+            joinedload(User.profile),
+            joinedload(User.profile_pictures),
+            joinedload(User.badges).joinedload(UserBadge.badge),
         )
-        db.add(log)
-        db.commit()
-        
-    return {"message": "Rating deleted successfully"}
+        .filter(User.is_suspended == False)
+        .all()
+    )
+
+    ranked_list = []
+    total_valid_ratings_count = 0
+    total_valid_ratings_score_sum = 0
+
+    for u in users:
+        stats = calculate_user_reputation_stats(db, u.user_id)
+        if stats["totalRatings"] > 0 and stats["averageRating"]:
+            total_valid_ratings_count += stats["totalRatings"]
+            total_valid_ratings_score_sum += (stats["averageRating"] * stats["totalRatings"])
+
+        # Check search filter
+        full_name = u.full_name
+        username = u.username
+        if search:
+            kw = search.strip().lower()
+            if kw not in full_name.lower() and kw not in username.lower() and kw not in u.email.lower():
+                continue
+
+        # Check minRatings filter
+        if minRatings is not None and stats["totalRatings"] < minRatings:
+            continue
+
+        # Check reputationLevel filter
+        if reputationLevel and stats["reputationLevel"].lower() != reputationLevel.lower():
+            continue
+
+        # Active badges
+        active_badges = [
+            {
+                "id": b.badge.badge_id,
+                "code": b.badge.badge_code,
+                "name": b.badge.name,
+                "icon": b.badge.icon,
+                "description": b.badge.description,
+            }
+            for b in u.badges
+            if b.badge and getattr(b, "status", "active") == "active"
+        ]
+
+        # Avatar
+        avatar_url = ""
+        for pic in getattr(u, "profile_pictures", []):
+            if getattr(pic, "is_active", False) and getattr(pic, "status_id", 0) == 2:
+                avatar_url = pic.file_reference
+                break
+
+        ranked_list.append({
+            "userId": u.user_id,
+            "id": f"user-{u.user_id}",
+            "email": u.email,
+            "username": username,
+            "fullName": full_name,
+            "avatar": avatar_url,
+            "averageRating": stats["averageRating"],
+            "totalRatings": stats["totalRatings"],
+            "completedDeals": stats["completedDeals"],
+            "reputationLevel": stats["reputationLevel"],
+            "bayesianScore": stats["bayesianScore"],
+            "badges": active_badges,
+        })
+
+    # Sort
+    if sortBy == "rating":
+        ranked_list.sort(key=lambda x: (x["averageRating"] or 0, x["totalRatings"]), reverse=True)
+    elif sortBy == "ratings_count":
+        ranked_list.sort(key=lambda x: (x["totalRatings"], x["bayesianScore"]), reverse=True)
+    elif sortBy == "deals_count":
+        ranked_list.sort(key=lambda x: (x["completedDeals"], x["bayesianScore"]), reverse=True)
+    else:  # rank / default
+        ranked_list.sort(key=lambda x: (x["bayesianScore"], x["completedDeals"], x["totalRatings"]), reverse=True)
+
+    # Assign rank numbers
+    for idx, item in enumerate(ranked_list, start=1):
+        item["rank"] = idx
+
+    # Platform summary calculations
+    rated_users_count = sum(1 for item in ranked_list if item["totalRatings"] > 0)
+    platform_avg = (
+        round(total_valid_ratings_score_sum / total_valid_ratings_count, 2)
+        if total_valid_ratings_count > 0
+        else None
+    )
+    top_user = ranked_list[0] if (ranked_list and ranked_list[0]["totalRatings"] > 0) else None
+
+    return {
+        "success": True,
+        "summary": {
+            "totalUsers": len(ranked_list),
+            "totalRatedUsers": rated_users_count,
+            "totalRatings": total_valid_ratings_count,
+            "platformAverageRating": platform_avg,
+            "topRatedUser": {
+                "name": top_user["fullName"] if top_user else "None",
+                "average": top_user["averageRating"] if top_user else None,
+                "ratings": top_user["totalRatings"] if top_user else 0,
+            } if top_user else None,
+        },
+        "rankings": ranked_list,
+    }
+
+
+# ============================================================================
+# Admin Badge Management
+# ============================================================================
+
+@router.get("/badges")
+def get_all_badges(db: Session = Depends(get_db)):
+    """Fetch all badges available in the platform."""
+    badges = db.query(Badge).all()
+    return {
+        "success": True,
+        "badges": [
+            {
+                "id": b.badge_id,
+                "code": b.badge_code,
+                "name": b.name,
+                "icon": b.icon,
+                "description": b.description,
+            }
+            for b in badges
+        ]
+    }
+
+
+@router.post("/users/{user_id}/badges")
+def award_badge_to_user(
+    user_id: str,
+    dto: AwardBadgeDto,
+    db: Session = Depends(get_db),
+):
+    """
+    Award a badge to a user with admin review and reason.
+    Prevents duplicate active assignments and logs the moderation event.
+    """
+    admin_id = get_admin_id(db, dto.adminId)
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    user = db.query(User).filter(User.user_id == num_uid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    badge = db.query(Badge).filter(Badge.badge_id == dto.badgeId).first()
+    if not badge:
+        raise HTTPException(status_code=404, detail="Badge not found.")
+
+    # Check if user already has an active badge
+    existing = db.query(UserBadge).filter(
+        UserBadge.user_id == num_uid,
+        UserBadge.badge_id == dto.badgeId,
+    ).first()
+
+    if existing:
+        if existing.status == "active":
+            raise HTTPException(status_code=400, detail=f"User already has the '{badge.name}' badge.")
+        else:
+            # Re-activate previously revoked badge
+            existing.status = "active"
+            existing.awarded_by = admin_id
+            existing.reason = dto.reason or "Re-awarded by administrator"
+            existing.earned_at = datetime.now()
+            existing.revoked_at = None
+    else:
+        new_ub = UserBadge(
+            user_id=num_uid,
+            badge_id=badge.badge_id,
+            awarded_by=admin_id,
+            reason=dto.reason or "Awarded by administrator",
+            status="active",
+            earned_at=datetime.now(),
+        )
+        db.add(new_ub)
+
+    # Log to AuditLog
+    log = AuditLog(
+        admin_id=admin_id,
+        action=AuditAction.UPDATE,
+        target_type=ReportTargetType.USER,
+        target_id=num_uid,
+        details=f"Admin awarded badge '{badge.name}' to user {user.full_name}. Reason: {dto.reason or 'N/A'}",
+    )
+    db.add(log)
+    db.commit()
+
+    # Send in-app notification to the user
+    try:
+        create_notification(
+            db=db,
+            user_id=num_uid,
+            type_code="system",
+            title=f"Badge Awarded: {badge.name}!",
+            message=f"An administrator awarded you the '{badge.name}' badge: {dto.reason or badge.description}",
+            link="/profile",
+        )
+    except Exception as e:
+        print(f"[WARNING] Notification creation failed: {e}")
+
+    return {
+        "success": True,
+        "message": f"Badge '{badge.name}' awarded to {user.full_name} successfully.",
+    }
+
+
+@router.delete("/users/{user_id}/badges/{badge_id}")
+def revoke_badge_from_user(
+    user_id: str,
+    badge_id: int,
+    adminId: Optional[str] = None,
+    reason: Optional[str] = "Revoked by administrator",
+    db: Session = Depends(get_db),
+):
+    """
+    Revoke a previously awarded badge from a user.
+    Preserves audit history.
+    """
+    admin_id = get_admin_id(db, adminId)
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    user_badge = db.query(UserBadge).filter(
+        UserBadge.user_id == num_uid,
+        UserBadge.badge_id == badge_id,
+    ).first()
+    if not user_badge:
+        raise HTTPException(status_code=404, detail="User badge not found.")
+
+    user_badge.status = "revoked"
+    user_badge.revoked_at = datetime.now()
+
+    badge_name = user_badge.badge.name if user_badge.badge else f"ID {badge_id}"
+    log = AuditLog(
+        admin_id=admin_id,
+        action=AuditAction.UPDATE,
+        target_type=ReportTargetType.USER,
+        target_id=num_uid,
+        details=f"Admin revoked badge '{badge_name}' from user #{num_uid}. Reason: {reason}",
+    )
+    db.add(log)
+    db.commit()
+
+    return {"success": True, "message": f"Badge '{badge_name}' revoked successfully."}
+
+
+@router.get("/users/{user_id}/badge-history")
+def get_user_badge_history(
+    user_id: str,
+    db: Session = Depends(get_db),
+):
+    """Fetch full badge history for a user (both active and revoked)."""
+    num_uid = parse_numeric_id(user_id)
+    if not num_uid:
+        raise HTTPException(status_code=400, detail="Invalid user ID.")
+
+    user_badges = (
+        db.query(UserBadge)
+        .filter(UserBadge.user_id == num_uid)
+        .options(
+            joinedload(UserBadge.badge),
+            joinedload(UserBadge.awarder).joinedload(User.profile),
+        )
+        .order_by(desc(UserBadge.earned_at))
+        .all()
+    )
+
+    results = []
+    for ub in user_badges:
+        awarder_name = ub.awarder.full_name if ub.awarder else "System (Automatic)"
+        results.append({
+            "badgeId": ub.badge_id,
+            "badgeName": ub.badge.name if ub.badge else "Unknown",
+            "icon": ub.badge.icon if ub.badge else "award",
+            "description": ub.badge.description if ub.badge else "",
+            "status": ub.status,
+            "reason": ub.reason,
+            "awardedBy": awarder_name,
+            "earnedAt": ub.earned_at.isoformat() if ub.earned_at else None,
+            "revokedAt": ub.revoked_at.isoformat() if ub.revoked_at else None,
+        })
+
+    return {"success": True, "history": results}
+
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: str, background_tasks: BackgroundTasks, adminId: Optional[str] = None, db: Session = Depends(get_db)):
