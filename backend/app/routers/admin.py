@@ -1339,9 +1339,9 @@ def update_rating_status(
     # Log action in AuditLog
     log = AuditLog(
         admin_id=admin_user_id,
-        action=AuditAction.UPDATE,
-        target_type=ReportTargetType.USER,
-        target_id=rating.rated_user_id,
+        action_id=8,
+        target_entity_type="rating",
+        target_entity_id=str(r_id),
         details=f"Admin updated rating #{r_id} (score {rating.score}) status from '{old_status}' to '{new_status}'. Reason: {dto.reason or 'Admin moderation'}",
     )
     db.add(log)
@@ -1393,9 +1393,9 @@ def delete_rating(
 
     log = AuditLog(
         admin_id=admin_user_id,
-        action=AuditAction.UPDATE,
-        target_type=ReportTargetType.USER,
-        target_id=target_user_id,
+        action_id=8,
+        target_entity_type="rating",
+        target_entity_id=str(r_id),
         details=action_desc,
     )
     db.add(log)
@@ -1608,9 +1608,9 @@ def award_badge_to_user(
     # Log to AuditLog
     log = AuditLog(
         admin_id=admin_id,
-        action=AuditAction.UPDATE,
-        target_type=ReportTargetType.USER,
-        target_id=num_uid,
+        action_id=8,
+        target_entity_type="user",
+        target_entity_id=str(num_uid),
         details=f"Admin awarded badge '{badge.name}' to user {user.full_name}. Reason: {dto.reason or 'N/A'}",
     )
     db.add(log)
@@ -1665,9 +1665,9 @@ def revoke_badge_from_user(
     badge_name = user_badge.badge.name if user_badge.badge else f"ID {badge_id}"
     log = AuditLog(
         admin_id=admin_id,
-        action=AuditAction.UPDATE,
-        target_type=ReportTargetType.USER,
-        target_id=num_uid,
+        action_id=8,
+        target_entity_type="user",
+        target_entity_id=str(num_uid),
         details=f"Admin revoked badge '{badge_name}' from user #{num_uid}. Reason: {reason}",
     )
     db.add(log)
