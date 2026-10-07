@@ -312,8 +312,8 @@ export default function ManagePostsPage() {
 
                         {/* Type */}
                         <td style={{ padding: '1rem' }}>
-                          <Badge variant={item.type === 'donation' ? 'success' : 'primary'}>
-                            {item.type === 'donation' ? 'Donation' : 'Exchange'}
+                          <Badge variant={item.type === 'donation' ? 'success' : item.type === 'exchange' ? 'primary' : 'warning'}>
+                            {item.type === 'donation' ? 'Donation' : item.type === 'exchange' ? 'Exchange' : 'Request'}
                           </Badge>
                         </td>
 

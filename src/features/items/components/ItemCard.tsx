@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles, MoreVertical, Flag, Trash2 } from 'lucide-react';
+import { Heart, MapPin, Tag, Gift, ArrowLeftRight, Sparkles, MoreVertical, Flag, Trash2, HandHelping } from 'lucide-react';
 import type { Item } from '@/types';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
@@ -25,7 +25,9 @@ interface ItemCardProps {
 export default function ItemCard({ item, onFavoriteToggle, currentUserId }: ItemCardProps) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const isDonation = item.type === 'donation';
+  const itemType = (item.type || '').toLowerCase().trim();
+  const isDonation = itemType === 'donation';
+  const isExchange = itemType === 'exchange';
   const [reportOpen, setReportOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -179,12 +181,14 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
                 fontWeight: 700,
                 borderRadius: '9999px',
                 /* Solid filled — same as Badge solid prop */
-                backgroundColor: isDonation ? '#16a34a' : '#2563eb',
+                backgroundColor: isDonation ? '#16a34a' : isExchange ? '#2563eb' : '#d97706',
                 color: '#ffffff',
                 border: 'none',
                 boxShadow: isDonation
                   ? '0 2px 8px rgba(22,163,74,0.35)'
-                  : '0 2px 8px rgba(37,99,235,0.35)',
+                  : isExchange
+                  ? '0 2px 8px rgba(37,99,235,0.35)'
+                  : '0 2px 8px rgba(217,119,6,0.35)',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
                 lineHeight: 1,
@@ -195,10 +199,15 @@ export default function ItemCard({ item, onFavoriteToggle, currentUserId }: Item
                   <Gift style={{ width: '0.75rem', height: '0.75rem', color: '#ffffff' }} />
                   <span>Donation</span>
                 </>
-              ) : (
+              ) : isExchange ? (
                 <>
                   <ArrowLeftRight style={{ width: '0.75rem', height: '0.75rem', color: '#ffffff' }} />
                   <span>For Exchange</span>
+                </>
+              ) : (
+                <>
+                  <HandHelping style={{ width: '0.75rem', height: '0.75rem', color: '#ffffff' }} />
+                  <span>Request</span>
                 </>
               )}
             </span>

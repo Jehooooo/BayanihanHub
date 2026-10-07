@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Trash2,
   Flag,
+  HandHelping,
 } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import ImageGallery from '../components/ImageGallery';
@@ -181,6 +182,11 @@ export default function ItemDetailsPage() {
     isSameUserId(user?.id, item.ownerId) ||
     isSameUserId(user?.id, item.owner?.id) ||
     isSameUserId(user?.userId, item.ownerId);
+
+  const itemType = (item?.type || '').toLowerCase().trim();
+  const isExchange = itemType === 'exchange';
+  const isDonation = itemType === 'donation';
+  const isRequest = itemType === 'request';
 
   const handleRequestDonation = async () => {
     if (!isAuthenticated || !user) {
@@ -438,8 +444,12 @@ export default function ItemDetailsPage() {
             <div className="bg-white p-4 sm:p-6 lg:p-7 rounded-[var(--radius-xl)] border border-neutral-200 shadow-[var(--shadow-card)] flex flex-col gap-5">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm" solid>
-                    {item.type === 'donation' ? 'Donation' : 'For Exchange'}
+                  <Badge
+                    variant={isDonation ? 'success' : isExchange ? 'primary' : 'warning'}
+                    size="sm"
+                    solid
+                  >
+                    {isDonation ? 'Donation' : isExchange ? 'For Exchange' : 'Community Request'}
                   </Badge>
                   <Badge variant="default" size="sm">{item.condition}</Badge>
                 </div>
@@ -550,7 +560,7 @@ export default function ItemDetailsPage() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                  {item.type === 'exchange' ? (
+                  {isExchange ? (
                     <Button
                       variant="primary"
                       size="lg"
@@ -563,6 +573,19 @@ export default function ItemDetailsPage() {
                       leftIcon={<ArrowLeftRight style={{ width: '1.2rem', height: '1.2rem' }} />}
                     >
                       Propose Exchange
+                    </Button>
+                  ) : isRequest ? (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      isLoading={isRequestingDonation}
+                      loadingText="Opening conversation..."
+                      style={{ fontWeight: 800, fontSize: '0.9375rem', height: '3.125rem', gap: '0.625rem', borderRadius: 'var(--radius-md)' }}
+                      onClick={handleRequestDonation}
+                      leftIcon={<MessageCircle style={{ width: '1.2rem', height: '1.2rem' }} />}
+                    >
+                      Offer Help / Fulfill
                     </Button>
                   ) : (
                     <Button

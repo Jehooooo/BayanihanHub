@@ -227,8 +227,8 @@ export default function RequestItemPage() {
           )}
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-              <Badge variant={item.type === 'donation' ? 'success' : 'primary'} size="sm" solid>
-                {item.type === 'donation' ? 'Donation' : 'For Exchange'}
+              <Badge variant={item.type === 'donation' ? 'success' : item.type === 'exchange' ? 'primary' : 'warning'} size="sm" solid>
+                {item.type === 'donation' ? 'Donation' : item.type === 'exchange' ? 'For Exchange' : 'Request'}
               </Badge>
               <Badge variant="default" size="sm">{item.condition}</Badge>
             </div>
