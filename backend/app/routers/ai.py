@@ -12,8 +12,11 @@ from app.models.request import ItemRequest
 from app.models.user import User
 from app.models.moderation import Report
 from app.services.terminal_logger import terminal_logger
+import app.config as config
+from app.services.ai_assistant import is_ai_enabled, generate_ai_reply
 
 router = APIRouter(prefix="/api/ai", tags=["AI Community Assistant & Statistics"])
+
 
 
 class AiChatMessageDto(BaseModel):
@@ -76,20 +79,70 @@ def get_ai_stats(db: Session = Depends(get_db)):
     return {"success": True, "stats": stats}
 
 
+@router.get("/status")
+def get_ai_status():
+    """
+    Returns AI service status: whether real Google Gemini model is connected.
+    """
+    return {
+        "success": True,
+        "isRealAiEnabled": is_ai_enabled(),
+        "model": config.GEMINI_MODEL,
+        "provider": "Google Gemini" if is_ai_enabled() else "Community Intelligence Engine",
+    }
+
+
 @router.post("/chat")
 def ai_community_chat(dto: AiChatMessageDto, db: Session = Depends(get_db)):
     """
     Community AI Assistant endpoint.
     Retrieves live database metrics and provides helpful, community-scoped answers.
+    Uses real Google Gemini model when GEMINI_API_KEY is configured,
+    with seamless fallback to the local community intelligence engine.
     """
     stats = get_live_system_statistics(db)
     user_msg = dto.message.strip().lower()
 
-    terminal_logger.integration("Backend", "AI Assistant", f"Processing query: '{dto.message[:60]}...' (Gemini / MySQL NLP)", status="SUCCESS")
+    # 1. Real Gemini AI model integration (with multi-turn history & live MySQL grounding)
+    if is_ai_enabled():
+        try:
+            terminal_logger.integration(
+                "Backend",
+                "AI Assistant",
+                f"Calling Gemini ({config.GEMINI_MODEL}) for query: '{dto.message[:60]}...'",
+                status="INFO",
+            )
+            ai_res = generate_ai_reply(
+                message=dto.message,
+                stats=stats,
+                history=dto.history,
+            )
+            return {
+                "success": True,
+                "reply": ai_res["reply"],
+                "model": ai_res["model"],
+                "isRealAi": True,
+                "stats": stats,
+            }
+        except Exception as exc:
+            terminal_logger.integration(
+                "Backend",
+                "AI Assistant",
+                f"Real AI invocation failed ({exc}). Falling back to local community engine with live MySQL stats.",
+                status="WARNING",
+            )
 
-    # Scope filtering & Intent resolution
+    terminal_logger.integration(
+        "Backend",
+        "AI Assistant",
+        f"Processing query via Community Knowledge Engine: '{dto.message[:60]}...'",
+        status="SUCCESS",
+    )
+
+    # Scope filtering & Intent resolution (Fallback engine)
     # 1. System Statistics Intent
     if any(k in user_msg for k in ["statistic", "stats", "how many", "count", "number of", "total", "reports", "exchanges completed", "donations posted"]):
+
         reply_lines = [
             "Here are the live community statistics directly from the Bayanihan Hub MySQL database:",
             f"• **Total Posted Items:** {stats['totalItems']} listings ({stats['totalDonations']} donations, {stats['totalExchangesPosted']} exchange offers)",
