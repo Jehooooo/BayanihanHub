@@ -10,7 +10,6 @@ import {
   Repeat,
   ShieldCheck,
   Package,
-  MessageSquare,
 } from 'lucide-react';
 
 interface Message {
@@ -18,7 +17,15 @@ interface Message {
   sender: 'user' | 'assistant';
   text: string;
   timestamp: string;
+  model?: string;
+  isRealAi?: boolean;
   stats?: any;
+}
+
+interface AiStatus {
+  isRealAiEnabled: boolean;
+  model: string;
+  provider: string;
 }
 
 const quickPrompts = [
@@ -31,11 +38,12 @@ const quickPrompts = [
 
 export default function AiChatbotModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState<AiStatus | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg-welcome',
       sender: 'assistant',
-      text: "Kumusta! I am your **Bayanihan Hub Community Assistant**. I can answer questions about local donations, barter proposals, Philippine ID verifications, and provide live statistics directly from our MySQL database.\n\nHow can I help you today?",
+      text: "Kumusta! I am your **Bayanihan Hub Community Assistant** powered by real AI and live MySQL database metrics.\n\nI can answer questions about local donations, barter exchanges, Philippine ID verification guidelines, and current neighborhood statistics.\n\nHow can I help you today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -46,6 +54,21 @@ export default function AiChatbotModal() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    fetch('/api/ai/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setAiStatus({
+            isRealAiEnabled: data.isRealAiEnabled,
+            model: data.model,
+            provider: data.provider,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,15 +87,25 @@ export default function AiChatbotModal() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     if (!textToSend) setInput('');
     setIsLoading(true);
+
+    // Build context history from previous turns
+    const historyPayload = nextMessages.slice(-8).map((m) => ({
+      sender: m.sender,
+      text: m.text,
+    }));
 
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: query }),
+        body: JSON.stringify({
+          message: query,
+          history: historyPayload,
+        }),
       });
 
       if (res.ok) {
@@ -82,6 +115,8 @@ export default function AiChatbotModal() {
           sender: 'assistant',
           text: data.reply || "I'm sorry, I could not retrieve an answer at this moment.",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          model: data.model,
+          isRealAi: data.isRealAi,
           stats: data.stats,
         };
         setMessages((prev) => [...prev, assistantMessage]);
@@ -89,12 +124,13 @@ export default function AiChatbotModal() {
         throw new Error('API response failed');
       }
     } catch {
-      // Fallback response with live system overview
+      // Graceful fallback response
       const assistantMessage: Message = {
         id: `ai-${Date.now()}`,
         sender: 'assistant',
-        text: "I am currently running in local mode. Bayanihan Hub is a community mutual aid and barter system connecting neighbors for donations, exchanges, and essential assistance. All users are verified via Philippine Government IDs to ensure a safe environment.",
+        text: "I am currently running in community mode. Bayanihan Hub is a community mutual aid and barter system connecting neighbors for donations, exchanges, and essential assistance. All users are verified via Philippine Government IDs to ensure a safe environment.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isRealAi: false,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } finally {
@@ -201,21 +237,27 @@ export default function AiChatbotModal() {
                 <Bot style={{ width: '1.25rem', height: '1.25rem' }} />
               </div>
               <div>
-                <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
-                  Bayanihan AI Assistant
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 800, letterSpacing: '-0.01em' }}>
+                    Bayanihan AI Assistant
+                  </h2>
+                  <Sparkles style={{ width: '0.875rem', height: '0.875rem', color: '#fef08a' }} />
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.125rem' }}>
                   <span
                     style={{
                       width: '0.45rem',
                       height: '0.45rem',
                       borderRadius: '9999px',
-                      backgroundColor: '#4ade80',
+                      backgroundColor: aiStatus?.isRealAiEnabled ? '#38bdf8' : '#4ade80',
                       display: 'inline-block',
+                      boxShadow: aiStatus?.isRealAiEnabled ? '0 0 6px #38bdf8' : 'none',
                     }}
                   />
                   <span style={{ fontSize: '0.6875rem', color: '#dcfce7', fontWeight: 500 }}>
-                    MySQL Database Connected
+                    {aiStatus?.isRealAiEnabled
+                      ? `Gemini AI (${aiStatus.model})`
+                      : 'Community AI • Live MySQL Data'}
                   </span>
                 </div>
               </div>
@@ -277,6 +319,36 @@ export default function AiChatbotModal() {
                   maxWidth: '100%',
                 }}
               >
+                {m.sender === 'assistant' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      marginBottom: '0.25rem',
+                      paddingLeft: '0.25rem',
+                    }}
+                  >
+                    <Sparkles
+                      style={{
+                        width: '0.6875rem',
+                        height: '0.6875rem',
+                        color: m.isRealAi ? 'var(--color-primary-600)' : 'var(--color-neutral-400)',
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '0.625rem',
+                        fontWeight: 700,
+                        color: m.isRealAi ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
+                        letterSpacing: '0.02em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {m.isRealAi ? (m.model || 'Gemini AI') : 'Community AI'}
+                    </span>
+                  </div>
+                )}
                 <div
                   style={{
                     padding: '0.75rem 0.875rem',
@@ -323,7 +395,7 @@ export default function AiChatbotModal() {
                   <Bot style={{ width: '1rem', height: '1rem' }} />
                 </div>
                 <span style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', fontStyle: 'italic' }}>
-                  Querying database statistics...
+                  {aiStatus?.isRealAiEnabled ? 'Thinking with Gemini AI...' : 'Analyzing community statistics...'}
                 </span>
               </div>
             )}
