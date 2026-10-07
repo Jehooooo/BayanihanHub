@@ -89,6 +89,8 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('posted');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [reputationData, setReputationData] = useState<any>(null);
+  const [isLoadingReputation, setIsLoadingReputation] = useState(false);
 
   // 3-dot overflow menu & modal states
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -144,6 +146,24 @@ export default function ProfilePage() {
       if (isMounted) {
         setProfileUser(targetUser);
       }
+
+      // Load reputation data for target user
+      const targetNumericId = String(targetUser?.id || id || currentUser?.id || '').replace('user-', '');
+      if (targetNumericId) {
+        setIsLoadingReputation(true);
+        fetch(`/api/users/profile/${encodeURIComponent(targetNumericId)}/reputation`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((rep) => {
+            if (isMounted && rep?.success) {
+              setReputationData(rep);
+            }
+          })
+          .catch((err) => console.error('[ProfilePage] Error fetching reputation:', err))
+          .finally(() => {
+            if (isMounted) setIsLoadingReputation(false);
+          });
+      }
+
 
       try {
         const allItems = await itemsService.getItems();
@@ -358,16 +378,22 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textAlign: 'center', backgroundColor: 'var(--color-neutral-50)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
                   <div>
-                    <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                      <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: '#f59e0b', color: '#f59e0b' }} />
-                      {displayedUser?.rating || 4.9}
+                    <span style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--color-neutral-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+                      <Star style={{ width: '0.9375rem', height: '0.9375rem', fill: reputationData?.averageRating ? '#f59e0b' : 'none', color: '#f59e0b' }} />
+                      {reputationData?.averageRating != null
+                        ? reputationData.averageRating.toFixed(1)
+                        : (displayedUser?.rating != null ? displayedUser.rating : 'No ratings yet')}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Rating</span>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>
+                      {reputationData?.totalRatings != null
+                        ? `${reputationData.totalRatings} rating${reputationData.totalRatings === 1 ? '' : 's'}`
+                        : 'Rating'}
+                    </span>
                   </div>
                   <div style={{ width: '1px', height: '1.75rem', backgroundColor: 'var(--color-neutral-200)' }} />
                   <div>
                     <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-neutral-900)', display: 'block' }}>
-                      {Math.max(displayedUser?.totalExchanges || 0, exchangesCount)}
+                      {reputationData?.completedDeals ?? Math.max(displayedUser?.totalExchanges || 0, exchangesCount)}
                     </span>
                     <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Exchanges</span>
                   </div>
@@ -379,6 +405,7 @@ export default function ProfilePage() {
                     <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500 }}>Donations</span>
                   </div>
                 </div>
+
 
                 {/* 3-Dot Menu Button for Reporting / Blocking (Non-self only) */}
                 {!isOwnProfile && (
@@ -484,32 +511,42 @@ export default function ProfilePage() {
             {/* Earned Badges Row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingTop: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '0.5rem' }}>Badges:</span>
-              {(displayedUser?.badges && displayedUser.badges.length > 0
-                ? displayedUser.badges
-                : [
-                    { id: 'b1', name: 'Trusted Donor', icon: 'award', description: 'Completed 10+ donations' },
-                    { id: 'b2', name: 'Community Star', icon: 'star', description: 'Rated 4.5+ average' },
-                  ]
-              ).map((b) => (
-                <Badge
-                  key={typeof b === 'string' ? b : b.id}
-                  variant="primary"
-                  size="md"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    padding: '0.35rem 0.85rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {getBadgeIcon(typeof b === 'string' ? b : (b.icon || b.name))}
-                  <span>{typeof b === 'string' ? b : b.name}</span>
-                </Badge>
-              ))}
+              {((reputationData?.badges && reputationData.badges.length > 0)
+                ? reputationData.badges
+                : (displayedUser?.badges && displayedUser.badges.length > 0
+                  ? displayedUser.badges
+                  : [{ id: 'b1', name: 'Verified Neighbor', icon: 'award', description: 'Verified community resident' }]
+                )
+              ).map((b: any) => {
+                const bName = typeof b === 'string' ? b : (b.name || 'Badge');
+                const bIcon = typeof b === 'string' ? b : (b.icon || bName);
+                const bDesc = typeof b === 'string' ? b : (b.description || bName);
+                const bKey = typeof b === 'string' ? b : (b.id || b.code || bName);
+
+                return (
+                  <Badge
+                    key={bKey}
+                    variant="primary"
+                    size="md"
+                    title={bDesc}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.35rem 0.85rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      cursor: 'help',
+                    }}
+                  >
+                    {getBadgeIcon(bIcon)}
+                    <span>{bName}</span>
+                  </Badge>
+                );
+              })}
             </div>
+
 
             {/* Profile Photo Status Info Banner (Self Only) */}
             {isOwnProfile && currentUser?.avatarStatus === 'pending' && (
@@ -684,26 +721,161 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'reviews' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <Card style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>Juan Dela Cruz</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <div style={{ display: 'flex', gap: '0.125rem' }}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} style={{ width: '0.75rem', height: '0.75rem', fill: '#f59e0b', color: '#f59e0b' }} />
-                    ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Reputation Overview Card */}
+            <Card style={{ padding: '1.5rem', border: '1px solid var(--color-neutral-200)' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                {/* Left Side: Score & Reputation Level */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.5rem', paddingRight: '0.5rem' }}>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--color-neutral-900)', lineHeight: 1 }}>
+                    {reputationData?.averageRating != null ? reputationData.averageRating.toFixed(1) : 'No ratings yet'}
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700, marginLeft: '0.25rem' }}>5.0</span>
+
+                  {reputationData?.averageRating != null && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center' }}>
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star
+                          key={i}
+                          style={{
+                            width: '1.25rem',
+                            height: '1.25rem',
+                            fill: i <= Math.round(reputationData.averageRating) ? '#f59e0b' : 'none',
+                            color: '#f59e0b',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--color-neutral-500)', fontWeight: 500 }}>
+                    {reputationData?.totalRatings
+                      ? `Based on ${reputationData.totalRatings} verified rating${reputationData.totalRatings > 1 ? 's' : ''}`
+                      : 'Complete an interaction to start building your reputation.'}
+                  </p>
+
+                  <div style={{ paddingTop: '0.25rem' }}>
+                    <Badge variant="primary" size="md" style={{ fontWeight: 700, padding: '0.35rem 0.85rem' }}>
+                      {reputationData?.reputationLevel || 'New Member'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Right Side: 5-Star Distribution Histogram */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[5, 4, 3, 2, 1].map((starLevel) => {
+                    const count = reputationData?.distribution?.[starLevel] || 0;
+                    const total = reputationData?.totalRatings || 0;
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+                    return (
+                      <div key={starLevel} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
+                        <span style={{ width: '3rem', fontWeight: 700, color: 'var(--color-neutral-700)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          {starLevel} <Star style={{ width: '0.75rem', height: '0.75rem', fill: '#f59e0b', color: '#f59e0b' }} />
+                        </span>
+                        <div style={{ flex: 1, height: '0.5rem', backgroundColor: 'var(--color-neutral-100)', borderRadius: '9999px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${pct}%`,
+                              height: '100%',
+                              backgroundColor: '#f59e0b',
+                              borderRadius: '9999px',
+                              transition: 'width 300ms ease',
+                            }}
+                          />
+                        </div>
+                        <span style={{ width: '2rem', textAlign: 'right', color: 'var(--color-neutral-500)', fontWeight: 600 }}>
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-600)', lineHeight: '1.6', margin: 0 }}>
-                Very friendly and punctual! The items were in excellent condition. Great neighbor!
-              </p>
-              <span style={{ fontSize: '0.625rem', color: 'var(--color-neutral-400)', fontWeight: 500, display: 'block', paddingTop: '0.25rem' }}>June 15, 2026</span>
             </Card>
+
+            {/* List of Verified Reviews */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: '0.25rem 0' }}>
+                Ratings & Reviews
+              </h3>
+
+              {isLoadingReputation ? (
+                <Card style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-neutral-400)' }}>
+                  <p style={{ margin: 0, fontSize: '0.8125rem' }}>Loading ratings...</p>
+                </Card>
+              ) : !reputationData?.reviews || reputationData.reviews.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1.5rem', backgroundColor: '#ffffff', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-neutral-200)', spaceY: '0.5rem' }}>
+                  <Star style={{ width: '2.5rem', height: '2.5rem', margin: '0 auto 0.75rem auto', color: 'var(--color-neutral-300)' }} />
+                  <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-neutral-800)' }}>
+                    No ratings yet
+                  </h4>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8125rem', color: 'var(--color-neutral-500)' }}>
+                    Complete an interaction to start building your reputation.
+                  </p>
+                </div>
+              ) : (
+                reputationData.reviews.map((rev: any) => {
+                  const revScore = rev.score || 5;
+                  const dateDisplay = rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+
+                  return (
+                    <Card key={rev.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', padding: '1rem', border: '1px solid var(--color-neutral-200)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                          <Avatar src={rev.rater?.avatar} name={rev.rater?.fullName || 'Neighbor'} size="sm" />
+                          <div>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-neutral-900)', display: 'block' }}>
+                              {rev.rater?.fullName || 'Community Neighbor'}
+                            </span>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)' }}>
+                              @{rev.rater?.username || 'neighbor'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.125rem' }}>
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <Star
+                                key={i}
+                                style={{
+                                  width: '0.875rem',
+                                  height: '0.875rem',
+                                  fill: i <= revScore ? '#f59e0b' : 'none',
+                                  color: '#f59e0b',
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <span style={{ fontSize: '0.8125rem', color: '#f59e0b', fontWeight: 800 }}>
+                            {revScore}.0
+                          </span>
+                        </div>
+                      </div>
+
+                      {rev.review ? (
+                        <p style={{ fontSize: '0.8125rem', color: 'var(--color-neutral-700)', lineHeight: '1.6', margin: 0 }}>
+                          "{rev.review}"
+                        </p>
+                      ) : (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-400)', fontStyle: 'italic', margin: 0 }}>
+                          No written feedback provided.
+                        </p>
+                      )}
+
+                      {dateDisplay && (
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-400)', fontWeight: 500, paddingTop: '0.25rem' }}>
+                          {dateDisplay}
+                        </span>
+                      )}
+                    </Card>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
+
 
         {/* Upload Avatar Modal */}
         {isOwnProfile && (

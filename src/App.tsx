@@ -204,6 +204,14 @@ export default function App() {
           }
         />
         <Route
+          path="/rate/:exchangeId"
+          element={
+            <ProtectedRoute>
+              <RatingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>

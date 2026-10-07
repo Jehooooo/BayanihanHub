@@ -243,7 +243,71 @@ export interface ExchangeHistory {
   details: string;
 }
 
+// --- Rating & Reputation Types ---
+
+export interface Rating {
+  id: string;
+  exchangeId: string;
+  score: number;
+  review?: string | null;
+  status: 'active' | 'hidden';
+  createdAt: string;
+  updatedAt?: string;
+  rater: {
+    id: string;
+    userId?: number;
+    fullName: string;
+    username: string;
+    avatar?: string;
+    email?: string;
+  };
+  ratedUser: {
+    id: string;
+    userId?: number;
+    fullName: string;
+    username: string;
+    avatar?: string;
+    email?: string;
+  };
+}
+
+export interface UserReputationSummary {
+  userId: number;
+  fullName: string;
+  username: string;
+  averageRating: number | null;
+  totalRatings: number;
+  distribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
+  completedDeals: number;
+  reputationLevel: string;
+  bayesianScore: number;
+  badges: Array<{
+    id: number;
+    code: string;
+    name: string;
+    icon: string;
+    description: string;
+    earnedAt?: string;
+    reason?: string;
+    isAwardedByAdmin?: boolean;
+  }>;
+  reviews: Array<{
+    id: string;
+    exchangeId: string;
+    score: number;
+    review: string | null;
+    createdAt: string;
+    rater: {
+      id: string;
+      fullName: string;
+      username: string;
+      avatar: string;
+    };
+  }>;
+}
+
 // --- Messaging Types ---
+
 
 export interface Chat {
   id: string;

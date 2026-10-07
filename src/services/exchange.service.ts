@@ -78,4 +78,65 @@ export const exchangeService = {
 
     return null;
   },
+
+  async getRatingEligibility(exchangeId: string): Promise<{
+    eligible: boolean;
+    reason?: string | null;
+    isCompleted: boolean;
+    alreadyRated: boolean;
+    existingRating?: any;
+    partner?: {
+      id: string;
+      userId: number;
+      fullName: string;
+      username: string;
+      avatar: string;
+      itemTitle: string;
+      completedAt: string;
+    } | null;
+  }> {
+    try {
+      const res = await fetch(`/api/exchanges/${encodeURIComponent(exchangeId)}/rating-eligibility`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const errData = await res.json().catch(() => ({}));
+      return {
+        eligible: false,
+        reason: errData.detail || 'Unable to check rating eligibility.',
+        isCompleted: false,
+        alreadyRated: false,
+        partner: null,
+      };
+    } catch (err) {
+      console.error(`[exchangeService.getRatingEligibility] Error:`, err);
+      return {
+        eligible: false,
+        reason: 'Network error checking rating eligibility.',
+        isCompleted: false,
+        alreadyRated: false,
+        partner: null,
+      };
+    }
+  },
+
+  async submitRating(
+    exchangeId: string,
+    payload: { score: number; review?: string; ratedUserId?: string | number }
+  ): Promise<{ success: boolean; message: string; rating?: any }> {
+    const res = await fetch(`/api/exchanges/${encodeURIComponent(exchangeId)}/rating`, {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || 'Failed to submit rating.');
+    }
+    return data;
+  },
 };
+
