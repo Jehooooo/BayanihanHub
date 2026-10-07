@@ -112,18 +112,12 @@ def generate_ai_reply(
 
     system_instruction = build_system_instruction(stats, user_name)
 
-    generation_config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        temperature=0.7,
-        max_output_tokens=1000,
-    )
-
     candidate_models = [
         config.GEMINI_MODEL,
-        "gemini-3.8-flash",
         "gemini-3.5-flash-lite",
+        "gemini-flash-lite-latest",
         "gemini-flash-latest",
-        "gemini-2.5-flash",
+        "gemini-3.8-flash",
     ]
 
     # Deduplicate while preserving order
@@ -135,6 +129,17 @@ def generate_ai_reply(
     last_error = None
     for model_name in models_to_try:
         try:
+            # Build fast generation config: minimal thinking level for 3.x models to avoid long reasoning delays
+            cfg_kwargs: Dict[str, Any] = {
+                "system_instruction": system_instruction,
+                "temperature": 0.7,
+                "max_output_tokens": 600,
+            }
+            if "3." in model_name:
+                cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="minimal")
+
+            generation_config = types.GenerateContentConfig(**cfg_kwargs)
+
             response = client.models.generate_content(
                 model=model_name,
                 contents=contents,
@@ -154,6 +159,29 @@ def generate_ai_reply(
                     "isRealAi": True,
                 }
         except Exception as exc:
+            # If thinking_config failed, retry once without thinking_config for this model
+            if "thinking" in str(exc).lower() or "invalid_argument" in str(exc).lower():
+                try:
+                    fallback_cfg = types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.7,
+                        max_output_tokens=600,
+                    )
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=contents,
+                        config=fallback_cfg,
+                    )
+                    reply = (response.text or "").strip()
+                    if reply:
+                        return {
+                            "reply": reply,
+                            "model": model_name,
+                            "isRealAi": True,
+                        }
+                except Exception as inner_exc:
+                    exc = inner_exc
+
             last_error = exc
             terminal_logger.integration(
                 "Backend",
@@ -163,3 +191,4 @@ def generate_ai_reply(
             )
 
     raise RuntimeError(f"All Gemini models failed. Last error: {last_error}")
+
