@@ -13,7 +13,6 @@ import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import ScrollReveal from '@/components/common/ScrollReveal';
 import { useAuthStore } from '@/stores/authStore';
-import BetaNoticeModal from '@/components/common/BetaNoticeModal';
 import SEO from '@/components/common/SEO';
 
 export default function LandingPage() {
@@ -46,7 +45,6 @@ export default function LandingPage() {
         canonicalUrl="/" 
         structuredData={structuredData} 
       />
-      <BetaNoticeModal />
       <Header />
 
       {/* Hero Section */}
