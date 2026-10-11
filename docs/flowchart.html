@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BayanihanHub — System Flowchart</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #090d16;
+    color: #e2e8f0;
+    width: 2560px;
+    height: 1440px;
+    padding: 40px 60px;
+    position: relative;
+    overflow: hidden;
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(22, 163, 74, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  }
+
+  /* Header Bar */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 32px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .brand-logo {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.4);
+  }
+  .brand-text h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge-system {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(22, 163, 74, 0.18);
+    color: #4ade80;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+  }
+  .brand-text p {
+    font-size: 14px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+  .legend {
+    display: flex;
+    gap: 20px;
+    background: rgba(15, 23, 42, 0.8);
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Grid Canvas */
+  .grid-canvas {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 28px;
+    height: 1200px;
+  }
+
+  /* Swimlane Column */
+  .column {
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 20px 18px;
+    backdrop-filter: blur(12px);
+    position: relative;
+  }
+  .column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .col-title {
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .col-num {
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .cards-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+  }
+
+  /* Flow Cards */
+  .flow-card {
+    background: rgba(30, 41, 59, 0.7);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px 18px;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .step-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+  }
+  .pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .card-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-top: 10px;
+  }
+  .meta-tag {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(15, 23, 42, 0.6);
+    color: #cbd5e1;
+    padding: 3px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Themes */
+  .green-theme { border-left: 4px solid #16a34a; }
+  .green-pill { background: rgba(22, 163, 74, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+
+  .blue-theme { border-left: 4px solid #2563eb; }
+  .blue-pill { background: rgba(37, 99, 235, 0.2); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); }
+
+  .amber-theme { border-left: 4px solid #d97706; }
+  .amber-pill { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+
+  .purple-theme { border-left: 4px solid #9333ea; }
+  .purple-pill { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+
+  .rose-theme { border-left: 4px solid #e11d48; }
+  .rose-pill { background: rgba(225, 29, 72, 0.2); color: #fb7185; border: 1px solid rgba(251, 113, 133, 0.3); }
+
+  .emerald-theme { border-left: 4px solid #059669; }
+  .emerald-pill { background: rgba(5, 150, 105, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+
+  /* Flow Connector Arrows */
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 18px;
+    color: #475569;
+    font-size: 16px;
+    margin: -4px 0;
+  }
+  .decision-box {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px dashed #d97706;
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .decision-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fbbf24;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .decision-branches {
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .branch-btn {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+</style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-logo">🤝</div>
+      <div class="brand-text">
+        <h1>BayanihanHub <span>System Flowchart</span> <span class="badge-system">v2.4 Full Lifecycle</span></h1>
+        <p>End-to-end operational architecture: Neighbor onboarding, barter exchange, community aid & reputation engine</p>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:#16a34a"></span> Onboarding & Auth</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> Listing & Barter</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#d97706"></span> Community Requests</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#9333ea"></span> Real-Time Messaging</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#059669"></span> Fulfillment & Trust</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#e11d48"></span> Admin Governance</div>
+    </div>
+  </div>
+
+  <!-- Main Grid Canvas (6 Columns) -->
+  <div class="grid-canvas">
+
+    <!-- Column 1: Onboarding & Auth -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#4ade80;"><span>🔐</span> Onboarding & Auth</div>
+        <div class="col-num">01</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card green-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 1.1</span>
+            <span class="pill green-pill">PUBLIC</span>
+          </div>
+          <div class="card-title">Landing & Discovery</div>
+          <div class="card-desc">Visitor reviews neighborhood statistics, active donations, and community impact counter.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /</span>
+            <span class="meta-tag">Stats: 1,240+ Users</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card green-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 1.2</span>
+            <span class="pill green-pill">FORM</span>
+          </div>
+          <div class="card-title">Registration & Geotag</div>
+          <div class="card-desc">User submits Full Name, Email, Password, Barangay, Municipality, and Province.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /register</span>
+            <span class="meta-tag">Store: authStore</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card green-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 1.3</span>
+            <span class="pill green-pill">SECURITY</span>
+          </div>
+          <div class="card-title">Identity Verification</div>
+          <div class="card-desc">Resident uploads Government ID alongside live camera selfie capture for community safety.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /verify</span>
+            <span class="meta-tag">Encrypted Upload</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="decision-box">
+          <div class="decision-title">Admin Review Queue</div>
+          <div class="decision-branches">
+            <span class="branch-btn" style="color:#4ade80;">✔ Approved</span>
+            <span class="branch-btn" style="color:#f87171;">✖ Re-upload</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card green-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 1.4</span>
+            <span class="pill green-pill">ACTIVE</span>
+          </div>
+          <div class="card-title">Neighbor Dashboard</div>
+          <div class="card-desc">User gains verified neighbor status with personalized banner, quick actions, and nearby feed.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /dashboard</span>
+            <span class="meta-tag">State: Verified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Item Listing (Donor/Lister) -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#60a5fa;"><span>📦</span> Item Listing</div>
+        <div class="col-num">02</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card blue-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 2.1</span>
+            <span class="pill blue-pill">ACTION</span>
+          </div>
+          <div class="card-title">Create Listing</div>
+          <div class="card-desc">Resident initiates listing for surplus household goods, textbooks, electronics, or clothing.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /items/post</span>
+            <span class="meta-tag">Max 5 Photos</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="decision-box">
+          <div class="decision-title">Post Intent Selection</div>
+          <div class="decision-branches">
+            <span class="branch-btn" style="color:#34d399;">🎁 100% Free Donation</span>
+            <span class="branch-btn" style="color:#60a5fa;">🔄 Barter Exchange</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card blue-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 2.2</span>
+            <span class="pill blue-pill">METADATA</span>
+          </div>
+          <div class="card-title">Condition & Geolocation</div>
+          <div class="card-desc">Tags item condition (Brand New → Fair), pickup schedule availability, and GPS live location pin.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Google Maps API</span>
+            <span class="meta-tag">Live Lat/Lng</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card blue-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 2.3</span>
+            <span class="pill blue-pill">PUBLISHED</span>
+          </div>
+          <div class="card-title">Active In Catalog</div>
+          <div class="card-desc">Item enters the community marketplace index and broadcasts to nearby barangay neighbors.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Status: Available</span>
+            <span class="meta-tag">Distance Indexing</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 3: Discovery & Requests -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#fbbf24;"><span>🔍</span> Discovery & Requests</div>
+        <div class="col-num">03</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card amber-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 3.1</span>
+            <span class="pill amber-pill">SEARCH</span>
+          </div>
+          <div class="card-title">Neighborhood Radar</div>
+          <div class="card-desc">Neighbors search available goods with multi-filter: Category, Distance (km radius), and Condition.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /browse</span>
+            <span class="meta-tag">Distance: 0–15km</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="decision-box">
+          <div class="decision-title">Item Found or Needed?</div>
+          <div class="decision-branches">
+            <span class="branch-btn" style="color:#60a5fa;">🎯 Found Item</span>
+            <span class="branch-btn" style="color:#fbbf24;">📢 Submit Request</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card amber-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 3.2</span>
+            <span class="pill amber-pill">COMMUNITY AID</span>
+          </div>
+          <div class="card-title">Community Help Request</div>
+          <div class="card-desc">If item is unavailable, resident posts urgent request with priority level (Critical, High, Medium, Low).</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /requests</span>
+            <span class="meta-tag">Urgency Badges</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card amber-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 3.3</span>
+            <span class="pill amber-pill">CONNECT</span>
+          </div>
+          <div class="card-title">Match & Engagement</div>
+          <div class="card-desc">Prospective recipient clicks "Request Item" or submits an item barter swap proposal.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Service: itemsService</span>
+            <span class="meta-tag">Direct Offer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 4: Trade Proposal & Chat -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#c084fc;"><span>💬</span> Trade & Negotiation</div>
+        <div class="col-num">04</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card purple-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 4.1</span>
+            <span class="pill purple-pill">PROPOSAL</span>
+          </div>
+          <div class="card-title">Exchange Offer Matrix</div>
+          <div class="card-desc">2-column offer comparison: Side-by-side breakdown of <strong>YOU OFFER</strong> vs <strong>THEY OFFER</strong>.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /exchange</span>
+            <span class="meta-tag">No Cash Involved</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card purple-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 4.2</span>
+            <span class="pill purple-pill">REAL-TIME</span>
+          </div>
+          <div class="card-title">Direct In-App Chat</div>
+          <div class="card-desc">Neighbors chat via instant messaging with online status, typing indicators, and photo exchange.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /messages</span>
+            <span class="meta-tag">Store: chatStore</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="decision-box">
+          <div class="decision-title">Owner Trade Decision</div>
+          <div class="decision-branches">
+            <span class="branch-btn" style="color:#4ade80;">✔ Accept Offer</span>
+            <span class="branch-btn" style="color:#f87171;">✖ Decline</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card purple-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 4.3</span>
+            <span class="pill purple-pill">AGREEMENT</span>
+          </div>
+          <div class="card-title">Handover Agreement</div>
+          <div class="card-desc">Parties lock in trade terms and select a secure public meeting location (e.g. Barangay Hall).</div>
+          <div class="card-meta">
+            <span class="meta-tag">Status: In Progress</span>
+            <span class="meta-tag">Item Reserved</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 5: Physical Handover & Fulfillment -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#34d399;"><span>🤝</span> Handover & Trust</div>
+        <div class="col-num">05</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card emerald-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 5.1</span>
+            <span class="pill emerald-pill">OFFLINE</span>
+          </div>
+          <div class="card-title">Safe Barangay Meetup</div>
+          <div class="card-desc">Neighbors meet at agreed public landmark. Mutual physical inspection of goods conducted.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Barangay Hall</span>
+            <span class="meta-tag">Zero Fee Handover</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card emerald-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 5.2</span>
+            <span class="pill emerald-pill">COMPLETION</span>
+          </div>
+          <div class="card-title">Mark Exchange Complete</div>
+          <div class="card-desc">Both users confirm successful transaction in the app. Listing transitions to Completed archive.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Exchange: Complete</span>
+            <span class="meta-tag">Inventory Cleared</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card emerald-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 5.3</span>
+            <span class="pill emerald-pill">REPUTATION</span>
+          </div>
+          <div class="card-title">Rating & Trust Badges</div>
+          <div class="card-desc">Users leave 1–5 star reviews. Top neighbors earn "Trusted Donor" & "Community Star" verified badges.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /profile</span>
+            <span class="meta-tag">★ 4.8 Rating Avg</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 6: Admin Governance -->
+    <div class="column">
+      <div class="column-header">
+        <div class="col-title" style="color:#fb7185;"><span>🛡️</span> Admin Governance</div>
+        <div class="col-num">06</div>
+      </div>
+      <div class="cards-stack">
+        <div class="flow-card rose-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 6.1</span>
+            <span class="pill rose-pill">BACK-OFFICE</span>
+          </div>
+          <div class="card-title">Admin KPI Dashboard</div>
+          <div class="card-desc">Live overview of platform health: Total Users, Active Listings, Pending Approvals & Completed Trades.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /admin</span>
+            <span class="meta-tag">5 Live Metrics</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card rose-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 6.2</span>
+            <span class="pill rose-pill">MODERATION</span>
+          </div>
+          <div class="card-title">Verification Queue</div>
+          <div class="card-desc">Lead reviewer inspects submitted IDs and selfies with privacy blur toggle prior to account approval.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /admin/approvals</span>
+            <span class="meta-tag">Privacy Shield</span>
+          </div>
+        </div>
+
+        <div class="arrow-down">▼</div>
+
+        <div class="flow-card rose-theme">
+          <div class="card-top">
+            <span class="step-id">STAGE 6.3</span>
+            <span class="pill rose-pill">SECURITY</span>
+          </div>
+          <div class="card-title">Reports & Audit Terminal</div>
+          <div class="card-desc">Community report resolution (Scam, Inappropriate, Harassment) and system-wide activity audit logs.</div>
+          <div class="card-meta">
+            <span class="meta-tag">Route: /admin/reports</span>
+            <span class="meta-tag">1-Click Takedown</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
