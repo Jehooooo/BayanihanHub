@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1520" width="1400" height="1520" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#334155" />
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06"/>
+    </filter>
+  </defs>
+
+  <!-- Title Section -->
+  <text x="700" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">BayanihanHub — System Flowchart</text>
+  <text x="700" y="72" text-anchor="middle" font-size="13" font-weight="400" fill="#64748b">End-to-End User Interaction Flow: Onboarding, Item Exchange, Community Aid, and Safe Handover</text>
+
+  <!-- Section Grouping Backgrounds -->
+  <!-- 1. Auth Group -->
+  <rect x="220" y="95" width="960" height="350" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="240" y="120" font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="1">PHASE 1: ONBOARDING &amp; VERIFICATION</text>
+
+  <!-- 2. Dual Path Group -->
+  <rect x="140" y="470" width="1120" height="490" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="160" y="495" font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="1">PHASE 2: LISTING, DISCOVERY &amp; COMMUNITY REQUESTS</text>
+  <text x="430" y="525" text-anchor="middle" font-size="13" font-weight="600" fill="#2563eb">Lister / Donor Flow</text>
+  <text x="970" y="525" text-anchor="middle" font-size="13" font-weight="600" fill="#d97706">Seeker / Recipient Flow</text>
+
+  <!-- 3. Handover & Trust Group -->
+  <rect x="260" y="985" width="880" height="495" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="280" y="1010" font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="1">PHASE 3: COORDINATION, HANDOVER &amp; TRUST</text>
+
+  <!-- CONNECTING LINES (Drawn first so nodes sit on top) -->
+  <!-- Start -> Register -->
+  <line x1="700" y1="165" x2="700" y2="190" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Register -> Verified? -->
+  <line x1="700" y1="240" x2="700" y2="265" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Verified? (No) -> Upload ID -->
+  <line x1="775" y1="305" x2="880" y2="305" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="825" y="297" font-size="11" font-weight="600" fill="#e11d48">No</text>
+
+  <!-- Upload ID -> Admin Review -->
+  <line x1="990" y1="330" x2="990" y2="360" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Admin Review -> Dashboard -->
+  <path d="M 990 410 L 990 435 L 810 435" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="915" y="427" font-size="11" font-weight="600" fill="#16a34a">Approved</text>
+
+  <!-- Verified? (Yes) -> Dashboard -->
+  <line x1="700" y1="345" x2="700" y2="410" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="710" y="380" font-size="11" font-weight="600" fill="#16a34a">Yes</text>
+
+  <!-- Dashboard split to Lister & Seeker -->
+  <path d="M 600 435 L 430 435 L 430 540" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 700 460 L 700 475 L 970 475 L 970 540" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Lister: Post Item -> Enter Details -->
+  <line x1="430" y1="585" x2="430" y2="615" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Enter Details -> Intent Decision -->
+  <line x1="430" y1="665" x2="430" y2="695" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Intent -> Free Donation -->
+  <path d="M 335 735 L 290 735 L 290 780" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="245" y="725" font-size="11" font-weight="600" fill="#16a34a">Free Donation</text>
+
+  <!-- Intent -> Barter -->
+  <path d="M 525 735 L 570 735 L 570 780" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="535" y="725" font-size="11" font-weight="600" fill="#2563eb">Barter Exchange</text>
+
+  <!-- Both Intents -> Published -->
+  <path d="M 290 830 L 290 865 L 430 865 L 430 895" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 570 830 L 570 865 L 430 865" fill="none" stroke="#334155" stroke-width="2" />
+
+  <!-- Seeker: Browse -> Found Item? -->
+  <line x1="970" y1="585" x2="970" y2="615" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Found Item? (Yes) -> View Item -->
+  <path d="M 885 655 L 850 655 L 850 720" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="820" y="647" font-size="11" font-weight="600" fill="#16a34a">Yes</text>
+
+  <!-- Found Item? (No) -> Post Request -->
+  <path d="M 1055 655 L 1090 655 L 1090 720" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="1065" y="647" font-size="11" font-weight="600" fill="#d97706">No</text>
+
+  <!-- View Item & Request -> Initiate Trade -->
+  <path d="M 850 770 L 850 810 L 970 810 L 970 835" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 1090 770 L 1090 810 L 970 810" fill="none" stroke="#334155" stroke-width="2" />
+
+  <!-- Lister Published & Seeker Initiate -> In-App Chat (Phase 3) -->
+  <path d="M 430 945 L 430 970 L 640 970 L 640 1025" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 970 885 L 970 970 L 760 970 L 760 1025" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- In-App Chat -> Offer Accepted? -->
+  <line x1="700" y1="1075" x2="700" y2="1105" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Offer Accepted? (No) -> Loop back to Browse -->
+  <path d="M 785 1145 L 1220 1145 L 1220 562 L 1090 562" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrow)" />
+  <text x="815" y="1137" font-size="11" font-weight="600" fill="#e11d48">No (Declined)</text>
+
+  <!-- Offer Accepted? (Yes) -> Agree Meetup -->
+  <line x1="700" y1="1185" x2="700" y2="1215" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="710" y="1202" font-size="11" font-weight="600" fill="#16a34a">Yes</text>
+
+  <!-- Agree Meetup -> Physical Handover -->
+  <line x1="700" y1="1265" x2="700" y2="1295" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Physical Handover -> Complete & Rate -->
+  <line x1="700" y1="1345" x2="700" y2="1375" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Complete -> End -->
+  <line x1="700" y1="1425" x2="700" y2="1455" stroke="#334155" stroke-width="2" marker-end="url(#arrow)" />
+
+
+  <!-- NODES (Rectangles, Diamonds, Capsules) -->
+
+  <!-- START -->
+  <rect x="630" y="125" width="140" height="40" rx="20" fill="#16a34a" filter="url(#shadow)"/>
+  <text x="700" y="150" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">START</text>
+
+  <!-- Register / Log In -->
+  <rect x="580" y="190" width="240" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="213" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Create Account / Log In</text>
+  <text x="700" y="230" text-anchor="middle" font-size="11" fill="#64748b">Name, Barangay, Municipality</text>
+
+  <!-- Diamond: ID Verified? -->
+  <polygon points="700,265 775,305 700,345 625,305" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="303" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">ID Verified by</text>
+  <text x="700" y="318" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Admin?</text>
+
+  <!-- Upload ID -->
+  <rect x="880" y="280" width="220" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="990" y="303" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Submit Verification</text>
+  <text x="990" y="320" text-anchor="middle" font-size="11" fill="#64748b">Upload Govt ID + Selfie Photo</text>
+
+  <!-- Admin Approves -->
+  <rect x="880" y="360" width="220" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="990" y="383" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Admin Verification Queue</text>
+  <text x="990" y="400" text-anchor="middle" font-size="11" fill="#64748b">Review document &amp; approve</text>
+
+  <!-- Dashboard -->
+  <rect x="590" y="410" width="220" height="50" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="433" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46">Neighbor Dashboard</text>
+  <text x="700" y="450" text-anchor="middle" font-size="11" fill="#047857">Verified community access</text>
+
+  <!-- LISTER PATH -->
+  <!-- Post Item -->
+  <rect x="320" y="540" width="220" height="45" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="430" y="568" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">1. Click "Post an Item"</text>
+
+  <!-- Enter Details -->
+  <rect x="300" y="615" width="260" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="430" y="638" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Fill Listing Information</text>
+  <text x="430" y="654" text-anchor="middle" font-size="11" fill="#64748b">Category, Photos, Condition &amp; Location</text>
+
+  <!-- Diamond: Intent? -->
+  <polygon points="430,695 525,735 430,775 335,735" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="430" y="733" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Donation or</text>
+  <text x="430" y="748" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Exchange?</text>
+
+  <!-- Free Gift -->
+  <rect x="200" y="780" width="180" height="50" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="290" y="803" text-anchor="middle" font-size="12" font-weight="600" fill="#15803d">100% Free Donation</text>
+  <text x="290" y="819" text-anchor="middle" font-size="10" fill="#166534">No return expected</text>
+
+  <!-- Barter -->
+  <rect x="480" y="780" width="180" height="50" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="570" y="803" text-anchor="middle" font-size="12" font-weight="600" fill="#1d4ed8">Barter Swap</text>
+  <text x="570" y="819" text-anchor="middle" font-size="10" fill="#1e40af">Specify items looking for</text>
+
+  <!-- Active Listing -->
+  <rect x="310" y="895" width="240" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="430" y="918" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Item Published to Catalog</text>
+  <text x="430" y="934" text-anchor="middle" font-size="11" fill="#64748b">Visible on Barangay map feed</text>
+
+
+  <!-- SEEKER PATH -->
+  <!-- Browse -->
+  <rect x="850" y="540" width="240" height="45" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="970" y="568" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">2. Browse Community Feed</text>
+
+  <!-- Diamond: Found? -->
+  <polygon points="970,615 1055,655 970,695 885,655" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="970" y="653" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Found What</text>
+  <text x="970" y="668" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">You Need?</text>
+
+  <!-- View Item -->
+  <rect x="750" y="720" width="200" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="850" y="743" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">Select Item Listing</text>
+  <text x="850" y="759" text-anchor="middle" font-size="11" fill="#64748b">Review photos &amp; distance</text>
+
+  <!-- Post Request -->
+  <rect x="990" y="720" width="200" height="50" rx="8" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="1090" y="743" text-anchor="middle" font-size="12" font-weight="600" fill="#b45309">Post Community Request</text>
+  <text x="1090" y="759" text-anchor="middle" font-size="11" fill="#92400e">Urgent need (Books, Meds)</text>
+
+  <!-- Initiate Trade -->
+  <rect x="850" y="835" width="240" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="970" y="858" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Send Proposal / Request</text>
+  <text x="970" y="874" text-anchor="middle" font-size="11" fill="#64748b">Submit "You Offer vs They Offer"</text>
+
+
+  <!-- PHASE 3: COORDINATION & HANDOVER -->
+  <!-- In-App Chat -->
+  <rect x="560" y="1025" width="280" height="50" rx="8" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="1048" text-anchor="middle" font-size="13" font-weight="600" fill="#6b21a8">Real-Time In-App Chat</text>
+  <text x="700" y="1064" text-anchor="middle" font-size="11" fill="#7e22ce">Discuss terms &amp; pickup arrangements</text>
+
+  <!-- Diamond: Accept? -->
+  <polygon points="700,1105 785,1145 700,1185 615,1145" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="1143" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Both Neighbors</text>
+  <text x="700" y="1158" text-anchor="middle" font-size="12" font-weight="600" fill="#92400e">Agree to Trade?</text>
+
+  <!-- Agree Meetup -->
+  <rect x="540" y="1215" width="320" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="1238" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">Schedule Safe Public Meetup</text>
+  <text x="700" y="1254" text-anchor="middle" font-size="11" fill="#64748b">Set time at Barangay Hall or public spot</text>
+
+  <!-- Physical Handover -->
+  <rect x="550" y="1295" width="300" height="50" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="1318" text-anchor="middle" font-size="13" font-weight="600" fill="#0f172a">In-Person Handover &amp; Inspection</text>
+  <text x="700" y="1334" text-anchor="middle" font-size="11" fill="#64748b">Physical exchange of goods with zero cash</text>
+
+  <!-- Mark Complete -->
+  <rect x="530" y="1375" width="340" height="50" rx="8" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="700" y="1398" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46">Mark Complete &amp; Leave Review</text>
+  <text x="700" y="1414" text-anchor="middle" font-size="11" fill="#047857">1–5 Star Rating &amp; "Trusted Neighbor" Badge</text>
+
+  <!-- END -->
+  <rect x="630" y="1455" width="140" height="40" rx="20" fill="#334155" filter="url(#shadow)"/>
+  <text x="700" y="1480" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">END</text>
+
+</svg>
