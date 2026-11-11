@@ -222,7 +222,7 @@ def format_item(item: Item, db: Session, current_user_id: Optional[int] = None) 
 
     owner_avatar = ""
     if owner and hasattr(owner, "profile_pictures") and owner.profile_pictures:
-        approved_pics = [p for p in owner.profile_pictures if p.is_current and p.status_id == 2]
+        approved_pics = [p for p in owner.profile_pictures if getattr(p, "is_active", False) and p.status_id == 2]
         if approved_pics:
             owner_avatar = approved_pics[0].file_reference or ""
         elif owner.profile_pictures[0].file_reference:
@@ -235,7 +235,7 @@ def format_item(item: Item, db: Session, current_user_id: Optional[int] = None) 
         "email": owner.email if owner else "",
         "avatar": owner_avatar,
         "role": "user",
-        "isVerified": bool(owner.is_verified) if owner else True,
+        "isVerified": (owner.account_status_id == 2) if owner else True,
         "rating": avg_rating,
         "reviewCount": review_count,
         "joinedDate": owner.created_at.strftime("%B %Y") if (owner and owner.created_at) else "August 2026",

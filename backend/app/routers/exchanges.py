@@ -94,12 +94,19 @@ def format_exchange(exc: Exchange, db: Session) -> dict:
             return None
         prof = u.profile
         name = f"{prof.first_name} {prof.last_name}".strip() if prof else u.email.split("@")[0]
+        avatar_url = ""
+        for pic in getattr(u, "profile_pictures", []):
+            if getattr(pic, "is_active", False) and getattr(pic, "status_id", 0) == 2:
+                avatar_url = pic.file_reference or ""
+                break
         return {
             "id": f"user-{u.user_id}",
             "userId": u.user_id,
             "fullName": name,
+            "username": prof.username if prof else u.email.split("@")[0],
             "email": u.email,
-            "avatar": "",
+            "avatar": avatar_url,
+            "isVerified": u.account_status_id == 2,
             "rating": 4.9,
         }
 
@@ -176,9 +183,12 @@ def get_user_exchanges(
         db.query(Exchange)
         .options(
             joinedload(Exchange.status),
+            joinedload(Exchange.ratings),
             joinedload(Exchange.participants).joinedload(ExchangeParticipant.user).joinedload(User.profile),
+            joinedload(Exchange.participants).joinedload(ExchangeParticipant.user).joinedload(User.profile_pictures),
             joinedload(Exchange.exchange_items).joinedload(ExchangeItem.item).joinedload(Item.images),
             joinedload(Exchange.exchange_items).joinedload(ExchangeItem.item).joinedload(Item.category),
+            joinedload(Exchange.exchange_items).joinedload(ExchangeItem.item).joinedload(Item.status),
         )
     )
 

@@ -70,17 +70,20 @@ ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- 8. Item Categories
 INSERT INTO `item_categories` (`category_id`, `slug`, `name`, `icon`, `description`) VALUES
-(1, 'clothing', 'Clothing & Apparel', 'Shirt', 'Men\'s, women\'s, and children\'s apparel, uniforms, and shoes'),
-(2, 'school-supplies', 'School & Office Supplies', 'BookOpen', 'Backpacks, uniforms, notebooks, stationery, and learning aids'),
-(3, 'appliances', 'Home Appliances', 'Tv', 'Kitchen cookers, electric fans, irons, and small household devices'),
-(4, 'books', 'Books & Learning Material', 'Book', 'Textbooks, children storybooks, reviewers, and novels'),
-(5, 'toys', 'Toys & Games', 'Gamepad2', 'Children toys, puzzles, educational sets, and board games'),
-(6, 'furniture', 'Furniture', 'Armchair', 'Chairs, study tables, shelves, and home furnishings'),
-(7, 'food', 'Food & Pantry Essentials', 'Apple', 'Non-perishable canned goods, rice sacks, and community groceries'),
-(8, 'electronics', 'Electronics & Gadgets', 'Smartphone', 'Phones, cables, radios, chargers, and small digital accessories'),
-(9, 'tools', 'Tools & Hardware', 'Wrench', 'Carpentry, gardening, plumbing, and home repair tools'),
-(10, 'other', 'Other Community Goods', 'Package', 'Miscellaneous helpful community items')
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+(1, 'clothing', 'Clothing', 'Shirt', 'Daily wear, school uniforms, formal attire, shoes, and bags'),
+(2, 'school-supplies', 'School Supplies', 'GraduationCap', 'Backpacks, notebooks, calculators, art & drafting kits'),
+(3, 'appliances', 'Appliances', 'Refrigerator', 'Electric fans, rice cookers, kettles, blenders, and home appliances'),
+(4, 'books', 'Books', 'BookOpen', 'STEM textbooks, nursing reviewers, literature, and children\'s books'),
+(5, 'toys', 'Toys & Games', 'Gamepad2', 'Educational wooden blocks, LEGO sets, board games, and puzzles'),
+(6, 'furniture', 'Furniture', 'Sofa', 'Study desks, ergonomic chairs, bookshelves, and dining tables'),
+(7, 'food', 'Food & Pantry', 'UtensilsCrossed', 'Rice packs, canned goods, fresh harvest produce, and infant nutrition'),
+(8, 'electronics', 'Electronics', 'Smartphone', 'Student laptops, monitors, keyboards, webcams, and study gadgets'),
+(9, 'tools', 'Tools & Hardware', 'Wrench', 'Hand tool kits, cordless drills, carpentry tools, and repair gear'),
+(10, 'other', 'Others', 'Package', 'Musical instruments, emergency solar kits, handwoven textiles, and misc.'),
+(11, 'sports', 'Sports & Outdoors', 'Dumbbell', 'Basketballs, volleyballs, badminton sets, dumbbells, and cycling gear'),
+(12, 'baby-kids', 'Baby & Kids', 'Baby', 'Baby strollers, wooden cribs, carriers, sterilizers, and toddler gear'),
+(13, 'health', 'Health & Medical', 'HeartPulse', 'Wheelchairs, crutches, BP monitors, nebulizers, and first aid kits')
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `description` = VALUES(`description`), `icon` = VALUES(`icon`);
 
 -- 9. Item Conditions
 INSERT INTO `item_conditions` (`condition_id`, `condition_name`, `description`) VALUES
@@ -158,7 +161,15 @@ INSERT INTO `notification_types` (`notification_type_id`, `type_code`, `display_
 (11, 'profile_picture_rejected', 'Profile Picture Rejected', 'Your avatar did not meet guidelines'),
 (12, 'identity_verification_approved', 'Identity Verified & Account Approved', 'Your account has been approved by administrator'),
 (13, 'identity_verification_rejected', 'Registration Rejected', 'Your identity documents were not approved'),
-(14, 'system', 'System Notice', 'General platform system update')
+(14, 'system', 'System Notice', 'General platform system update'),
+(15, 'post_removed', 'Post Removed', 'Your listing was removed by an administrator'),
+(16, 'request_removed', 'Request Removed', 'Your community request was removed by an administrator'),
+(17, 'report_resolved', 'Report Update', 'A moderation report involving your content was resolved'),
+(18, 'account_suspended', 'Account Suspended', 'Your account has been temporarily or permanently suspended'),
+(19, 'account_unsuspended', 'Account Restored', 'Your account suspension has been lifted'),
+(20, 'report_received', 'Report Received', 'Community report submission confirmation'),
+(21, 'user_warned', 'Account Warning', 'Formal moderation warning notice'),
+(22, 'new_rating', 'New Rating Received', 'You received a new rating from a neighbor')
 ON DUPLICATE KEY UPDATE `display_name` = VALUES(`display_name`);
 
 -- 17. Report Reasons
@@ -168,7 +179,19 @@ INSERT INTO `report_reasons` (`reason_id`, `reason_code`, `description`) VALUES
 (3, 'scam', 'Fraudulent, counterfeit, or misleading information'),
 (4, 'offensive', 'Harassment, hate speech, or disrespectful behavior'),
 (5, 'duplicate', 'Duplicate posting of an existing item'),
-(6, 'other', 'Other community guideline violations')
+(6, 'other', 'Other community guideline violations'),
+(19, 'scam_fraud', 'Scam, fraud, or fraudulent request'),
+(20, 'prohibited_item', 'Prohibited, hazardous, or illegal item'),
+(21, 'misleading_information', 'Misleading, false, or inaccurate information'),
+(22, 'inappropriate_content', 'Inappropriate, abusive, or sexually explicit content'),
+(23, 'harassment', 'Harassment, hate speech, or bullying'),
+(24, 'wrong_category', 'Wrong category or misclassified item'),
+(25, 'fake_identity', 'Fake identity, impersonation, or deceptive account'),
+(26, 'inappropriate_behavior', 'Inappropriate behavior or violation of community standards'),
+(27, 'suspicious_activity', 'Suspicious activity or suspicious communication'),
+(28, 'false_information', 'False or fabricated information in request'),
+(29, 'inappropriate_request', 'Inappropriate or commercial request'),
+(30, 'prohibited_request', 'Prohibited or illegal request')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- 18. Report Statuses
@@ -176,14 +199,16 @@ INSERT INTO `report_statuses` (`report_status_id`, `status_name`, `description`)
 (1, 'pending', 'Submitted and awaiting moderator investigation'),
 (2, 'reviewed', 'Under active review by administrator'),
 (3, 'resolved', 'Appropriate disciplinary or cleanup action taken'),
-(4, 'dismissed', 'Investigated and determined not to violate guidelines')
+(4, 'dismissed', 'Investigated and determined not to violate guidelines'),
+(6, 'under_review', 'Report is currently being reviewed by an admin')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- 19. Report Target Types
 INSERT INTO `report_target_types` (`target_type_id`, `type_name`) VALUES
 (1, 'user'),
 (2, 'item'),
-(3, 'message')
+(3, 'message'),
+(5, 'request')
 ON DUPLICATE KEY UPDATE `type_name` = VALUES(`type_name`);
 
 -- 20. Administrative Audit Actions
@@ -195,5 +220,14 @@ INSERT INTO `audit_actions` (`action_id`, `action_name`, `description`) VALUES
 (5, 'PROFILE_PICTURE_REJECTED', 'Administrator rejected an applicant avatar photo'),
 (6, 'ITEM_REMOVED', 'Administrator removed an item listing violating policy'),
 (7, 'USER_SUSPENDED', 'Administrator suspended an account for misconduct'),
-(8, 'REPORT_RESOLVED', 'Administrator resolved a community safety report')
+(8, 'REPORT_RESOLVED', 'Administrator resolved a community safety report'),
+(9, 'REQUEST_REMOVED', 'Administrator removed a community request'),
+(10, 'USER_UNSUSPENDED', 'Administrator lifted suspension on an account'),
+(18, 'REPORT_CREATED', 'User submitted a community report'),
+(19, 'REPORT_REVIEWED', 'Admin placed report under review'),
+(20, 'REPORT_DISMISSED', 'Admin dismissed report with no violation'),
+(21, 'USER_WARNED', 'Admin issued formal warning to user'),
+(22, 'POST_RESTORED_BY_ADMIN', 'Admin restored a previously removed post'),
+(23, 'USER_RESTRICTED', 'Admin restricted user account privileges'),
+(24, 'USER_REMOVED', 'Admin deactivated or removed user account')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);

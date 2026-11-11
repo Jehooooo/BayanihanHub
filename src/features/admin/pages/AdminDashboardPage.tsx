@@ -15,8 +15,8 @@ import { ShieldAlert, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-rea
 import SEO from '@/components/common/SEO';
 
 export default function AdminDashboardPage() {
-  const { getPendingCount: getPendingPhotoCount, fetchPendingPhotos } = useProfilePictureStore();
-  const { getPendingCount: getPendingVerifCount, fetchApplications } = useIdentityVerificationStore();
+  const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
+  const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
   const pendingApprovals = getPendingPhotoCount() + getPendingVerifCount();
 
   const [systemStats, setSystemStats] = useState<{
@@ -47,9 +47,6 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
-    fetchPendingPhotos().catch(() => {});
-    fetchApplications().catch(() => {});
-
     adminService
       .getSystemStats()
       .then((data) => {
@@ -67,7 +64,7 @@ export default function AdminDashboardPage() {
       .catch(() => {
         // keep fallback 0s
       });
-  }, [fetchPendingPhotos, fetchApplications]);
+  }, []);
 
   const hasUrgentReports = reportStats.pending > 0 || reportStats.highPriority > 0;
 
