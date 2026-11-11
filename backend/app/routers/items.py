@@ -46,9 +46,19 @@ CATEGORY_IMAGES = {
     "food": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
     "appliances": "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=600&auto=format&fit=crop&q=80",
     "toys": "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=600&auto=format&fit=crop&q=80",
+    "tools": "https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&auto=format&fit=crop&q=80",
+    "sports": "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&auto=format&fit=crop&q=80",
+    "baby-kids": "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=600&auto=format&fit=crop&q=80",
+    "health": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80",
     "medical": "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80",
     "school-supplies": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=600&auto=format&fit=crop&q=80",
     "other": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80",
+    "others": "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&auto=format&fit=crop&q=80",
+}
+
+CATEGORY_SLUG_ALIASES = {
+    "others": "other",
+    "medical": "health",
 }
 
 
@@ -199,16 +209,35 @@ def format_item(item: Item, db: Session, current_user_id: Optional[int] = None) 
         "lng": float(loc.longitude) if (loc and loc.longitude is not None) else 120.3209,
     }
 
+    from app.models.exchange import Rating
+    active_ratings = (
+        db.query(Rating)
+        .filter(Rating.rated_user_id == item.owner_id, Rating.status == "active")
+        .all()
+        if item.owner_id
+        else []
+    )
+    review_count = len(active_ratings)
+    avg_rating = round(sum(r.score for r in active_ratings) / review_count, 1) if review_count > 0 else 4.8
+
+    owner_avatar = ""
+    if owner and hasattr(owner, "profile_pictures") and owner.profile_pictures:
+        approved_pics = [p for p in owner.profile_pictures if p.is_current and p.status_id == 2]
+        if approved_pics:
+            owner_avatar = approved_pics[0].file_reference or ""
+        elif owner.profile_pictures[0].file_reference:
+            owner_avatar = owner.profile_pictures[0].file_reference
+
     owner_dict = {
         "id": f"user-{owner.user_id}" if owner else "user-1",
         "fullName": owner_name,
         "username": owner_profile.username if owner_profile else (owner.email.split("@")[0] if owner else "neighbor"),
         "email": owner.email if owner else "",
-        "avatar": (owner_profile.profile_pictures[0].file_reference if owner_profile and hasattr(owner_profile, "profile_pictures") and owner_profile.profile_pictures else "") or "",
+        "avatar": owner_avatar,
         "role": "user",
-        "isVerified": True,
-        "rating": 4.8,
-        "reviewCount": 12,
+        "isVerified": bool(owner.is_verified) if owner else True,
+        "rating": avg_rating,
+        "reviewCount": review_count,
         "joinedDate": owner.created_at.strftime("%B %Y") if (owner and owner.created_at) else "August 2026",
         "location": location_dict,
     }
@@ -287,8 +316,9 @@ def list_items(
 
     # Filter category
     if category and isinstance(category, str) and category != "all":
+        norm_cat = CATEGORY_SLUG_ALIASES.get(category.strip().lower(), category.strip().lower())
         q = q.join(ItemCategory, ItemCategory.category_id == Item.category_id).filter(
-            or_(ItemCategory.slug == category, ItemCategory.name.ilike(f"%{category}%"))
+            or_(ItemCategory.slug == norm_cat, ItemCategory.slug == category.strip().lower(), ItemCategory.name.ilike(f"%{norm_cat}%"))
         )
 
     # Filter condition
@@ -520,13 +550,14 @@ def create_item(dto: CreateItemDto, db: Session = Depends(get_db)):
 
         # 2. Resolve Category ID
         cat_str = str(dto.category).strip()
+        norm_cat_str = CATEGORY_SLUG_ALIASES.get(cat_str.lower(), cat_str.lower())
         cat_num = parse_numeric_id(cat_str)
         cat = None
         if cat_num:
             cat = db.query(ItemCategory).filter(ItemCategory.category_id == cat_num).first()
         if not cat:
             cat = db.query(ItemCategory).filter(
-                or_(ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{cat_str}%"))
+                or_(ItemCategory.slug == norm_cat_str, ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{norm_cat_str}%"))
             ).first()
         cat_id = cat.category_id if cat else 10  # 10 is 'other'
 

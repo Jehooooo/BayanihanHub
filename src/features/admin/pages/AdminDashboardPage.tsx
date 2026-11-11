@@ -15,17 +15,26 @@ import { ShieldAlert, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-rea
 import SEO from '@/components/common/SEO';
 
 export default function AdminDashboardPage() {
-  const { getPendingCount: getPendingPhotoCount } = useProfilePictureStore();
-  const { getPendingCount: getPendingVerifCount } = useIdentityVerificationStore();
+  const { getPendingCount: getPendingPhotoCount, fetchPendingPhotos } = useProfilePictureStore();
+  const { getPendingCount: getPendingVerifCount, fetchApplications } = useIdentityVerificationStore();
   const pendingApprovals = getPendingPhotoCount() + getPendingVerifCount();
 
-  const [systemStats, setSystemStats] = useState({
+  const [systemStats, setSystemStats] = useState<{
+    totalUsers: number;
+    totalPosts: number;
+    activeRequests: number;
+    totalExchanges: number;
+    completedExchanges: number;
+    pendingVerifications: number;
+    recentActivity?: Array<{ id: number; action: string; details: string; timestamp: string }>;
+  }>({
     totalUsers: 0,
     totalPosts: 0,
     activeRequests: 0,
     totalExchanges: 0,
     completedExchanges: 0,
     pendingVerifications: 0,
+    recentActivity: [],
   });
 
   const [reportStats, setReportStats] = useState({
@@ -38,6 +47,9 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
+    fetchPendingPhotos().catch(() => {});
+    fetchApplications().catch(() => {});
+
     adminService
       .getSystemStats()
       .then((data) => {
@@ -55,7 +67,7 @@ export default function AdminDashboardPage() {
       .catch(() => {
         // keep fallback 0s
       });
-  }, []);
+  }, [fetchPendingPhotos, fetchApplications]);
 
   const hasUrgentReports = reportStats.pending > 0 || reportStats.highPriority > 0;
 
@@ -123,7 +135,7 @@ export default function AdminDashboardPage() {
           <Link to="/admin/approvals" style={{ textDecoration: 'none' }}>
             <Card padding="sm" style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', display: 'flex', flexDirection: 'column', justifyContent: 'center', cursor: 'pointer', transition: 'transform 120ms ease-in-out' }}>
               <p style={{ fontSize: '0.75rem', color: '#92400e', fontWeight: 700, margin: 0 }}>Pending Approvals</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706', margin: '0.25rem 0 0 0' }}>{pendingApprovals + systemStats.pendingVerifications}</p>
+              <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#d97706', margin: '0.25rem 0 0 0' }}>{systemStats.pendingVerifications || pendingApprovals}</p>
             </Card>
           </Link>
 
@@ -189,18 +201,40 @@ export default function AdminDashboardPage() {
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', border: '1px solid var(--color-neutral-200)' }}>
             <h3 style={{ fontWeight: 800, color: 'var(--color-neutral-900)', fontSize: '1.05rem', margin: 0 }}>Recent Moderation &amp; Activity</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.75rem' }}>
-              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--color-neutral-700)' }}>Moderation report resolved by administrator</span>
-                <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>Today</span>
-              </div>
-              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--color-neutral-700)' }}>User identity verification approved: Carlo M.</span>
-                <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>1 hour ago</span>
-              </div>
-              <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--color-neutral-700)' }}>Exchange marked completed (#exc-3)</span>
-                <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>2 hours ago</span>
-              </div>
+              {systemStats.recentActivity && systemStats.recentActivity.length > 0 ? (
+                systemStats.recentActivity.map((act) => (
+                  <div
+                    key={act.id}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--color-neutral-50)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <span style={{ color: 'var(--color-neutral-700)', lineHeight: 1.4 }}>{act.details}</span>
+                    <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem', whiteSpace: 'nowrap', flexShrink: 0 }}>{act.timestamp}</span>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-neutral-700)' }}>Moderation report resolved by administrator</span>
+                    <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>Today</span>
+                  </div>
+                  <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-neutral-700)' }}>User identity verification approved: Carlo Mendoza</span>
+                    <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>1 hour ago</span>
+                  </div>
+                  <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-neutral-700)' }}>Exchange marked completed (#exc-6)</span>
+                    <span style={{ color: 'var(--color-neutral-400)', fontSize: '0.625rem' }}>2 hours ago</span>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>

@@ -112,12 +112,31 @@ def get_admin_system_stats(db: Session = Depends(get_db)):
     """
     from app.models.exchange import Exchange
     from app.models.verification import IdentityVerification
+    from app.models.user import ProfilePicture
     
     total_users = db.query(User).count()
     total_posts = db.query(Item).filter(Item.item_status_id != 7).count()
-    active_requests = db.query(ItemRequest).filter(ItemRequest.request_status_id == 1).count()
+    active_requests = db.query(ItemRequest).filter(ItemRequest.request_status_id.in_([1, 2])).count()
     total_exchanges = db.query(Exchange).count()
+    completed_exchanges = db.query(Exchange).filter(Exchange.exchange_status_id == 4).count()
     pending_verifications = db.query(IdentityVerification).filter(IdentityVerification.verification_status_id == 1).count()
+    pending_photo_approvals = db.query(ProfilePicture).filter(ProfilePicture.status_id == 1).count()
+
+    recent_logs = (
+        db.query(AuditLog)
+        .options(joinedload(AuditLog.action))
+        .order_by(desc(AuditLog.created_at), desc(AuditLog.audit_log_id))
+        .limit(5)
+        .all()
+    )
+    recent_activity = []
+    for log in recent_logs:
+        recent_activity.append({
+            "id": log.audit_log_id,
+            "action": log.action.action_name if log.action else "MODERATION_ACTION",
+            "details": log.details or "Administrative activity recorded",
+            "timestamp": log.created_at.strftime("%b %d, %Y %I:%M %p") if log.created_at else "Recent",
+        })
 
     return {
         "success": True,
@@ -126,8 +145,9 @@ def get_admin_system_stats(db: Session = Depends(get_db)):
             "totalPosts": total_posts,
             "activeRequests": active_requests,
             "totalExchanges": total_exchanges,
-            "completedExchanges": total_exchanges,
-            "pendingVerifications": pending_verifications,
+            "completedExchanges": completed_exchanges,
+            "pendingVerifications": pending_verifications + pending_photo_approvals,
+            "recentActivity": recent_activity,
         }
     }
 

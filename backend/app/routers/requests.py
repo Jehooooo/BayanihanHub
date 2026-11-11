@@ -18,6 +18,11 @@ from app.services.terminal_logger import terminal_logger
 
 router = APIRouter(prefix="/api/requests", tags=["Community Help Requests"])
 
+CATEGORY_SLUG_ALIASES = {
+    "others": "other",
+    "medical": "health",
+}
+
 
 def parse_numeric_id(val: Any) -> Optional[int]:
     if val is None:
@@ -157,8 +162,9 @@ def list_requests(
         )
 
     if category and category != "all":
+        norm_cat = CATEGORY_SLUG_ALIASES.get(category.strip().lower(), category.strip().lower())
         q = q.join(ItemCategory, ItemCategory.category_id == ItemRequest.category_id).filter(
-            or_(ItemCategory.slug == category, ItemCategory.name.ilike(f"%{category}%"))
+            or_(ItemCategory.slug == norm_cat, ItemCategory.slug == category.strip().lower(), ItemCategory.name.ilike(f"%{norm_cat}%"))
         )
 
     if query:
@@ -188,8 +194,9 @@ def create_request(dto: CreateRequestDto, db: Session = Depends(get_db)):
 
     # Resolve Category
     cat_str = (dto.category or "other").strip()
+    norm_cat_str = CATEGORY_SLUG_ALIASES.get(cat_str.lower(), cat_str.lower())
     cat = db.query(ItemCategory).filter(
-        or_(ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{cat_str}%"))
+        or_(ItemCategory.slug == norm_cat_str, ItemCategory.slug == cat_str.lower(), ItemCategory.name.ilike(f"%{norm_cat_str}%"))
     ).first()
     cat_id = cat.category_id if cat else 10
 
