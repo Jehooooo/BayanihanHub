@@ -3,7 +3,8 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { categories as initialCategories } from '@/data/categories';
-import { useState } from 'react';
+import { itemsService } from '@/services/items.service';
+import { useEffect, useState } from 'react';
 import type { Category } from '@/types';
 import toast from 'react-hot-toast';
 import SEO from '@/components/common/SEO';
@@ -11,6 +12,23 @@ import SEO from '@/components/common/SEO';
 export default function ManageCategoriesPage() {
   const [categoriesList, setCategoriesList] = useState<Category[]>(initialCategories);
   const [newCatName, setNewCatName] = useState('');
+
+  useEffect(() => {
+    itemsService.getItems().then((items) => {
+      const counts: Record<string, number> = {};
+      for (const item of items) {
+        if (item.status === 'removed') continue;
+        const catKey = item.category === 'others' ? 'other' : item.category;
+        counts[catKey] = (counts[catKey] || 0) + 1;
+      }
+      setCategoriesList((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          itemCount: counts[cat.id] ?? cat.itemCount,
+        }))
+      );
+    }).catch(() => {});
+  }, []);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +53,7 @@ export default function ManageCategoriesPage() {
       <div style={{ maxWidth: '56rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-neutral-900)', margin: 0 }}>Manage Item Categories</h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>Create and update item classification categories</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-neutral-500)', margin: '0.25rem 0 0 0' }}>Create and update item classification categories and subcategories</p>
         </div>
 
         {/* Add Category Card Form */}
@@ -62,6 +80,7 @@ export default function ManageCategoriesPage() {
             <thead style={{ backgroundColor: 'var(--color-neutral-50)', borderBottom: '1px solid var(--color-neutral-200)', color: 'var(--color-neutral-500)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <tr>
                 <th style={{ padding: '1rem' }}>Category Name</th>
+                <th style={{ padding: '1rem' }}>Subcategories & Scope</th>
                 <th style={{ padding: '1rem' }}>Slug ID</th>
                 <th style={{ padding: '1rem' }}>Active Items</th>
               </tr>
@@ -70,6 +89,7 @@ export default function ManageCategoriesPage() {
               {categoriesList.map((cat) => (
                 <tr key={cat.id} style={{ borderBottom: '1px solid var(--color-neutral-100)' }}>
                   <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--color-neutral-900)' }}>{cat.name}</td>
+                  <td style={{ padding: '1rem', color: 'var(--color-neutral-600)' }}>{cat.description}</td>
                   <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--color-neutral-500)' }}>{cat.id}</td>
                   <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--color-neutral-700)' }}>{cat.itemCount} items</td>
                 </tr>

@@ -9,90 +9,106 @@ export const categories: Category[] = [
     id: 'clothing',
     name: 'Clothing',
     icon: 'Shirt',
-    description: 'Clothes, shoes, and accessories',
-    itemCount: 0,
-  },
-  {
-    id: 'electronics',
-    name: 'Electronics',
-    icon: 'Smartphone',
-    description: 'Gadgets, appliances, and tech items',
-    itemCount: 0,
-  },
-  {
-    id: 'books',
-    name: 'Books',
-    icon: 'BookOpen',
-    description: 'Textbooks, novels, and educational materials',
-    itemCount: 0,
-  },
-  {
-    id: 'furniture',
-    name: 'Furniture',
-    icon: 'Sofa',
-    description: 'Tables, chairs, shelves, and home decor',
-    itemCount: 0,
+    description: 'Daily wear, school uniforms, formal attire, shoes, and bags',
+    itemCount: 3,
   },
   {
     id: 'school-supplies',
     name: 'School Supplies',
     icon: 'GraduationCap',
-    description: 'Bags, notebooks, and school essentials',
-    itemCount: 0,
-  },
-  {
-    id: 'food',
-    name: 'Food',
-    icon: 'UtensilsCrossed',
-    description: 'Rice, canned goods, and groceries',
-    itemCount: 0,
-  },
-  {
-    id: 'toys',
-    name: 'Toys & Games',
-    icon: 'Gamepad2',
-    description: 'Children\'s toys, board games, and puzzles',
-    itemCount: 0,
+    description: 'Backpacks, notebooks, calculators, art & drafting kits',
+    itemCount: 3,
   },
   {
     id: 'appliances',
     name: 'Appliances',
     icon: 'Refrigerator',
-    description: 'Kitchen and household appliances',
-    itemCount: 0,
+    description: 'Electric fans, rice cookers, kettles, blenders, and home appliances',
+    itemCount: 3,
+  },
+  {
+    id: 'books',
+    name: 'Books',
+    icon: 'BookOpen',
+    description: 'STEM textbooks, nursing reviewers, literature, and children\'s books',
+    itemCount: 3,
+  },
+  {
+    id: 'toys',
+    name: 'Toys & Games',
+    icon: 'Gamepad2',
+    description: 'Educational wooden blocks, LEGO sets, board games, and puzzles',
+    itemCount: 2,
+  },
+  {
+    id: 'furniture',
+    name: 'Furniture',
+    icon: 'Sofa',
+    description: 'Study desks, ergonomic chairs, bookshelves, and dining tables',
+    itemCount: 2,
+  },
+  {
+    id: 'food',
+    name: 'Food & Pantry',
+    icon: 'UtensilsCrossed',
+    description: 'Rice packs, canned goods, fresh harvest produce, and infant nutrition',
+    itemCount: 3,
+  },
+  {
+    id: 'electronics',
+    name: 'Electronics',
+    icon: 'Smartphone',
+    description: 'Student laptops, monitors, keyboards, webcams, and study gadgets',
+    itemCount: 3,
+  },
+  {
+    id: 'tools',
+    name: 'Tools & Hardware',
+    icon: 'Wrench',
+    description: 'Hand tool kits, cordless drills, carpentry tools, and repair gear',
+    itemCount: 2,
   },
   {
     id: 'sports',
-    name: 'Sports',
+    name: 'Sports & Outdoors',
     icon: 'Dumbbell',
-    description: 'Sports equipment and outdoor gear',
-    itemCount: 0,
+    description: 'Basketballs, volleyballs, badminton sets, dumbbells, and cycling gear',
+    itemCount: 3,
   },
   {
     id: 'baby-kids',
     name: 'Baby & Kids',
     icon: 'Baby',
-    description: 'Baby items, strollers, and children\'s needs',
-    itemCount: 0,
+    description: 'Baby strollers, wooden cribs, carriers, sterilizers, and toddler gear',
+    itemCount: 2,
   },
   {
     id: 'health',
     name: 'Health & Medical',
     icon: 'HeartPulse',
-    description: 'Medical supplies and health essentials',
-    itemCount: 0,
+    description: 'Wheelchairs, crutches, BP monitors, nebulizers, and first aid kits',
+    itemCount: 3,
   },
   {
-    id: 'others',
+    id: 'other',
     name: 'Others',
     icon: 'Package',
-    description: 'Miscellaneous items',
-    itemCount: 0,
+    description: 'Musical instruments, emergency solar kits, handwoven textiles, and misc.',
+    itemCount: 3,
   },
 ];
 
-export const getCategoryByid = (id: string): Category | undefined =>
-  categories.find((c) => c.id === id);
+const CATEGORY_ALIASES: Record<string, string> = {
+  others: 'other',
+  medical: 'health',
+};
 
-export const getCategoryName = (id: string): string =>
-  categories.find((c) => c.id === id)?.name ?? 'Unknown';
+export const getCategoryByid = (id: string): Category | undefined => {
+  const normalized = CATEGORY_ALIASES[id] ?? id;
+  return categories.find((c) => c.id === normalized);
+};
+
+export const getCategoryName = (id: string): string => {
+  const normalized = CATEGORY_ALIASES[id] ?? id;
+  return categories.find((c) => c.id === normalized)?.name ?? 'Others';
+};
